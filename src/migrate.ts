@@ -1,7 +1,7 @@
 import pg from 'pg';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const MIGRATIONS_DIR = fileURLToPath(new URL('../migrations', import.meta.url));
 
@@ -50,7 +50,7 @@ export async function runMigrations(pool: pg.Pool): Promise<string[]> {
 }
 
 // CLI エントリ
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const url = process.env.DATABASE_URL;
   if (!url) {
     console.error('DATABASE_URL is required');
@@ -62,8 +62,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.log(`done. ${list.length} migration(s) applied.`);
       return pool.end();
     })
-    .catch((err) => {
+    .catch(async (err) => {
       console.error(err);
-      pool.end().then(() => process.exit(1));
+      try {
+        await pool.end();
+      } catch {
+        // swallow: we're already in an error path
+      }
+      process.exit(1);
     });
 }

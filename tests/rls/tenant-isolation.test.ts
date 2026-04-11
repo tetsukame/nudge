@@ -63,4 +63,55 @@ describe('tenant RLS isolation', () => {
       client.release();
     }
   });
+
+  it('UPDATE cannot reach other tenant rows (zero affected)', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`SET LOCAL ROLE nudge_app`);
+      await client.query(`SET LOCAL app.tenant_id = '${t1}'`);
+      const res = await client.query(
+        `UPDATE users SET display_name='HACKED' WHERE email='b@t2'`,
+      );
+      expect(res.rowCount).toBe(0);
+      await client.query('ROLLBACK');
+    } finally {
+      client.release();
+    }
+  });
+
+  it('DELETE cannot reach other tenant rows (zero affected)', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`SET LOCAL ROLE nudge_app`);
+      await client.query(`SET LOCAL app.tenant_id = '${t1}'`);
+      const res = await client.query(`DELETE FROM users WHERE email='b@t2'`);
+      expect(res.rowCount).toBe(0);
+      await client.query('ROLLBACK');
+    } finally {
+      client.release();
+    }
+  });
+
+  it('session with unset app.tenant_id fails closed (zero rows, insert rejected)', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`SET LOCAL ROLE nudge_app`);
+      // deliberately do NOT SET app.tenant_id
+      const sel = await client.query(`SELECT email FROM users`);
+      expect(sel.rows.length).toBe(0);
+      await expect(
+        client.query(
+          `INSERT INTO users (tenant_id, keycloak_sub, email, display_name)
+           VALUES ($1,'sX','x@x','X')`,
+          [t1],
+        ),
+      ).rejects.toThrow(/row-level security|new row violates/i);
+      await client.query('ROLLBACK');
+    } finally {
+      client.release();
+    }
+  });
 });

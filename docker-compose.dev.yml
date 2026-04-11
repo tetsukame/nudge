@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: nudge-dev-pg
+    environment:
+      POSTGRES_USER: nudge
+      POSTGRES_PASSWORD: nudge
+      POSTGRES_DB: nudge_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - nudge_pg_data:/var/lib/postgresql/data
+
+volumes:
+  nudge_pg_data:

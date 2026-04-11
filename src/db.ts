@@ -2,6 +2,8 @@ import pg from 'pg';
 
 export type TenantId = string;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function createPool(connectionString: string): pg.Pool {
   return new pg.Pool({ connectionString, max: 10 });
 }
@@ -16,6 +18,9 @@ export async function withTenant<T>(
   tenantId: TenantId,
   fn: (client: pg.PoolClient) => Promise<T>,
 ): Promise<T> {
+  if (!UUID_RE.test(tenantId)) {
+    throw new Error(`invalid tenantId (not a UUID): ${tenantId}`);
+  }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -24,7 +29,11 @@ export async function withTenant<T>(
     await client.query('COMMIT');
     return result;
   } catch (err) {
-    await client.query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      // swallow: preserving the original error is more important
+    }
     throw err;
   } finally {
     client.release();

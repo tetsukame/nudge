@@ -1,1 +1,18 @@
+# 環境変数（絶対にコミットしない）
+.env
+.env.local
+.env.production
+
+# Node.js
+node_modules/
+.next/
+dist/
+coverage/
+
+#superpowers
 .superpowers/
+
+
+# OS
+.DS_Store
+Thumbs.db

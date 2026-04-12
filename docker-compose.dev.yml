@@ -1,3 +1,8 @@
+# Local development PostgreSQL for Nudge.
+# The service user (nudge) is PostgreSQL superuser in this image, suitable for
+# DATABASE_URL_ADMIN (running migrations and schema evolution).
+# The application runtime should use DATABASE_URL_APP pointing at the nudge_app
+# role (created by migration 018 and granted LOGIN by migration 020).
 services:
   postgres:
     image: postgres:17-alpine

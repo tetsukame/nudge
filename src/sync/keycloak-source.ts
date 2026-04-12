@@ -1,13 +1,14 @@
-import type { SyncSource, SyncUserRecord } from './types.js';
+import type { SyncSource, SyncUserRecord, OrgSyncSource, SyncOrgRecord, OrgMembership } from './types.js';
 
 const PAGE_SIZE = 500;
 
-export class KeycloakSyncSource implements SyncSource {
+export class KeycloakSyncSource implements SyncSource, OrgSyncSource {
   private issuerUrl: string;
   private clientId: string;
   private clientSecret: string;
   private cachedToken: string | null = null;
   private tokenExpiresAt = 0;
+  private orgGroupPrefix: string | null = null;
 
   constructor(issuerUrl: string, clientId: string, clientSecret: string) {
     this.issuerUrl = issuerUrl;
@@ -67,6 +68,80 @@ export class KeycloakSyncSource implements SyncSource {
     }
   }
 
+  setOrgGroupPrefix(prefix: string): void {
+    this.orgGroupPrefix = prefix;
+  }
+
+  async *fetchAllOrgs(): AsyncGenerator<SyncOrgRecord[]> {
+    if (!this.orgGroupPrefix) throw new Error('orgGroupPrefix not set; call setOrgGroupPrefix() first');
+    const url = `${this.realmAdminUrl}/groups?briefRepresentation=false`;
+    const res = await this.authedFetch(url);
+    if (!res.ok) throw new Error(`KC groups API failed: ${res.status}`);
+    const tree = (await res.json()) as KcGroup[];
+
+    const prefixDepth = this.orgGroupPrefix.split('/').filter(Boolean).length;
+    const orgs: SyncOrgRecord[] = [];
+
+    const walk = (group: KcGroup, parentOrgId: string | null): void => {
+      const pathParts = group.path.split('/').filter(Boolean);
+      const depth = pathParts.length;
+      // Groups at prefix depth are the container group itself — skip but recurse
+      if (depth <= prefixDepth) {
+        // Only recurse into the matching prefix subtree
+        if (group.path === this.orgGroupPrefix || this.orgGroupPrefix!.startsWith(group.path)) {
+          for (const child of group.subGroups ?? []) {
+            walk(child, null);
+          }
+        }
+        return;
+      }
+      // Only emit groups under our prefix
+      if (!group.path.startsWith(this.orgGroupPrefix!)) return;
+
+      const level = depth - prefixDepth - 1;
+      orgs.push({
+        externalId: group.id,
+        name: group.name,
+        parentExternalId: parentOrgId,
+        level,
+      });
+      for (const child of group.subGroups ?? []) {
+        walk(child, group.id);
+      }
+    };
+
+    for (const root of tree) {
+      walk(root, null);
+    }
+    yield orgs;
+  }
+
+  async *fetchOrgMemberships(): AsyncGenerator<OrgMembership[]> {
+    // First collect all org groups
+    const orgGroups: { id: string }[] = [];
+    for await (const chunk of this.fetchAllOrgs()) {
+      orgGroups.push(...chunk.map((o) => ({ id: o.externalId })));
+    }
+
+    for (const group of orgGroups) {
+      let offset = 0;
+      const memberships: OrgMembership[] = [];
+      while (true) {
+        const url = `${this.realmAdminUrl}/groups/${group.id}/members?first=${offset}&max=${PAGE_SIZE}`;
+        const res = await this.authedFetch(url);
+        if (!res.ok) throw new Error(`KC group members API failed: ${res.status}`);
+        const members = (await res.json()) as { id: string }[];
+        if (members.length === 0) break;
+        for (const m of members) {
+          memberships.push({ orgExternalId: group.id, userExternalId: m.id, isPrimary: false });
+        }
+        if (members.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
+      if (memberships.length > 0) yield memberships;
+    }
+  }
+
   async fetchDeltaUsers(since: Date): Promise<SyncUserRecord[]> {
     const dateFrom = since.toISOString().split('.')[0];
     const eventsUrl =
@@ -102,6 +177,13 @@ export class KeycloakSyncSource implements SyncSource {
     return results;
   }
 }
+
+type KcGroup = {
+  id: string;
+  name: string;
+  path: string;
+  subGroups?: KcGroup[];
+};
 
 type KcUser = {
   id: string;

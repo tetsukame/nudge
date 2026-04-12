@@ -51,9 +51,9 @@ export async function runMigrations(pool: pg.Pool): Promise<string[]> {
 
 // CLI エントリ
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const url = process.env.DATABASE_URL;
+  const url = process.env.DATABASE_URL_ADMIN;
   if (!url) {
-    console.error('DATABASE_URL is required');
+    console.error('DATABASE_URL_ADMIN is required');
     process.exit(1);
   }
   const pool = new pg.Pool({ connectionString: url });

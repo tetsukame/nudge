@@ -25,7 +25,10 @@ const ADMIN_PASS = 'admin';
 const TEST_USER = 'alice@example.com';
 const TEST_PASS = 'alice-pass';
 
+const _global = globalThis as unknown as { __kcSetup?: KeycloakSetup };
+
 export async function startKeycloak(redirectUri: string): Promise<KeycloakSetup> {
+  if (_global.__kcSetup) return _global.__kcSetup;
   const container = await new GenericContainer('quay.io/keycloak/keycloak:26.0')
     .withEnvironment({
       KC_BOOTSTRAP_ADMIN_USERNAME: ADMIN_USER,
@@ -37,7 +40,7 @@ export async function startKeycloak(redirectUri: string): Promise<KeycloakSetup>
       Wait.forHttp('/realms/master/.well-known/openid-configuration', 8080)
         .forStatusCode(200),
     )
-    .withStartupTimeout(120_000)
+    .withStartupTimeout(180_000)
     .start();
 
   const baseUrl = `http://${container.getHost()}:${container.getMappedPort(8080)}`;
@@ -185,7 +188,7 @@ export async function startKeycloak(redirectUri: string): Promise<KeycloakSetup>
     }),
   }));
 
-  return {
+  _global.__kcSetup = {
     container,
     issuerUrl: `${baseUrl}/realms/${REALM}`,
     realmName: REALM,
@@ -199,10 +202,12 @@ export async function startKeycloak(redirectUri: string): Promise<KeycloakSetup>
     testUserPassword: TEST_PASS,
     baseUrl,
   };
+  return _global.__kcSetup;
 }
 
-export async function stopKeycloak(setup: KeycloakSetup): Promise<void> {
-  await setup.container.stop();
+export async function stopKeycloak(_setup: KeycloakSetup): Promise<void> {
+  // No-op: the singleton container is reused across test files and cleaned up
+  // automatically by testcontainers' resource reaper when the process exits.
 }
 
 export async function kcCreateUser(

@@ -1,6 +1,7 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { afterAll, describe, expect, it, vi, beforeEach } from 'vitest';
 import { KeycloakSyncSource } from '../../../src/sync/keycloak-source.js';
 
+const originalFetch = globalThis.fetch;
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
@@ -17,6 +18,10 @@ describe('KeycloakSyncSource', () => {
   beforeEach(() => {
     mockFetch.mockReset();
     source = new KeycloakSyncSource(issuerUrl, 'nudge-sync', 'secret');
+  });
+
+  afterAll(() => {
+    vi.stubGlobal('fetch', originalFetch);
   });
 
   it('fetchAllUsers pages through results', async () => {

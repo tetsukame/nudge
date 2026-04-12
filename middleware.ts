@@ -12,6 +12,11 @@ export const config = {
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
+  // Short-circuit for non-tenant paths — avoid loading config / DB / session
+  if (path === '/' || path.startsWith('/api/health')) {
+    return NextResponse.next();
+  }
+
   // Resolve tenant if path is /t/<code>/...
   let tenant: { id: string; code: string } | null = null;
   const m = path.match(/^\/t\/([^/]+)/);

@@ -11,6 +11,7 @@ describe('config', () => {
     delete process.env.OIDC_CLIENT_ID;
     delete process.env.OIDC_CLIENT_SECRET;
     delete process.env.OIDC_REDIRECT_URI_BASE;
+    delete process.env.SYNC_API_KEY;
     resetConfigCache();
   });
 
@@ -49,5 +50,17 @@ describe('config', () => {
   it('rejects invalid OIDC_REDIRECT_URI_BASE', () => {
     Object.assign(process.env, { ...valid, OIDC_REDIRECT_URI_BASE: 'not-a-url' });
     expect(() => loadConfig()).toThrow(/OIDC_REDIRECT_URI_BASE/);
+  });
+
+  it('loads config with optional SYNC_API_KEY', () => {
+    Object.assign(process.env, { ...valid, SYNC_API_KEY: 'my-sync-key' });
+    const cfg = loadConfig();
+    expect(cfg.SYNC_API_KEY).toBe('my-sync-key');
+  });
+
+  it('loads config without SYNC_API_KEY', () => {
+    Object.assign(process.env, valid);
+    const cfg = loadConfig();
+    expect(cfg.SYNC_API_KEY).toBeUndefined();
   });
 });

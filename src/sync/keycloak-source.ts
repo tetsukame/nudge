@@ -82,15 +82,26 @@ export class KeycloakSyncSource implements SyncSource, OrgSyncSource {
     const prefixDepth = this.orgGroupPrefix.split('/').filter(Boolean).length;
     const orgs: SyncOrgRecord[] = [];
 
-    const walk = (group: KcGroup, parentOrgId: string | null): void => {
+    const walk = async (group: KcGroup, parentOrgId: string | null): Promise<void> => {
       const pathParts = group.path.split('/').filter(Boolean);
       const depth = pathParts.length;
+
+      // KC 26+ may not populate subGroups — fetch children via API if needed
+      let children = group.subGroups ?? [];
+      if (children.length === 0 && (group.subGroupCount ?? 0) > 0) {
+        const childrenUrl = `${this.realmAdminUrl}/groups/${group.id}/children?briefRepresentation=false`;
+        const childRes = await this.authedFetch(childrenUrl);
+        if (childRes.ok) {
+          children = (await childRes.json()) as KcGroup[];
+        }
+      }
+
       // Groups at prefix depth are the container group itself — skip but recurse
       if (depth <= prefixDepth) {
         // Only recurse into the matching prefix subtree
         if (group.path === this.orgGroupPrefix || this.orgGroupPrefix!.startsWith(group.path)) {
-          for (const child of group.subGroups ?? []) {
-            walk(child, null);
+          for (const child of children) {
+            await walk(child, null);
           }
         }
         return;
@@ -105,13 +116,13 @@ export class KeycloakSyncSource implements SyncSource, OrgSyncSource {
         parentExternalId: parentOrgId,
         level,
       });
-      for (const child of group.subGroups ?? []) {
-        walk(child, group.id);
+      for (const child of children) {
+        await walk(child, group.id);
       }
     };
 
     for (const root of tree) {
-      walk(root, null);
+      await walk(root, null);
     }
     yield orgs;
   }
@@ -183,6 +194,7 @@ type KcGroup = {
   name: string;
   path: string;
   subGroups?: KcGroup[];
+  subGroupCount?: number;
 };
 
 type KcUser = {

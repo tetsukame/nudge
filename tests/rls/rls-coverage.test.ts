@@ -7,7 +7,7 @@ const TENANT_SCOPED = [
   'group','group_member','user_role',
   'request','request_target','assignment','assignment_status_history',
   'tenant_notification_config','user_notification_pref','notification_rule','notification',
-  'audit_log',
+  'audit_log','tenant_sync_config','sync_log',
 ] as const;
 
 describe('RLS coverage', () => {

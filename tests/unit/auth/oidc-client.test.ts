@@ -8,6 +8,7 @@ const tenant: Tenant = {
   keycloakRealm: 'nudge-acme',
   keycloakIssuerUrl: 'https://kc.example.com/realms/nudge-acme',
   status: 'active',
+  authMode: 'oidc',
 };
 
 let discoverCallCount = 0;

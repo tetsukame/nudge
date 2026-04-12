@@ -7,6 +7,7 @@ export type Tenant = {
   keycloakRealm: string;
   keycloakIssuerUrl: string;
   status: 'active' | 'suspended';
+  authMode: 'oidc' | 'local';
 };
 
 type CacheEntry = {
@@ -39,8 +40,9 @@ export async function resolveTenant(
     keycloak_realm: string;
     keycloak_issuer_url: string;
     status: 'active' | 'suspended';
+    auth_mode: 'oidc' | 'local';
   }>(
-    `SELECT id, code, name, keycloak_realm, keycloak_issuer_url, status
+    `SELECT id, code, name, keycloak_realm, keycloak_issuer_url, status, auth_mode
      FROM tenant WHERE code = $1`,
     [code],
   );
@@ -53,6 +55,7 @@ export async function resolveTenant(
         keycloakRealm: rows[0].keycloak_realm,
         keycloakIssuerUrl: rows[0].keycloak_issuer_url,
         status: rows[0].status,
+        authMode: rows[0].auth_mode,
       }
     : null;
 

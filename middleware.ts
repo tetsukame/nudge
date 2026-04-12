@@ -19,10 +19,21 @@ export async function middleware(request: NextRequest) {
 
   // Resolve tenant if path is /t/<code>/...
   let tenant: { id: string; code: string } | null = null;
+  let tenantAuthMode: string | undefined;
   const m = path.match(/^\/t\/([^/]+)/);
   if (m) {
     const resolved = await resolveTenant(adminPool(), m[1]);
-    if (resolved) tenant = { id: resolved.id, code: resolved.code };
+    if (resolved) {
+      tenant = { id: resolved.id, code: resolved.code };
+      tenantAuthMode = resolved.authMode;
+    }
+  }
+
+  if (tenantAuthMode === 'local') {
+    return new NextResponse(
+      'Local authentication is not yet supported. Please configure Keycloak OIDC.',
+      { status: 501 },
+    );
   }
 
   // Read session from cookie

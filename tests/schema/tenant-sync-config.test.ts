@@ -18,7 +18,7 @@ describe('tenant_sync_config table', () => {
   it('exists with required columns', async () => {
     await assertTableExists(pool, 'tenant_sync_config');
     await assertColumn(pool, 'tenant_sync_config', 'tenant_id', 'uuid', false);
-    await assertColumn(pool, 'tenant_sync_config', 'source_type', 'text', false);
+    await assertColumn(pool, 'tenant_sync_config', 'user_source_type', 'text', false);
     await assertColumn(pool, 'tenant_sync_config', 'enabled', 'boolean', false);
     await assertColumn(pool, 'tenant_sync_config', 'sync_client_id', 'text', true);
     await assertColumn(pool, 'tenant_sync_config', 'sync_client_secret', 'text', true);
@@ -32,21 +32,21 @@ describe('tenant_sync_config table', () => {
       [tenantId],
     );
     const { rows } = await pool.query(
-      `SELECT source_type, interval_minutes FROM tenant_sync_config WHERE tenant_id = $1`,
+      `SELECT user_source_type, interval_minutes FROM tenant_sync_config WHERE tenant_id = $1`,
       [tenantId],
     );
-    expect(rows[0].source_type).toBe('keycloak');
+    expect(rows[0].user_source_type).toBe('keycloak');
     expect(rows[0].interval_minutes).toBe(60);
   });
 
-  it('rejects invalid source_type', async () => {
+  it('rejects invalid user_source_type', async () => {
     const t2 = (await pool.query(
       `INSERT INTO tenant (code, name, keycloak_realm, keycloak_issuer_url)
        VALUES ('sc-bad', 'B', 'r', 'https://kc/r') RETURNING id`,
     )).rows[0].id;
     await expect(
       pool.query(
-        `INSERT INTO tenant_sync_config (tenant_id, source_type) VALUES ($1, 'ldap')`,
+        `INSERT INTO tenant_sync_config (tenant_id, user_source_type) VALUES ($1, 'ldap')`,
         [t2],
       ),
     ).rejects.toThrow(/check constraint/i);

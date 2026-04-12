@@ -35,7 +35,11 @@ export async function POST(req: NextRequest) {
   } catch {
     // empty body is OK
   }
-  const mode = (body.mode === 'full' ? 'full' : 'delta') as 'full' | 'delta';
+  const validModes = ['full', 'delta', 'full-with-orgs'] as const;
+  type SyncMode = (typeof validModes)[number];
+  const mode: SyncMode = validModes.includes(body.mode as SyncMode)
+    ? (body.mode as SyncMode)
+    : 'delta';
 
   const pool = adminPool();
   let tenants: { id: string; code: string; keycloak_issuer_url: string }[];
@@ -95,7 +99,25 @@ export async function POST(req: NextRequest) {
         configRows[0].sync_client_secret,
       );
 
-      const syncResult = await reconcileUsers(appPool(), pool, tenant.id, source, mode);
+      let orgResult = null;
+      if (mode === 'full-with-orgs') {
+        const { rows: orgConfig } = await pool.query<{
+          org_source_type: string;
+          org_group_prefix: string | null;
+        }>(
+          `SELECT org_source_type, org_group_prefix FROM tenant_sync_config WHERE tenant_id = $1`,
+          [tenant.id],
+        );
+
+        if (orgConfig[0]?.org_source_type === 'keycloak' && orgConfig[0].org_group_prefix) {
+          const { reconcileOrgs } = await import('@/sync/org-reconciler');
+          source.setOrgGroupPrefix(orgConfig[0].org_group_prefix);
+          orgResult = await reconcileOrgs(pool, tenant.id, source);
+        }
+      }
+
+      const userMode = mode === 'full-with-orgs' ? 'full' : mode;
+      const syncResult = await reconcileUsers(appPool(), pool, tenant.id, source, userMode as 'full' | 'delta');
 
       await pool.query(
         `UPDATE sync_log SET status = 'success', finished_at = now(),
@@ -104,7 +126,7 @@ export async function POST(req: NextRequest) {
         [logId, syncResult.created, syncResult.updated, syncResult.deactivated, syncResult.reactivated],
       );
 
-      const tsField = mode === 'full' ? 'last_full_synced_at' : 'last_delta_synced_at';
+      const tsField = mode === 'full-with-orgs' ? 'last_full_synced_at' : (mode === 'full' ? 'last_full_synced_at' : 'last_delta_synced_at');
       await pool.query(
         `UPDATE tenant_sync_config SET ${tsField} = now(), last_error = NULL, updated_at = now()
          WHERE tenant_id = $1`,
@@ -115,6 +137,7 @@ export async function POST(req: NextRequest) {
         tenantCode: tenant.code,
         syncType: mode,
         ...syncResult,
+        ...(orgResult ? { orgs: orgResult } : {}),
         durationMs: Date.now() - startTime,
       });
     } catch (err) {

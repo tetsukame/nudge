@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   const pool = adminPool();
 
   let query = `
-    SELECT t.code AS tenant_code, sc.enabled, sc.source_type,
+    SELECT t.code AS tenant_code, sc.enabled, sc.user_source_type,
            sc.last_full_synced_at, sc.last_delta_synced_at, sc.last_error
     FROM tenant t
     JOIN tenant_sync_config sc ON t.id = sc.tenant_id
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     results.push({
       tenantCode: t.tenant_code,
       enabled: t.enabled,
-      sourceType: t.source_type,
+      sourceType: t.user_source_type,
       lastFullSync: t.last_full_synced_at,
       lastDeltaSync: t.last_delta_synced_at,
       lastError: t.last_error,

@@ -1,4 +1,11 @@
+import { timingSafeEqual } from 'node:crypto';
+
 export type AuthResult = { ok: true } | { ok: false; reason: string };
+
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 export function verifySyncAuth(
   authHeader: string | null,
@@ -7,7 +14,7 @@ export function verifySyncAuth(
 ): AuthResult {
   if (authHeader) {
     const token = authHeader.replace(/^Bearer\s+/i, '');
-    if (configuredApiKey && token === configuredApiKey) {
+    if (configuredApiKey && safeEqual(token, configuredApiKey)) {
       return { ok: true };
     }
     return { ok: false, reason: 'Invalid API key' };

@@ -7,6 +7,7 @@ export class KeycloakSyncSource implements SyncSource {
   private clientId: string;
   private clientSecret: string;
   private cachedToken: string | null = null;
+  private tokenExpiresAt = 0;
 
   constructor(issuerUrl: string, clientId: string, clientSecret: string) {
     this.issuerUrl = issuerUrl;
@@ -22,7 +23,10 @@ export class KeycloakSyncSource implements SyncSource {
   }
 
   private async getToken(): Promise<string> {
-    if (this.cachedToken) return this.cachedToken;
+    const now = Date.now();
+    if (this.cachedToken && this.tokenExpiresAt > now + 30_000) {
+      return this.cachedToken;
+    }
     const tokenUrl = `${this.issuerUrl}/protocol/openid-connect/token`;
     const res = await fetch(tokenUrl, {
       method: 'POST',
@@ -36,9 +40,10 @@ export class KeycloakSyncSource implements SyncSource {
     if (!res.ok) {
       throw new Error(`Failed to obtain KC admin token: ${res.status} ${await res.text()}`);
     }
-    const { access_token } = (await res.json()) as { access_token: string };
-    this.cachedToken = access_token;
-    return access_token;
+    const body = (await res.json()) as { access_token: string; expires_in?: number };
+    this.cachedToken = body.access_token;
+    this.tokenExpiresAt = now + ((body.expires_in ?? 300) - 30) * 1000;
+    return this.cachedToken;
   }
 
   private async authedFetch(url: string): Promise<Response> {

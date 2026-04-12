@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(git -C c:/work/nudge log --oneline -20)",
-      "Bash(C:/Users/tetsu/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/start-server.sh --project-dir c:/work/nudge)",
-      "mcp__claude_ai_Notion__notion-fetch"
-    ]
-  }
-}

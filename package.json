@@ -4,18 +4,32 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "migrate": "tsx src/migrate.ts",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "vitest run tests/unit tests/schema tests/rls",
+    "test:integration": "vitest run tests/integration",
+    "test:all": "vitest run",
+    "test:watch": "vitest tests/unit",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "pg": "^8.13.0"
+    "pg": "^8.13.0",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "openid-client": "^5.7.0",
+    "iron-session": "^8.0.0",
+    "zod": "^3.23.0",
+    "jose": "^5.9.0"
   },
   "devDependencies": {
     "@testcontainers/postgresql": "^10.13.0",
     "@types/node": "^20.14.0",
     "@types/pg": "^8.11.10",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "testcontainers": "^10.13.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",

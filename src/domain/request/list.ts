@@ -42,8 +42,10 @@ export async function listRequests(
   actor: ActorContext,
   input: ListRequestsInput,
 ): Promise<ListRequestsResult> {
-  const page = Math.max(1, input.page ?? 1);
-  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, input.pageSize ?? DEFAULT_PAGE_SIZE));
+  const safePage = Number.isFinite(input.page) ? (input.page as number) : 1;
+  const safePageSize = Number.isFinite(input.pageSize) ? (input.pageSize as number) : DEFAULT_PAGE_SIZE;
+  const page = Math.max(1, safePage);
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, safePageSize));
   const offset = (page - 1) * pageSize;
 
   if (input.scope === 'all' && !(actor.isTenantWideRequester || actor.isTenantAdmin)) {

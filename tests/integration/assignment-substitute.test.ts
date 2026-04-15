@@ -85,4 +85,38 @@ describe('substitute via REST', () => {
     );
     expect(res.status).toBe(403);
   });
+
+  it('manager (not requester) can substitute assignee in managed subtree', async () => {
+    const s = await createDomainScenario(getPool());
+    // admin creates a request to memberA; manager is org_unit_manager of orgDiv
+    // which contains orgTeam as descendant (memberA is in orgTeam).
+    const requestId = await seedOne(s.tenantCode, s.users.admin, s.users.memberA, s.tenantId);
+    const { rows } = await getPool().query(
+      `SELECT id FROM assignment WHERE request_id=$1`,
+      [requestId],
+    );
+    const assignmentId = rows[0].id;
+
+    const managerCookie = await makeSessionCookie({
+      userId: s.users.manager, tenantId: s.tenantId, tenantCode: s.tenantCode,
+    });
+    const res = await PATCH(
+      new NextRequest(
+        `http://localhost/t/${s.tenantCode}/api/assignments/${assignmentId}`,
+        {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json', cookie: managerCookie },
+          body: JSON.stringify({ action: 'substitute', reason: 'manager override' }),
+        },
+      ),
+      { params: Promise.resolve({ code: s.tenantCode, id: assignmentId }) },
+    );
+    expect(res.status).toBe(200);
+
+    const { rows: r } = await getPool().query(
+      `SELECT status FROM assignment WHERE id=$1`,
+      [assignmentId],
+    );
+    expect(r[0].status).toBe('substituted');
+  });
 });

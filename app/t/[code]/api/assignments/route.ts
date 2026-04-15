@@ -5,6 +5,12 @@ import { withTenant } from '@/db/with-tenant';
 
 export const runtime = 'nodejs';
 
+function parsePositiveInt(raw: string | null, fallback: number): number {
+  if (raw == null) return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ code: string }> },
@@ -14,8 +20,8 @@ export async function GET(
   if (isGuardFailure(guard)) return guard;
 
   const statusFilter = req.nextUrl.searchParams.get('status') ?? 'pending';
-  const page = Math.max(1, Number(req.nextUrl.searchParams.get('page') ?? '1'));
-  const pageSize = Math.min(100, Math.max(1, Number(req.nextUrl.searchParams.get('pageSize') ?? '50')));
+  const page = parsePositiveInt(req.nextUrl.searchParams.get('page'), 1);
+  const pageSize = Math.min(100, parsePositiveInt(req.nextUrl.searchParams.get('pageSize'), 50));
 
   const statusSql =
     statusFilter === 'done'

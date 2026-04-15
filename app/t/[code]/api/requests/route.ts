@@ -7,6 +7,12 @@ import type { TargetSpec } from '@/domain/request/expand-targets';
 
 export const runtime = 'nodejs';
 
+function parsePositiveInt(raw: string | null, fallback: number): number {
+  if (raw == null) return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ code: string }> },
@@ -58,8 +64,8 @@ export async function GET(
 
   const url = req.nextUrl;
   const scope = (url.searchParams.get('scope') ?? 'mine') as ListScope;
-  const page = Number(url.searchParams.get('page') ?? '1');
-  const pageSize = Number(url.searchParams.get('pageSize') ?? '50');
+  const page = parsePositiveInt(url.searchParams.get('page'), 1);
+  const pageSize = parsePositiveInt(url.searchParams.get('pageSize'), 50);
   if (!['mine', 'subordinate', 'all'].includes(scope)) {
     return NextResponse.json({ error: 'invalid scope' }, { status: 400 });
   }

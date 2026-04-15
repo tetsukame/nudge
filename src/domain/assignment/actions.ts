@@ -218,8 +218,10 @@ export async function substituteAssignment(
     if (!allowed) {
       throw new AssignmentActionError('not permitted to substitute', 'permission_denied');
     }
-    const actorRole = actor.userId === asg.created_by_user_id ? 'requester' : 'manager';
-    if (!canTransition({ from: asg.status, to: 'substituted', actorRole })) {
+    const canAsRequester = actor.userId === asg.created_by_user_id
+      && canTransition({ from: asg.status, to: 'substituted', actorRole: 'requester' });
+    const canAsManager = canTransition({ from: asg.status, to: 'substituted', actorRole: 'manager' });
+    if (!canAsRequester && !canAsManager) {
       throw new AssignmentActionError('cannot substitute', 'invalid_transition');
     }
     await client.query(

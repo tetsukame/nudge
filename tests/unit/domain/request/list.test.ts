@@ -75,4 +75,16 @@ describe('listRequests', () => {
     const result = await listRequests(getAppPool(), wideCtx, { scope: 'all' });
     expect(result.items.length).toBeGreaterThanOrEqual(1);
   });
+
+  it('rejects NaN from bad page/pageSize by falling back to defaults', async () => {
+    const s = await createDomainScenario(getPool());
+    const adminCtx = ctx(s.tenantId, s.users.admin, { isTenantAdmin: true });
+    // Simulate what the route handler used to pass: NaN
+    const result = await listRequests(getAppPool(), adminCtx, {
+      scope: 'mine', page: NaN, pageSize: NaN,
+    });
+    // listRequests internals: Math.max(1, NaN) === NaN — so the domain layer must also guard.
+    expect(result.page).toBeGreaterThanOrEqual(1);
+    expect(result.pageSize).toBeGreaterThanOrEqual(1);
+  });
 });

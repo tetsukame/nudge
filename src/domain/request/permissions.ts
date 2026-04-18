@@ -1,5 +1,5 @@
 import type pg from 'pg';
-import type { ActorContext } from '../types.js';
+import type { ActorContext } from '../types';
 
 export function canTargetOutsideScope(actor: ActorContext): boolean {
   return actor.isTenantWideRequester || actor.isTenantAdmin;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { LogoutConfirmModal } from './LogoutConfirmModal.js';
+import { LogoutConfirmModal } from './LogoutConfirmModal';
 
 type Props = {
   tenantCode: string;

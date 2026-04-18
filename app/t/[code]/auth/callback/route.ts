@@ -56,11 +56,18 @@ export async function GET(
     (claims.preferred_username as string) ??
     email;
 
-  const userId = await jitUpsertUser(appPool(), tenant.id, {
-    sub,
-    email,
-    displayName,
-  });
+  let userId: string;
+  try {
+    userId = await jitUpsertUser(appPool(), tenant.id, {
+      sub,
+      email,
+      displayName,
+    });
+    console.log('[callback] jitUpsertUser OK, userId:', userId);
+  } catch (err) {
+    console.error('[callback] jitUpsertUser FAILED:', err);
+    return new NextResponse('User provisioning failed', { status: 500 });
+  }
 
   const session: NudgeSession = {
     userId,
@@ -69,26 +76,31 @@ export async function GET(
     sub,
     email,
     displayName,
-    refreshToken: tokenSet.refresh_token ?? '',
+    refreshToken: '', // Excluded from cookie to stay under 4096 byte browser limit
     accessTokenExp: tokenSet.expires_at ?? 0,
   };
 
   const sessionSealed = await sealSession(session, cfg.IRON_SESSION_PASSWORD);
+  console.log('[callback] session sealed, length:', sessionSealed.length);
 
-  const response = NextResponse.redirect(
-    new URL(state.returnTo, req.url),
+  const returnUrl = new URL(state.returnTo, req.url);
+  console.log('[callback] redirecting to:', returnUrl.toString());
+
+  const maxAge = 14 * 24 * 60 * 60;
+  const expires = new Date(Date.now() + maxAge * 1000).toUTCString();
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+
+  const headers = new Headers();
+  headers.set('Location', returnUrl.toString());
+  headers.append(
+    'Set-Cookie',
+    `nudge_session=${sessionSealed}; Path=/; Max-Age=${maxAge}; Expires=${expires}; HttpOnly; SameSite=Lax${secure}`,
   );
-  response.cookies.set('nudge_session', sessionSealed, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: `/t/${code}/`,
-    maxAge: 14 * 24 * 60 * 60,
-  });
-  // Clear the transient state cookie
-  response.cookies.set(OIDC_STATE_COOKIE_NAME, '', {
-    path: `/t/${code}/`,
-    maxAge: 0,
-  });
-  return response;
+  headers.append(
+    'Set-Cookie',
+    `${OIDC_STATE_COOKIE_NAME}=; Path=/t/${code}/; Max-Age=0`,
+  );
+  console.log('[callback] Set-Cookie count:', headers.getSetCookie().length);
+  console.log('[callback] Cookie value length:', sessionSealed.length);
+  return new Response(null, { status: 302, headers });
 }

@@ -1,13 +1,13 @@
 import type pg from 'pg';
-import { withTenant } from '../../db/with-tenant.js';
-import type { ActorContext, ExpandBreakdown } from '../types.js';
-import { expandTargets, type TargetSpec } from './expand-targets.js';
+import { withTenant } from '../../db/with-tenant';
+import type { ActorContext, ExpandBreakdown } from '../types';
+import { expandTargets, type TargetSpec } from './expand-targets';
 import {
   canTargetOutsideScope,
   getVisibleOrgUnitIds,
   getVisibleGroupIds,
-} from './permissions.js';
-import { emitNotification } from '../notification/emit.js';
+} from './permissions';
+import { emitNotification } from '../notification/emit';
 
 export type CreateRequestInput = {
   title: string;

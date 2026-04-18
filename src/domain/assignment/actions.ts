@@ -1,9 +1,9 @@
 import type pg from 'pg';
-import { withTenant } from '../../db/with-tenant.js';
-import type { ActorContext, AssignmentStatus } from '../types.js';
-import { canTransition } from './transitions.js';
-import { canSubstitute } from './permissions.js';
-import { emitNotification } from '../notification/emit.js';
+import { withTenant } from '../../db/with-tenant';
+import type { ActorContext, AssignmentStatus } from '../types';
+import { canTransition } from './transitions';
+import { canSubstitute } from './permissions';
+import { emitNotification } from '../notification/emit';
 
 export class AssignmentActionError extends Error {
   constructor(
@@ -161,28 +161,50 @@ export async function forwardAssignment(
     if (!canTransition({ from: asg.status, to: 'forwarded', actorRole: 'assignee' })) {
       throw new AssignmentActionError('cannot forward', 'invalid_transition');
     }
-    const { rows: dup } = await client.query(
-      `SELECT 1 FROM assignment WHERE request_id=$1 AND user_id=$2`,
+    // Check if target already has an assignment for this request
+    const { rows: dup } = await client.query<{ id: string }>(
+      `SELECT id FROM assignment WHERE request_id=$1 AND user_id=$2`,
       [asg.request_id, input.toUserId],
     );
-    if (dup.length > 0) {
-      throw new AssignmentActionError(
-        `target user already has assignment for this request`,
-        'conflict',
-      );
-    }
+
     await client.query(
       `UPDATE assignment SET status='forwarded', action_at=now() WHERE id=$1`,
       [assignmentId],
     );
-    const { rows: newRows } = await client.query<{ id: string }>(
-      `INSERT INTO assignment
-         (tenant_id, request_id, user_id, forwarded_from_assignment_id)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id`,
-      [actor.tenantId, asg.request_id, input.toUserId, asg.id],
+
+    // Get forwarding user's name for the chat message
+    const { rows: actorRows } = await client.query<{ display_name: string }>(
+      `SELECT display_name FROM users WHERE id=$1`,
+      [actor.userId],
     );
-    const newAssignmentId = newRows[0].id;
+    const actorName = actorRows[0]?.display_name ?? actor.userId;
+
+    let newAssignmentId: string;
+
+    if (dup.length > 0) {
+      // Target already has assignment — don't create a new one.
+      // Record a system comment on their existing assignment thread.
+      newAssignmentId = dup[0].id;
+      const msg = `${actorName} さんからこの依頼が転送されました。`
+        + (input.reason ? `\n理由: ${input.reason}` : '');
+      await client.query(
+        `INSERT INTO request_comment
+           (tenant_id, request_id, assignment_id, author_user_id, body)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [actor.tenantId, asg.request_id, newAssignmentId, actor.userId, msg],
+      );
+    } else {
+      // Create new assignment for target
+      const { rows: newRows } = await client.query<{ id: string }>(
+        `INSERT INTO assignment
+           (tenant_id, request_id, user_id, forwarded_from_assignment_id)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id`,
+        [actor.tenantId, asg.request_id, input.toUserId, asg.id],
+      );
+      newAssignmentId = newRows[0].id;
+    }
+
     await recordHistory(
       client, actor.tenantId, asg, 'forwarded', 'user_forward',
       actor.userId, input.reason ?? null, input.toUserId,

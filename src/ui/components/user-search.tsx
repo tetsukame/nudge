@@ -21,14 +21,42 @@ export function UserSearch({ tenantCode, onSelect, selectedId, placeholder }: Pr
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoaded, setInitialLoaded] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Load org members on mount (empty query = all visible users)
   useEffect(() => {
+    setLoading(true);
+    fetch(`/t/${tenantCode}/api/users/search?q=`)
+      .then((res) => res.ok ? res.json() : Promise.reject())
+      .then((data) => {
+        const items = Array.isArray(data) ? data : data.items ?? [];
+        setResults(items);
+        setInitialLoaded(true);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [tenantCode]);
+
+  // Filter/search on query change
+  useEffect(() => {
+    if (!initialLoaded) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
+
     if (!query.trim()) {
-      setResults([]);
+      // Reset to full list
+      setLoading(true);
+      fetch(`/t/${tenantCode}/api/users/search?q=`)
+        .then((res) => res.ok ? res.json() : Promise.reject())
+        .then((data) => {
+          const items = Array.isArray(data) ? data : data.items ?? [];
+          setResults(items);
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
       return;
     }
+
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
@@ -36,8 +64,9 @@ export function UserSearch({ tenantCode, onSelect, selectedId, placeholder }: Pr
           `/t/${tenantCode}/api/users/search?q=${encodeURIComponent(query)}`,
         );
         if (res.ok) {
-          const data = await res.json() as UserResult[];
-          setResults(data);
+          const data = await res.json();
+          const items = Array.isArray(data) ? data : data.items ?? [];
+          setResults(items);
         }
       } finally {
         setLoading(false);
@@ -46,7 +75,7 @@ export function UserSearch({ tenantCode, onSelect, selectedId, placeholder }: Pr
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, tenantCode]);
+  }, [query, tenantCode, initialLoaded]);
 
   return (
     <div className="space-y-2">
@@ -54,12 +83,12 @@ export function UserSearch({ tenantCode, onSelect, selectedId, placeholder }: Pr
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder={placeholder ?? 'ユーザーを検索（名前・メール）'}
+        placeholder={placeholder ?? '名前・メールで絞り込み'}
         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
 
       {loading && (
-        <p className="text-xs text-gray-500 px-1">検索中...</p>
+        <p className="text-xs text-gray-500 px-1">読み込み中...</p>
       )}
 
       {!loading && results.length > 0 && (
@@ -85,7 +114,7 @@ export function UserSearch({ tenantCode, onSelect, selectedId, placeholder }: Pr
         </ul>
       )}
 
-      {!loading && query.trim() && results.length === 0 && (
+      {!loading && initialLoaded && results.length === 0 && (
         <p className="text-xs text-gray-500 px-1">該当するユーザーが見つかりません。</p>
       )}
     </div>

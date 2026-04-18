@@ -1,4 +1,4 @@
-import type { NudgeSession } from './session.js';
+import type { NudgeSession } from './session';
 
 export type TenantRef = { id: string; code: string };
 

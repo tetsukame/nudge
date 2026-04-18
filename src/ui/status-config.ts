@@ -1,4 +1,4 @@
-import type { AssignmentStatus } from '../domain/types.js';
+import type { AssignmentStatus } from '../domain/types';
 
 export type StatusDisplay = {
   label: string;

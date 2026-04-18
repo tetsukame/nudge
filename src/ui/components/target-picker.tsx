@@ -16,21 +16,28 @@ type TabKey = 'org' | 'user' | 'group' | 'all';
 
 export function TargetPicker({ tenantCode, targets, onChange, showAllTab = false }: Props) {
   const [tab, setTab] = useState<TabKey>('org');
-  // Keep user metadata for display purposes (id -> UserResult)
+  // Keep metadata for display purposes (id -> name)
   const [userMeta, setUserMeta] = useState<Map<string, UserResult>>(new Map());
+  const [orgMeta, setOrgMeta] = useState<Map<string, string>>(new Map());
 
   // Derive selected orgs from targets
   const selectedOrgs: SelectedOrg[] = targets
     .filter((t): t is Extract<TargetSpec, { type: 'org_unit' }> => t.type === 'org_unit')
     .map((t) => ({
       id: t.orgUnitId,
-      name: t.orgUnitId,
+      name: orgMeta.get(t.orgUnitId) ?? t.orgUnitId,
       includeDescendants: t.includeDescendants,
     }));
 
   const allEnabled = targets.some((t) => t.type === 'all');
 
   function handleOrgChange(orgs: SelectedOrg[]) {
+    // Save org names for display
+    for (const o of orgs) {
+      if (o.name && o.name !== o.id) {
+        setOrgMeta((prev) => new Map(prev).set(o.id, o.name));
+      }
+    }
     const nonOrg = targets.filter((t) => t.type !== 'org_unit');
     const orgSpecs: TargetSpec[] = orgs.map((o) => ({
       type: 'org_unit',

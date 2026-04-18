@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { withTenant } from '../db/with-tenant.js';
+import { withTenant } from '../db/with-tenant';
 
 export type JitUserInfo = {
   sub: string;

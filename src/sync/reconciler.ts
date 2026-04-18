@@ -1,6 +1,6 @@
 import pg from 'pg';
-import { withTenant } from '../db/with-tenant.js';
-import type { SyncSource, SyncResult } from './types.js';
+import { withTenant } from '../db/with-tenant';
+import type { SyncSource, SyncResult } from './types';
 
 export async function reconcileUsers(
   appPool: pg.Pool,

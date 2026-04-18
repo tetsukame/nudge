@@ -1,5 +1,5 @@
 import { Issuer, Client } from 'openid-client';
-import type { Tenant } from '../tenant/resolver.js';
+import type { Tenant } from '../tenant/resolver';
 
 export type OidcClientOptions = {
   clientId: string;

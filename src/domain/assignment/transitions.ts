@@ -1,4 +1,4 @@
-import type { AssignmentStatus, ActorRole } from '../types.js';
+import type { AssignmentStatus, ActorRole } from '../types';
 
 export type ActionName =
   | 'open'

@@ -1,4 +1,4 @@
-import type { SyncSource, SyncUserRecord, OrgSyncSource, SyncOrgRecord, OrgMembership } from './types.js';
+import type { SyncSource, SyncUserRecord, OrgSyncSource, SyncOrgRecord, OrgMembership } from './types';
 
 const PAGE_SIZE = 500;
 

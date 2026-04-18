@@ -1,6 +1,6 @@
 import type pg from 'pg';
-import { withTenant } from '../../db/with-tenant.js';
-import type { ActorContext } from '../types.js';
+import { withTenant } from '../../db/with-tenant';
+import type { ActorContext } from '../types';
 
 /**
  * Update last_viewed_at to now() for the given assignment, only if the actor

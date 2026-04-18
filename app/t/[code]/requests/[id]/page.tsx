@@ -56,9 +56,12 @@ export default async function RequestDetailPage({
     const { rows: asgRows } = await client.query(
       `SELECT a.id, a.status,
               (r.due_at IS NOT NULL AND r.due_at < now()
-               AND a.status IN ('unopened','opened')) AS is_overdue
+               AND a.status IN ('unopened','opened')) AS is_overdue,
+              fwd_u.display_name AS forwarded_to_name
          FROM assignment a
          JOIN request r ON r.id = a.request_id
+         LEFT JOIN assignment fwd_a ON fwd_a.forwarded_from_assignment_id = a.id
+         LEFT JOIN users fwd_u ON fwd_u.id = fwd_a.user_id
         WHERE a.request_id = $1 AND a.user_id = $2
         LIMIT 1`,
       [id, session.userId],
@@ -80,7 +83,9 @@ export default async function RequestDetailPage({
   }
 
   const { req, myAssignment } = data;
-  const isRequester = req.created_by_user_id === session.userId;
+  // When user is both requester AND assignee, prioritize assignee experience.
+  // Requester management UI is shown only when viewing without an assignment (v0.7 sent-list).
+  const isRequester = req.created_by_user_id === session.userId && !myAssignment;
   const overdue = isOverdue(req.due_at, myAssignment?.status ?? req.status);
 
   // Auto-open and mark-viewed: fire-and-forget
@@ -150,9 +155,14 @@ export default async function RequestDetailPage({
         </div>
 
         {myAssignment && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-gray-600">ステータス:</span>
             <StatusBadge status={myAssignment.status} overdue={myAssignment.is_overdue} />
+            {myAssignment.status === 'forwarded' && myAssignment.forwarded_to_name && (
+              <span className="text-sm text-purple-600">
+                → {myAssignment.forwarded_to_name} に転送済み
+              </span>
+            )}
           </div>
         )}
 

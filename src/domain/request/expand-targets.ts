@@ -1,5 +1,5 @@
 import type pg from 'pg';
-import type { ExpandBreakdown } from '../types.js';
+import type { ExpandBreakdown } from '../types';
 
 export type TargetSpec =
   | { type: 'user'; userId: string }

@@ -1,5 +1,5 @@
 import pg from 'pg';
-import type { OrgSyncSource, OrgSyncResult } from './types.js';
+import type { OrgSyncSource, OrgSyncResult } from './types';
 
 export async function reconcileOrgs(
   adminPool: pg.Pool,

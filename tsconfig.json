@@ -10,12 +10,40 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "preserve",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node", "vitest/globals"],
-    "plugins": [{ "name": "next" }],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "node",
+      "vitest/globals"
+    ],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "allowJs": true,
+    "incremental": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "app/**/*.ts", "app/**/*.tsx", "tests/**/*.ts", "middleware.ts", "vitest.config.ts", "next.config.mjs", ".next/types/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "tests/**/*.ts",
+    "middleware.ts",
+    "vitest.config.ts",
+    "next.config.mjs",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

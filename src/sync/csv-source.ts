@@ -1,8 +1,8 @@
 import type {
   SyncSource, SyncUserRecord,
   OrgSyncSource, SyncOrgRecord, OrgMembership,
-} from './types.js';
-import { parseSyncCsv, type CsvRow } from './csv-parser.js';
+} from './types';
+import { parseSyncCsv, type CsvRow } from './csv-parser';
 
 export class CsvSyncSource implements SyncSource, OrgSyncSource {
   private rows: CsvRow[];

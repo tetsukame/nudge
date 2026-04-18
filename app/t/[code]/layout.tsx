@@ -1,7 +1,9 @@
 import { cookies } from 'next/headers';
+import Link from 'next/link';
 import { unsealSession } from '@/auth/session';
 import { loadConfig } from '@/config';
-import { UserMenu } from '@/components/UserMenu';
+import { Sidebar } from '@/ui/components/sidebar';
+import { BottomTabs } from '@/ui/components/bottom-tabs';
 
 export default async function TenantLayout({
   children,
@@ -15,23 +17,29 @@ export default async function TenantLayout({
   const sealed = (await cookies()).get('nudge_session')?.value;
   const session = await unsealSession(sealed, cfg.IRON_SESSION_PASSWORD);
 
+  if (!session) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center space-y-4">
+          <p className="text-gray-600">セッションが無効です。</p>
+          <Link
+            href={`/t/${code}/login`}
+            className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            ログイン
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif' }}>
-      <header
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '12px 24px',
-          borderBottom: '1px solid #eee',
-        }}
-      >
-        <div style={{ fontWeight: 'bold' }}>Nudge — {code}</div>
-        {session && (
-          <UserMenu tenantCode={code} displayName={session.displayName} />
-        )}
-      </header>
-      <main style={{ padding: 24 }}>{children}</main>
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar tenantCode={code} displayName={session.displayName} />
+      <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
+        {children}
+      </main>
+      <BottomTabs tenantCode={code} />
     </div>
   );
 }

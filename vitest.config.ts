@@ -1,6 +1,12 @@
 import { defineConfig } from 'vitest/config';
+import { resolve } from 'node:path';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+    },
+  },
   test: {
     globals: true,
     testTimeout: 120_000,       // testcontainers 起動待ちを吸収
@@ -8,5 +14,6 @@ export default defineConfig({
     fileParallelism: false,     // 同一 PG コンテナを共有したいので直列実行
     pool: 'forks',
     poolOptions: { forks: { singleFork: true } },
+    setupFiles: ['tests/helpers/setup-env.ts'],
   },
 });

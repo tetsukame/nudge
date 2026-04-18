@@ -39,3 +39,13 @@ export async function closePools(): Promise<void> {
 export function createPool(connectionString: string): pg.Pool {
   return new pg.Pool({ connectionString, max: 10 });
 }
+
+/**
+ * Reset cached pool singletons. Intended for tests that spin up a fresh
+ * database container and need the production singletons to re-initialize
+ * against the new connection strings.
+ */
+export function resetPools(): void {
+  _adminPool = undefined;
+  _appPool = undefined;
+}

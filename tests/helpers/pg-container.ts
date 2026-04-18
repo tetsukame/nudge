@@ -1,6 +1,8 @@
 import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import pg from 'pg';
 import { runMigrations } from '../../src/migrate.js';
+import { resetPools, closePools } from '../../src/db/pools.js';
+import { resetConfigCache } from '../../src/config.js';
 
 const NUDGE_APP_PASSWORD = 'test_nudge_app_password';
 
@@ -25,10 +27,22 @@ export async function startTestDb(): Promise<pg.Pool> {
   const appUri = `postgresql://nudge_app:${NUDGE_APP_PASSWORD}@${host}:${port}/${db}`;
   appPool = new pg.Pool({ connectionString: appUri });
 
+  // Point the production pool singletons at the test container so that
+  // route handlers (which call adminPool() / appPool() internally) use the
+  // same DB that the test fixtures write into.
+  process.env.DATABASE_URL_ADMIN = adminUri;
+  process.env.DATABASE_URL_APP = appUri;
+  resetPools();      // clear cached singletons so they re-init from the new env
+  resetConfigCache(); // clear loadConfig() cache so it re-reads the new values
+
   return adminPool;
 }
 
 export async function stopTestDb(): Promise<void> {
+  // Close the production pool singletons (used by route handlers) BEFORE the
+  // container shuts down, so pg doesn't receive "terminating connection" errors.
+  await closePools();
+
   if (appPool) {
     await appPool.end();
     appPool = undefined;
@@ -41,6 +55,9 @@ export async function stopTestDb(): Promise<void> {
     await container.stop();
     container = undefined;
   }
+  // Reset production singletons so the next startTestDb() call re-initialises them.
+  resetPools();
+  resetConfigCache();
 }
 
 export function getPool(): pg.Pool {

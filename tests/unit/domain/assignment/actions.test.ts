@@ -101,20 +101,28 @@ describe('assignment actions', () => {
     expect(rows[1].forwarded_from_assignment_id).toBe(assignmentId);
   });
 
-  it('forwardAssignment rejects if target already has assignment for this request', async () => {
+  it('forwardAssignment records system comment if target already has assignment for this request', async () => {
     const s = await createDomainScenario(getPool());
     const { requestId, assignmentId } = await seedAssignment(s, s.users.memberA);
-    await getPool().query(
+    const { rows: existing } = await getPool().query<{ id: string }>(
       `INSERT INTO assignment(tenant_id, request_id, user_id)
-       VALUES ($1,$2,$3)`,
+       VALUES ($1,$2,$3) RETURNING id`,
       [s.tenantId, requestId, s.users.memberB],
     );
-    await expect(
-      forwardAssignment(
-        getAppPool(), ctx(s, s.users.memberA), assignmentId,
-        { toUserId: s.users.memberB, reason: 'x' },
-      ),
-    ).rejects.toThrow(/already has assignment/);
+    const existingId = existing[0].id;
+    const result = await forwardAssignment(
+      getAppPool(), ctx(s, s.users.memberA), assignmentId,
+      { toUserId: s.users.memberB, reason: 'x' },
+    );
+    // Should return the existing assignment id
+    expect(result.newAssignmentId).toBe(existingId);
+    // Should have recorded a comment on the existing assignment thread
+    const { rows: comments } = await getPool().query(
+      `SELECT body FROM request_comment WHERE assignment_id=$1`,
+      [existingId],
+    );
+    expect(comments.length).toBeGreaterThanOrEqual(1);
+    expect(comments[0].body).toMatch(/転送/);
   });
 
   it('substituteAssignment by requester succeeds', async () => {
@@ -167,5 +175,24 @@ describe('assignment actions', () => {
     await expect(
       respondAssignment(getAppPool(), ctx(s, s.users.memberA), assignmentId, {}),
     ).rejects.toBeInstanceOf(AssignmentActionError);
+  });
+
+  it('substituteAssignment records system message in assignee chat', async () => {
+    const s = await createDomainScenario(getPool());
+    const { assignmentId, requestId } = await seedAssignment(s, s.users.memberA);
+    await substituteAssignment(
+      getAppPool(), ctx(s, s.users.admin),
+      assignmentId, { reason: 'taking over' },
+    );
+    const { rows } = await getPool().query(
+      `SELECT body, author_user_id FROM request_comment
+        WHERE assignment_id=$1 ORDER BY created_at`,
+      [assignmentId],
+    );
+    expect(rows.length).toBeGreaterThanOrEqual(1);
+    const systemMsg = rows.find((r) => r.author_user_id === s.users.admin);
+    expect(systemMsg).toBeDefined();
+    expect(systemMsg!.body).toMatch(/代理完了/);
+    expect(systemMsg!.body).toMatch(/taking over/);
   });
 });

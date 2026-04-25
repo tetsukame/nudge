@@ -7,9 +7,12 @@ import { appPool } from '@/db/pools';
 import { withTenant } from '@/db/with-tenant';
 import { openAssignment } from '@/domain/assignment/actions';
 import { markViewed } from '@/domain/assignment/view';
+import { listAssignees } from '@/domain/request/assignees';
+import { markViewedByRequester } from '@/domain/request/mark-viewed-requester';
 import { StatusBadge } from '@/ui/components/status-badge';
 import { ActionButtons } from '@/ui/components/action-buttons';
 import { CommentSection } from '@/ui/components/comment-thread';
+import { RequesterSection } from '@/ui/components/requester-section';
 
 export const runtime = 'nodejs';
 
@@ -83,29 +86,52 @@ export default async function RequestDetailPage({
   }
 
   const { req, myAssignment } = data;
-  // When user is both requester AND assignee, prioritize assignee experience.
-  // Requester management UI is shown only when viewing without an assignment (v0.7 sent-list).
+  // When user is both requester AND assignee, suppress the broadcast composer
+  // (so the comment thread shows the chat UX, not the requester broadcast UX).
+  // The requester management section below is still rendered — see canViewRequesterSection.
   const isRequester = req.created_by_user_id === session.userId && !myAssignment;
   const overdue = isOverdue(req.due_at, myAssignment?.status ?? req.status);
 
+  const actor = {
+    userId: session.userId,
+    tenantId: session.tenantId,
+    isTenantAdmin: false,
+    isTenantWideRequester: false,
+  };
+
   // Auto-open and mark-viewed: fire-and-forget
   if (myAssignment?.status === 'unopened') {
-    const actor = {
-      userId: session.userId,
-      tenantId: session.tenantId,
-      isTenantAdmin: false,
-      isTenantWideRequester: false,
-    };
     void openAssignment(pool, actor, myAssignment.id).catch(() => {});
   }
   if (myAssignment?.id) {
-    const actor = {
-      userId: session.userId,
-      tenantId: session.tenantId,
-      isTenantAdmin: false,
-      isTenantWideRequester: false,
-    };
     void markViewed(pool, actor, myAssignment.id).catch(() => {});
+  }
+
+  const isRequesterStrict = req.created_by_user_id === session.userId;
+
+  const isManagerOfAny = await withTenant(appPool(), session.tenantId, async (client) => {
+    const { rows } = await client.query(
+      `SELECT EXISTS(
+         SELECT 1 FROM assignment a
+         JOIN user_org_unit uou ON uou.user_id = a.user_id
+         JOIN org_unit_closure c ON c.descendant_id = uou.org_unit_id
+         JOIN org_unit_manager m ON m.org_unit_id = c.ancestor_id
+         WHERE a.request_id = $1 AND m.user_id = $2
+       ) AS ok`,
+      [id, session.userId],
+    );
+    return rows[0].ok;
+  });
+
+  const canViewRequesterSection = isRequesterStrict || isManagerOfAny;
+
+  let requesterSummary: Awaited<ReturnType<typeof listAssignees>> | null = null;
+  if (canViewRequesterSection) {
+    requesterSummary = await listAssignees(appPool(), actor, id, { pageSize: 1 });
+  }
+
+  if (isRequesterStrict) {
+    void markViewedByRequester(appPool(), actor, id).catch(() => {});
   }
 
   const typeLabelMap: Record<string, string> = {
@@ -194,6 +220,27 @@ export default async function RequestDetailPage({
         isRequester={isRequester}
         currentUserId={session.userId}
       />
+
+      {/* Requester / manager section */}
+      {canViewRequesterSection && requesterSummary && (
+        <RequesterSection
+          tenantCode={code}
+          requestId={id}
+          currentUserId={session.userId}
+          canSubstitute={isRequesterStrict || isManagerOfAny}
+          summary={{
+            unopened: requesterSummary.summary.unopened,
+            opened: requesterSummary.summary.opened,
+            responded: requesterSummary.summary.responded,
+            unavailable: requesterSummary.summary.unavailable,
+            forwarded: requesterSummary.summary.forwarded,
+            substituted: requesterSummary.summary.substituted,
+            exempted: requesterSummary.summary.exempted,
+            expired: requesterSummary.summary.expired,
+          }}
+          total={requesterSummary.total}
+        />
+      )}
     </div>
   );
 }

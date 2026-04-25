@@ -255,6 +255,19 @@ export async function substituteAssignment(
       actor.userId, input.reason, null,
     );
     if (actor.userId !== asg.user_id) {
+      // Record system message in the assignee's chat thread
+      const { rows: actorRows } = await client.query<{ display_name: string }>(
+        `SELECT display_name FROM users WHERE id=$1`,
+        [actor.userId],
+      );
+      const actorName = actorRows[0]?.display_name ?? actor.userId;
+      const msg = `${actorName} さんが代理完了にしました。\n理由: ${input.reason}`;
+      await client.query(
+        `INSERT INTO request_comment
+           (tenant_id, request_id, assignment_id, author_user_id, body)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [actor.tenantId, asg.request_id, asg.id, actor.userId, msg],
+      );
       await emitNotification(client, {
         tenantId: actor.tenantId,
         recipientUserId: asg.user_id,

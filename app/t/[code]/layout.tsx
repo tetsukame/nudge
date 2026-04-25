@@ -2,6 +2,8 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { unsealSession } from '@/auth/session';
 import { loadConfig } from '@/config';
+import { appPool } from '@/db/pools';
+import { withTenant } from '@/db/with-tenant';
 import { Sidebar } from '@/ui/components/sidebar';
 import { BottomTabs } from '@/ui/components/bottom-tabs';
 
@@ -33,9 +35,17 @@ export default async function TenantLayout({
     );
   }
 
+  const isManager = await withTenant(appPool(), session.tenantId, async (client) => {
+    const { rows } = await client.query(
+      `SELECT 1 FROM org_unit_manager WHERE user_id = $1 LIMIT 1`,
+      [session.userId],
+    );
+    return rows.length > 0;
+  });
+
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar tenantCode={code} displayName={session.displayName} />
+      <Sidebar tenantCode={code} displayName={session.displayName} isManager={isManager} />
       <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
         {children}
       </main>

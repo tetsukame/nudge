@@ -86,8 +86,9 @@ export default async function RequestDetailPage({
   }
 
   const { req, myAssignment } = data;
-  // When user is both requester AND assignee, prioritize assignee experience.
-  // Requester management UI is shown only when viewing without an assignment (v0.7 sent-list).
+  // When user is both requester AND assignee, suppress the broadcast composer
+  // (so the comment thread shows the chat UX, not the requester broadcast UX).
+  // The requester management section below is still rendered — see canViewRequesterSection.
   const isRequester = req.created_by_user_id === session.userId && !myAssignment;
   const overdue = isOverdue(req.due_at, myAssignment?.status ?? req.status);
 

@@ -7,16 +7,21 @@ import { cn } from '@/lib/utils';
 type Props = {
   tenantCode: string;
   displayName: string;
+  isManager: boolean;
 };
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { href: 'requests', label: '自分宛の依頼', icon: '📥' },
   { href: 'requests/new', label: '新規依頼作成', icon: '➕' },
   { href: 'sent', label: '送信した依頼', icon: '📤' },
 ];
 
-export function Sidebar({ tenantCode, displayName }: Props) {
+export function Sidebar({ tenantCode, displayName, isManager }: Props) {
   const pathname = usePathname();
+
+  const navItems = isManager
+    ? [...BASE_NAV_ITEMS, { href: 'subordinates', label: '部下の依頼', icon: '👥' }]
+    : BASE_NAV_ITEMS;
 
   return (
     <aside className="hidden md:flex md:flex-col md:w-52 bg-slate-900 text-white min-h-screen shrink-0">
@@ -25,9 +30,14 @@ export function Sidebar({ tenantCode, displayName }: Props) {
       </div>
 
       <nav className="flex-1 px-2 py-4 space-y-1">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const href = `/t/${tenantCode}/${item.href}`;
-          const isActive = pathname === href || (item.href !== 'requests/new' && item.href !== 'sent' && pathname.startsWith(`${href}/`));
+          const isActive =
+            pathname === href ||
+            (item.href !== 'requests/new' &&
+              item.href !== 'sent' &&
+              item.href !== 'subordinates' &&
+              pathname.startsWith(`${href}/`));
           return (
             <Link
               key={item.href}

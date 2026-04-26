@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { LogoutLink } from './logout-link';
 
 type Props = {
   tenantCode: string;
@@ -61,12 +62,10 @@ export function Sidebar({ tenantCode, displayName, isManager, isTenantAdmin }: P
 
       <div className="px-4 py-4 border-t border-slate-700 text-sm space-y-2">
         <p className="text-slate-300 truncate">{displayName}</p>
-        <Link
-          href={`/t/${tenantCode}/logout`}
-          className="text-slate-400 hover:text-white transition-colors"
-        >
-          ログアウト
-        </Link>
+        <LogoutLink
+          tenantCode={tenantCode}
+          className="text-slate-400 hover:text-white transition-colors bg-transparent border-none p-0 cursor-pointer text-sm"
+        />
       </div>
     </aside>
   );

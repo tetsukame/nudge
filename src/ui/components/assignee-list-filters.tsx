@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { AssignmentStatus } from '@/domain/types';
 
 type OrgNode = { id: string; name: string; memberCount: number; children: OrgNode[] };
@@ -35,6 +35,7 @@ export function AssigneeListFilters({ tenantCode, onChange }: Props) {
   const [hasUnread, setHasUnread] = useState(false);
   const [orgs, setOrgs] = useState<Array<{ id: string; label: string }>>([]);
   const [groups, setGroups] = useState<GroupItem[]>([]);
+  const mountedRef = useRef(false);
 
   useEffect(() => {
     fetch(`/t/${tenantCode}/api/org-tree`)
@@ -44,6 +45,10 @@ export function AssigneeListFilters({ tenantCode, onChange }: Props) {
   }, [tenantCode]);
 
   useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
     const timer = setTimeout(() => {
       onChange({
         q,

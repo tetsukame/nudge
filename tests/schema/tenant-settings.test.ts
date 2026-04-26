@@ -39,6 +39,8 @@ describe('tenant_settings', () => {
       're_notify_interval_days',
       're_notify_max_count',
       'updated_at',
+      'teams_webhook_url_encrypted',
+      'slack_webhook_url_encrypted',
     ]);
   });
 

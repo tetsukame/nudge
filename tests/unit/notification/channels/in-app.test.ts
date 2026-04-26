@@ -23,6 +23,8 @@ const settings: TenantSettings = {
   smtpPasswordEncrypted: null,
   smtpFrom: null,
   smtpSecure: false,
+  teamsWebhookUrlEncrypted: null,
+  slackWebhookUrlEncrypted: null,
   reminderBeforeDays: 3,
   reNotifyIntervalDays: 7,
   reNotifyMaxCount: 3,

@@ -29,6 +29,8 @@ const DEFAULT_SETTINGS = (tenantId: string): TenantSettings => ({
   smtpPasswordEncrypted: null,
   smtpFrom: null,
   smtpSecure: false,
+  teamsWebhookUrlEncrypted: null,
+  slackWebhookUrlEncrypted: null,
   reminderBeforeDays: 1,
   reNotifyIntervalDays: 3,
   reNotifyMaxCount: 5,
@@ -37,8 +39,9 @@ const DEFAULT_SETTINGS = (tenantId: string): TenantSettings => ({
 async function loadSettings(client: pg.PoolClient, tenantId: string): Promise<TenantSettings> {
   const { rows } = await client.query(
     `SELECT smtp_host, smtp_port, smtp_user, smtp_password_encrypted,
-            smtp_from, smtp_secure, reminder_before_days,
-            re_notify_interval_days, re_notify_max_count
+            smtp_from, smtp_secure,
+            teams_webhook_url_encrypted, slack_webhook_url_encrypted,
+            reminder_before_days, re_notify_interval_days, re_notify_max_count
        FROM tenant_settings WHERE tenant_id = $1`,
     [tenantId],
   );
@@ -52,6 +55,8 @@ async function loadSettings(client: pg.PoolClient, tenantId: string): Promise<Te
     smtpPasswordEncrypted: r.smtp_password_encrypted,
     smtpFrom: r.smtp_from,
     smtpSecure: r.smtp_secure,
+    teamsWebhookUrlEncrypted: r.teams_webhook_url_encrypted,
+    slackWebhookUrlEncrypted: r.slack_webhook_url_encrypted,
     reminderBeforeDays: r.reminder_before_days,
     reNotifyIntervalDays: r.re_notify_interval_days,
     reNotifyMaxCount: r.re_notify_max_count,

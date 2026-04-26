@@ -6,6 +6,8 @@ export type TenantSettings = {
   smtpPasswordEncrypted: string | null;
   smtpFrom: string | null;
   smtpSecure: boolean;
+  teamsWebhookUrlEncrypted: string | null;
+  slackWebhookUrlEncrypted: string | null;
   reminderBeforeDays: number;
   reNotifyIntervalDays: number;
   reNotifyMaxCount: number;

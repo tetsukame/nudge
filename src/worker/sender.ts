@@ -2,6 +2,7 @@ import type pg from 'pg';
 import { getChannel } from '../notification/channel-registry';
 import type { TenantSettings } from '../notification/types';
 import type { NotificationContext } from '../notification/channel';
+import { nextAttemptAt } from './retry';
 
 const BATCH_SIZE = 100;
 
@@ -14,6 +15,7 @@ type PendingRow = {
   channel: string;
   kind: NotificationContext['kind'];
   payload_json: Record<string, unknown>;
+  attempt_count: number;
 };
 
 type RecipientRow = {
@@ -90,10 +92,11 @@ async function claimBatch(pool: pg.Pool, batchSize: number): Promise<PendingRow[
     await client.query('BEGIN');
     const { rows } = await client.query<PendingRow>(
       `SELECT id, tenant_id, request_id, assignment_id, recipient_user_id,
-              channel, kind, payload_json
+              channel, kind, payload_json, attempt_count
          FROM notification
-        WHERE status='pending' AND scheduled_at <= now()
-        ORDER BY scheduled_at
+        WHERE (status = 'pending' AND scheduled_at <= now())
+           OR (status = 'failed' AND next_attempt_at IS NOT NULL AND next_attempt_at <= now())
+        ORDER BY COALESCE(next_attempt_at, scheduled_at)
         LIMIT $1
         FOR UPDATE SKIP LOCKED`,
       [batchSize],
@@ -141,17 +144,20 @@ async function processOne(pool: pg.Pool, row: PendingRow): Promise<void> {
     };
     await channel.send(ctx, settings);
     await client.query(
-      `UPDATE notification SET status='sent', sent_at=now() WHERE id=$1`,
+      `UPDATE notification SET status='sent', sent_at=now(), next_attempt_at=NULL WHERE id=$1`,
       [row.id],
     );
   } catch (err) {
+    const newAttemptCount = row.attempt_count + 1;
+    const next = nextAttemptAt(newAttemptCount);
     await client.query(
       `UPDATE notification
-          SET status='failed',
-              attempt_count = attempt_count + 1,
-              error_message = $2
+          SET status = 'failed',
+              attempt_count = $2,
+              error_message = $3,
+              next_attempt_at = $4
         WHERE id = $1`,
-      [row.id, (err as Error).message],
+      [row.id, newAttemptCount, (err as Error).message, next],
     ).catch(() => {});
   } finally {
     client.release();

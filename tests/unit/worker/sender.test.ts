@@ -120,9 +120,9 @@ describe('runSender', () => {
     expect(rows[0].attempt_count).toBe(0);
   });
 
-  it('marks failed for unknown channel type', async () => {
+  it('marks failed for teams channel when webhook not configured', async () => {
+    // No tenant_settings row → DEFAULT_SETTINGS → teamsWebhookUrlEncrypted=null → ChannelError
     const requestId = await seedRequest(s);
-    // 'teams' is a valid channel value in the DB CHECK constraint
     const notifId = await seedNotification(
       s.tenantId,
       requestId,
@@ -138,6 +138,6 @@ describe('runSender', () => {
       [notifId],
     );
     expect(rows[0].status).toBe('failed');
-    expect(rows[0].error_message).toContain('unknown channel');
+    expect(rows[0].error_message).toContain('Teams webhook URL not configured');
   });
 });

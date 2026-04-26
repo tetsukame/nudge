@@ -52,4 +52,14 @@ describe('renderEmail', () => {
     const { subject } = renderEmail(makeCtx('created', { payload: { title: 42 } }));
     expect(subject).toContain('依頼');
   });
+
+  it('completed text includes completedBy from payload', () => {
+    const out = renderEmail(makeCtx('completed', { payload: { title: 'テスト', completedBy: '山田太郎' } }));
+    expect(out.text).toContain('対応者: 山田太郎');
+  });
+
+  it('completed text falls back to "担当者" when completedBy missing', () => {
+    const out = renderEmail(makeCtx('completed', { payload: { title: 'T' } }));
+    expect(out.text).toContain('対応者: 担当者');
+  });
 });

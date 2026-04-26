@@ -81,7 +81,7 @@ export function AssigneeList({ tenantCode, requestId, currentUserId, canSubstitu
   useEffect(() => { fetchList(); }, [fetchList]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 min-h-[200px]">
       <AssigneeListFilters tenantCode={tenantCode} onChange={setFilters} />
 
       {summary && (

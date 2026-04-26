@@ -26,6 +26,7 @@ type AssignmentRow = {
   user_id: string;
   status: AssignmentStatus;
   created_by_user_id: string;
+  request_title: string;
 };
 
 async function loadLocked(
@@ -34,7 +35,7 @@ async function loadLocked(
 ): Promise<AssignmentRow> {
   const { rows } = await client.query<AssignmentRow>(
     `SELECT a.id, a.request_id, a.user_id, a.status::text AS status,
-            r.created_by_user_id
+            r.created_by_user_id, r.title AS request_title
        FROM assignment a
        JOIN request r ON r.id = a.request_id
       WHERE a.id = $1
@@ -64,6 +65,32 @@ async function recordHistory(
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
     [tenantId, asg.id, asg.status, to, transitionKind, actorUserId, reason, forwardedToUserId],
   );
+}
+
+async function emitCompletedToRequester(
+  client: pg.PoolClient,
+  actor: ActorContext,
+  asg: AssignmentRow,
+  action: 'responded' | 'unavailable' | 'substituted',
+): Promise<void> {
+  if (asg.created_by_user_id === actor.userId) return; // suppress self-completion
+  const { rows: actorRows } = await client.query<{ display_name: string }>(
+    `SELECT display_name FROM users WHERE id = $1`,
+    [actor.userId],
+  );
+  const completedBy = actorRows[0]?.display_name ?? 'ユーザー';
+  await emitNotification(client, {
+    tenantId: actor.tenantId,
+    recipientUserId: asg.created_by_user_id,
+    requestId: asg.request_id,
+    assignmentId: asg.id,
+    kind: 'completed',
+    payload: {
+      title: asg.request_title,
+      completedBy,
+      action,
+    },
+  });
 }
 
 export async function openAssignment(
@@ -114,6 +141,7 @@ export async function respondAssignment(
       client, actor.tenantId, asg, 'responded', 'user_respond',
       actor.userId, input.note ?? null, null,
     );
+    await emitCompletedToRequester(client, actor, asg, 'responded');
   });
 }
 
@@ -144,6 +172,7 @@ export async function unavailableAssignment(
       client, actor.tenantId, asg, 'unavailable', 'user_unavailable',
       actor.userId, input.reason, null,
     );
+    await emitCompletedToRequester(client, actor, asg, 'unavailable');
   });
 }
 
@@ -277,6 +306,7 @@ export async function substituteAssignment(
         payload: { substitutedBy: actor.userId, reason: input.reason },
       });
     }
+    await emitCompletedToRequester(client, actor, asg, 'substituted');
   });
 }
 

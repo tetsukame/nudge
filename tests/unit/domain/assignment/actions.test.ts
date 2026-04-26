@@ -195,4 +195,94 @@ describe('assignment actions', () => {
     expect(systemMsg!.body).toMatch(/代理完了/);
     expect(systemMsg!.body).toMatch(/taking over/);
   });
+
+  it('respondAssignment emits completed notification to requester', async () => {
+    const s = await createDomainScenario(getPool());
+    const { assignmentId, requestId } = await seedAssignment(s, s.users.memberA);
+    await respondAssignment(getAppPool(), ctx(s, s.users.memberA), assignmentId, {});
+
+    const { rows } = await getPool().query(
+      `SELECT recipient_user_id, channel, kind, payload_json
+         FROM notification
+        WHERE request_id=$1 AND kind='completed' AND recipient_user_id=$2`,
+      [requestId, s.users.admin],
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    const inApp = rows.find((r) => r.channel === 'in_app');
+    expect(inApp).toBeDefined();
+    expect(inApp!.payload_json.action).toBe('responded');
+    expect(inApp!.payload_json.completedBy).toBeDefined();
+  });
+
+  it('respondAssignment does NOT emit completed when requester is also the assignee', async () => {
+    const s = await createDomainScenario(getPool());
+    const reqId = randomUUID();
+    await getPool().query(
+      `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, status)
+       VALUES ($1,$2,$3,'task','self','active')`,
+      [reqId, s.tenantId, s.users.admin],
+    );
+    const { rows: asgRows } = await getPool().query<{ id: string }>(
+      `INSERT INTO assignment(tenant_id, request_id, user_id) VALUES ($1,$2,$3) RETURNING id`,
+      [s.tenantId, reqId, s.users.admin],
+    );
+    const assignmentId = asgRows[0].id;
+
+    await respondAssignment(getAppPool(), ctx(s, s.users.admin), assignmentId, {});
+
+    const { rows } = await getPool().query(
+      `SELECT COUNT(*)::int AS n FROM notification
+        WHERE request_id=$1 AND kind='completed'`,
+      [reqId],
+    );
+    expect(rows[0].n).toBe(0);
+  });
+
+  it('unavailableAssignment emits completed with action=unavailable', async () => {
+    const s = await createDomainScenario(getPool());
+    const { assignmentId, requestId } = await seedAssignment(s, s.users.memberA);
+    await unavailableAssignment(
+      getAppPool(), ctx(s, s.users.memberA), assignmentId, { reason: 'busy' },
+    );
+
+    const { rows } = await getPool().query(
+      `SELECT payload_json FROM notification
+        WHERE request_id=$1 AND kind='completed' AND recipient_user_id=$2 AND channel='in_app'`,
+      [requestId, s.users.admin],
+    );
+    expect(rows.length).toBe(1);
+    expect(rows[0].payload_json.action).toBe('unavailable');
+  });
+
+  it('substituteAssignment by non-requester emits completed with action=substituted', async () => {
+    const s = await createDomainScenario(getPool());
+    const { assignmentId, requestId } = await seedAssignment(s, s.users.memberA);
+    // manager substitutes (manager is not the requester, admin is)
+    await substituteAssignment(
+      getAppPool(), ctx(s, s.users.manager), assignmentId, { reason: 'manager step in' },
+    );
+    const { rows } = await getPool().query(
+      `SELECT payload_json FROM notification
+        WHERE request_id=$1 AND kind='completed' AND recipient_user_id=$2 AND channel='in_app'`,
+      [requestId, s.users.admin],
+    );
+    expect(rows.length).toBe(1);
+    expect(rows[0].payload_json.action).toBe('substituted');
+  });
+
+  it('substituteAssignment by requester suppresses requester-side completed', async () => {
+    const s = await createDomainScenario(getPool());
+    const { assignmentId, requestId } = await seedAssignment(s, s.users.memberA);
+    // admin (the requester) substitutes — should NOT emit completed to admin (self)
+    await substituteAssignment(
+      getAppPool(), ctx(s, s.users.admin), assignmentId, { reason: 'taking over' },
+    );
+    const { rows } = await getPool().query(
+      `SELECT recipient_user_id FROM notification
+        WHERE request_id=$1 AND kind='completed' AND recipient_user_id=$2`,
+      [requestId, s.users.admin],
+    );
+    // Self-completion suppressed: admin is requester, no completed row to admin
+    expect(rows.length).toBe(0);
+  });
 });

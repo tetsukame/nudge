@@ -120,9 +120,9 @@ describe('runSender', () => {
     expect(rows[0].attempt_count).toBe(0);
   });
 
-  it('marks failed for unknown channel type', async () => {
+  it('marks failed for teams channel when webhook not configured', async () => {
+    // No tenant_settings row → DEFAULT_SETTINGS → teamsWebhookUrlEncrypted=null → ChannelError
     const requestId = await seedRequest(s);
-    // 'teams' is a valid channel value in the DB CHECK constraint
     const notifId = await seedNotification(
       s.tenantId,
       requestId,
@@ -138,6 +138,86 @@ describe('runSender', () => {
       [notifId],
     );
     expect(rows[0].status).toBe('failed');
-    expect(rows[0].error_message).toContain('unknown channel');
+    expect(rows[0].error_message).toContain('Teams webhook URL not configured');
+  });
+
+  it('failed notification gets next_attempt_at scheduled (1 min for attempt 1)', async () => {
+    const s = await createDomainScenario(getPool());
+    const reqId = await seedRequest(s);
+    const nId = await seedNotification(s.tenantId, reqId, s.users.memberA, 'email');
+
+    await runSender(getPool());
+
+    const { rows } = await getPool().query(
+      `SELECT status, attempt_count, next_attempt_at FROM notification WHERE id=$1`, [nId],
+    );
+    expect(rows[0].status).toBe('failed');
+    expect(rows[0].attempt_count).toBe(1);
+    expect(rows[0].next_attempt_at).not.toBeNull();
+    const delta = new Date(rows[0].next_attempt_at).getTime() - Date.now();
+    expect(delta).toBeGreaterThan(50_000);
+    expect(delta).toBeLessThan(70_000);
+  });
+
+  it('failed notification claimable when next_attempt_at <= now', async () => {
+    const s = await createDomainScenario(getPool());
+    const reqId = await seedRequest(s);
+    const nId = await seedNotification(s.tenantId, reqId, s.users.memberA, 'email');
+    await getPool().query(
+      `UPDATE notification
+          SET status='failed', attempt_count=1,
+              next_attempt_at = now() - interval '1 minute'
+        WHERE id=$1`,
+      [nId],
+    );
+
+    await runSender(getPool());
+
+    const { rows } = await getPool().query(
+      `SELECT status, attempt_count, next_attempt_at FROM notification WHERE id=$1`, [nId],
+    );
+    expect(rows[0].attempt_count).toBe(2);
+    expect(rows[0].next_attempt_at).not.toBeNull();
+  });
+
+  it('5th attempt sets next_attempt_at to NULL (permanent failure)', async () => {
+    const s = await createDomainScenario(getPool());
+    const reqId = await seedRequest(s);
+    const nId = await seedNotification(s.tenantId, reqId, s.users.memberA, 'email');
+    await getPool().query(
+      `UPDATE notification
+          SET status='failed', attempt_count=4,
+              next_attempt_at = now() - interval '1 minute'
+        WHERE id=$1`,
+      [nId],
+    );
+
+    await runSender(getPool());
+
+    const { rows } = await getPool().query(
+      `SELECT status, attempt_count, next_attempt_at FROM notification WHERE id=$1`, [nId],
+    );
+    expect(rows[0].status).toBe('failed');
+    expect(rows[0].attempt_count).toBe(5);
+    expect(rows[0].next_attempt_at).toBeNull();
+  });
+
+  it('successful send clears next_attempt_at', async () => {
+    const s = await createDomainScenario(getPool());
+    const reqId = await seedRequest(s);
+    const nId = await seedNotification(s.tenantId, reqId, s.users.memberA, 'in_app');
+    // Pre-mark with stale next_attempt_at (shouldn't matter for in_app which always succeeds)
+    await getPool().query(
+      `UPDATE notification SET next_attempt_at = now() - interval '1 minute' WHERE id=$1`,
+      [nId],
+    );
+
+    await runSender(getPool());
+
+    const { rows } = await getPool().query(
+      `SELECT status, next_attempt_at FROM notification WHERE id=$1`, [nId],
+    );
+    expect(rows[0].status).toBe('sent');
+    expect(rows[0].next_attempt_at).toBeNull();
   });
 });

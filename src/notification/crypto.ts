@@ -54,3 +54,7 @@ export function decryptSmtpPassword(encoded: string): string {
   const dec = Buffer.concat([decipher.update(enc), decipher.final()]);
   return dec.toString('utf8');
 }
+
+// Generic aliases for encrypting any secret (Webhook URLs, etc.)
+export const encryptSecret = encryptSmtpPassword;
+export const decryptSecret = decryptSmtpPassword;

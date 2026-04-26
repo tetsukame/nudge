@@ -27,6 +27,8 @@ function makeSettings(overrides?: Partial<TenantSettings>): TenantSettings {
     smtpPasswordEncrypted: null,
     smtpFrom: 'noreply@example.com',
     smtpSecure: false,
+    teamsWebhookUrlEncrypted: null,
+    slackWebhookUrlEncrypted: null,
     reminderBeforeDays: 3,
     reNotifyIntervalDays: 7,
     reNotifyMaxCount: 3,

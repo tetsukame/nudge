@@ -26,6 +26,7 @@ export class TeamsChannel implements Channel {
           title,
           text: body.replace(/\n/g, '<br>'),
         }),
+        signal: AbortSignal.timeout(30_000),
       });
     } catch (err) {
       throw new ChannelError(

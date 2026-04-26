@@ -23,6 +23,7 @@ export class SlackChannel implements Channel {
         body: JSON.stringify({
           text: `*${title}*\n${body}`,
         }),
+        signal: AbortSignal.timeout(30_000),
       });
     } catch (err) {
       throw new ChannelError(

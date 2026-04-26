@@ -49,17 +49,23 @@ export async function updateNotificationSettings(
     );
     const existing = existingRows[0];
 
-    const smtpPasswordEncrypted = input.smtp.password !== undefined
-      ? encryptSecret(input.smtp.password)
-      : (existing?.smtp_password_encrypted ?? null);
+    const smtpPasswordEncrypted = input.smtp.password === undefined
+      ? (existing?.smtp_password_encrypted ?? null)
+      : input.smtp.password === ''
+        ? null
+        : encryptSecret(input.smtp.password);
 
-    const teamsWebhookEncrypted = input.teams.webhookUrl !== undefined
-      ? encryptSecret(input.teams.webhookUrl)
-      : (existing?.teams_webhook_url_encrypted ?? null);
+    const teamsWebhookEncrypted = input.teams.webhookUrl === undefined
+      ? (existing?.teams_webhook_url_encrypted ?? null)
+      : input.teams.webhookUrl === ''
+        ? null
+        : encryptSecret(input.teams.webhookUrl);
 
-    const slackWebhookEncrypted = input.slack.webhookUrl !== undefined
-      ? encryptSecret(input.slack.webhookUrl)
-      : (existing?.slack_webhook_url_encrypted ?? null);
+    const slackWebhookEncrypted = input.slack.webhookUrl === undefined
+      ? (existing?.slack_webhook_url_encrypted ?? null)
+      : input.slack.webhookUrl === ''
+        ? null
+        : encryptSecret(input.slack.webhookUrl);
 
     await client.query(
       `INSERT INTO tenant_settings(

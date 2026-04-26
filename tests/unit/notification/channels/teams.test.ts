@@ -99,4 +99,18 @@ describe('TeamsChannel', () => {
     await expect(channel.send(ctx, settings)).rejects.toThrow(ChannelError);
     await expect(channel.send(ctx, settings)).rejects.toMatchObject({ code: 'transport_error' });
   });
+
+  it('throws ChannelError on fetch timeout (AbortError)', async () => {
+    const url = 'https://outlook.office.com/webhook/xyz';
+    const enc = encryptSecret(url);
+    const fetchMock = vi.fn().mockRejectedValue(
+      Object.assign(new Error('aborted'), { name: 'AbortError' }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const ch = new TeamsChannel();
+    await expect(
+      ch.send(ctx, makeSettings({ teamsWebhookUrlEncrypted: enc })),
+    ).rejects.toBeInstanceOf(ChannelError);
+  });
 });

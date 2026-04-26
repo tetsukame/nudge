@@ -85,4 +85,18 @@ describe('SlackChannel', () => {
     await expect(channel.send(ctx, settings)).rejects.toThrow(ChannelError);
     await expect(channel.send(ctx, settings)).rejects.toMatchObject({ code: 'transport_error' });
   });
+
+  it('throws ChannelError on fetch timeout (AbortError)', async () => {
+    const url = 'https://hooks.slack.com/services/xyz';
+    const enc = encryptSecret(url);
+    const fetchMock = vi.fn().mockRejectedValue(
+      Object.assign(new Error('aborted'), { name: 'AbortError' }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const ch = new SlackChannel();
+    await expect(
+      ch.send(ctx, makeSettings({ slackWebhookUrlEncrypted: enc })),
+    ).rejects.toBeInstanceOf(ChannelError);
+  });
 });

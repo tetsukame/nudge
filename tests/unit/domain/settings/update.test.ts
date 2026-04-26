@@ -104,6 +104,47 @@ describe('updateNotificationSettings', () => {
     expect(decryptSecret(after[0].smtp_password_encrypted)).toBe('original-pass');
   });
 
+  it('clears smtp password to NULL when password=""', async () => {
+    const s = await createDomainScenario(getPool());
+    // Pre-seed an encrypted password
+    await getPool().query(
+      `INSERT INTO tenant_settings(tenant_id, smtp_password_encrypted) VALUES ($1, $2)`,
+      [s.tenantId, encryptSecret('existing-pass')],
+    );
+    // Update with explicit empty string
+    await updateNotificationSettings(getAppPool(), adminCtx(s), {
+      smtp: { password: '' },
+      teams: {}, slack: {},
+      channels: { in_app: true, email: false, teams: false, slack: false },
+      reminders: { reminderBeforeDays: 1, reNotifyIntervalDays: 3, reNotifyMaxCount: 5 },
+    });
+    const { rows } = await getPool().query(
+      `SELECT smtp_password_encrypted FROM tenant_settings WHERE tenant_id=$1`,
+      [s.tenantId],
+    );
+    expect(rows[0].smtp_password_encrypted).toBeNull();
+  });
+
+  it('clears teams webhook URL to NULL when webhookUrl=""', async () => {
+    const s = await createDomainScenario(getPool());
+    await getPool().query(
+      `INSERT INTO tenant_settings(tenant_id, teams_webhook_url_encrypted) VALUES ($1, $2)`,
+      [s.tenantId, encryptSecret('https://existing.example.com')],
+    );
+    await updateNotificationSettings(getAppPool(), adminCtx(s), {
+      smtp: {},
+      teams: { webhookUrl: '' },
+      slack: {},
+      channels: { in_app: true, email: false, teams: false, slack: false },
+      reminders: { reminderBeforeDays: 1, reNotifyIntervalDays: 3, reNotifyMaxCount: 5 },
+    });
+    const { rows } = await getPool().query(
+      `SELECT teams_webhook_url_encrypted FROM tenant_settings WHERE tenant_id=$1`,
+      [s.tenantId],
+    );
+    expect(rows[0].teams_webhook_url_encrypted).toBeNull();
+  });
+
   it('UPSERTs tenant_notification_config for all 4 channels', async () => {
     const s = await createDomainScenario(getPool());
     const ctx = adminCtx(s);

@@ -12,9 +12,10 @@ export function BottomTabs({ tenantCode }: Props) {
   const pathname = usePathname();
 
   const requestsHref = `/t/${tenantCode}/requests`;
-  const logoutHref = `/t/${tenantCode}/logout`;
+  const myPageHref = `/t/${tenantCode}/me`;
 
   const isRequests = pathname.startsWith(`/t/${tenantCode}/requests`);
+  const isMyPage = pathname.startsWith(`/t/${tenantCode}/me`);
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
@@ -33,8 +34,13 @@ export function BottomTabs({ tenantCode }: Props) {
         </Link>
 
         <Link
-          href={logoutHref}
-          className="flex-1 flex flex-col items-center justify-center py-2 text-xs gap-1 text-gray-500 hover:text-gray-700 transition-colors"
+          href={myPageHref}
+          className={cn(
+            'flex-1 flex flex-col items-center justify-center py-2 text-xs gap-1 transition-colors',
+            isMyPage
+              ? 'text-blue-600 font-medium'
+              : 'text-gray-500 hover:text-gray-700',
+          )}
         >
           <span className="text-lg leading-none">👤</span>
           <span>マイページ</span>

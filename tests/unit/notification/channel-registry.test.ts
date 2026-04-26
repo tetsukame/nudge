@@ -16,9 +16,15 @@ describe('getChannel', () => {
     expect(channel?.type).toBe('email');
   });
 
-  it('returns null for unknown types (teams, slack, xyz)', () => {
-    expect(getChannel('teams')).toBeNull();
-    expect(getChannel('slack')).toBeNull();
+  it('returns TeamsChannel for teams', () => {
+    expect(getChannel('teams')?.type).toBe('teams');
+  });
+
+  it('returns SlackChannel for slack', () => {
+    expect(getChannel('slack')?.type).toBe('slack');
+  });
+
+  it('returns null for unknown type', () => {
     expect(getChannel('xyz')).toBeNull();
   });
 });

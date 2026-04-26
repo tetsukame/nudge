@@ -43,7 +43,7 @@ describe('createRequest', () => {
     expect(asg.map((r) => r.status)).toEqual(['unopened', 'unopened']);
 
     const { rows: notif } = await getPool().query(
-      `SELECT recipient_user_id FROM notification WHERE request_id=$1`,
+      `SELECT recipient_user_id FROM notification WHERE request_id=$1 AND channel='in_app'`,
       [result.id],
     );
     expect(notif).toHaveLength(2);

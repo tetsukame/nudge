@@ -32,14 +32,13 @@ const DEFAULT_SETTINGS = (tenantId: string): TenantSettings => ({
   reminderBeforeDays: 1,
   reNotifyIntervalDays: 3,
   reNotifyMaxCount: 5,
-  updatedAt: new Date(),
 });
 
 async function loadSettings(client: pg.PoolClient, tenantId: string): Promise<TenantSettings> {
   const { rows } = await client.query(
     `SELECT smtp_host, smtp_port, smtp_user, smtp_password_encrypted,
             smtp_from, smtp_secure, reminder_before_days,
-            re_notify_interval_days, re_notify_max_count, updated_at
+            re_notify_interval_days, re_notify_max_count
        FROM tenant_settings WHERE tenant_id = $1`,
     [tenantId],
   );
@@ -56,19 +55,31 @@ async function loadSettings(client: pg.PoolClient, tenantId: string): Promise<Te
     reminderBeforeDays: r.reminder_before_days,
     reNotifyIntervalDays: r.re_notify_interval_days,
     reNotifyMaxCount: r.re_notify_max_count,
-    updatedAt: r.updated_at,
   };
 }
 
-async function loadRecipient(client: pg.PoolClient, userId: string): Promise<RecipientRow | null> {
+async function loadRecipient(
+  client: pg.PoolClient, userId: string, tenantId: string,
+): Promise<RecipientRow | null> {
   const { rows } = await client.query<RecipientRow>(
-    `SELECT email, display_name FROM users WHERE id = $1`,
-    [userId],
+    `SELECT email, display_name FROM users WHERE id = $1 AND tenant_id = $2`,
+    [userId, tenantId],
   );
   return rows[0] ?? null;
 }
 
 export async function runSender(pool: pg.Pool): Promise<void> {
+  // Phase 1: claim batch (short txn, releases lock immediately)
+  const claimed = await claimBatch(pool, BATCH_SIZE);
+  if (claimed.length === 0) return;
+
+  // Phase 2: process each row independently (no shared txn)
+  for (const row of claimed) {
+    await processOne(pool, row);
+  }
+}
+
+async function claimBatch(pool: pg.Pool, batchSize: number): Promise<PendingRow[]> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -80,52 +91,63 @@ export async function runSender(pool: pg.Pool): Promise<void> {
         ORDER BY scheduled_at
         LIMIT $1
         FOR UPDATE SKIP LOCKED`,
-      [BATCH_SIZE],
+      [batchSize],
     );
-
-    for (const row of rows) {
-      try {
-        const channel = getChannel(row.channel);
-        if (!channel) {
-          throw new Error(`unknown channel: ${row.channel}`);
-        }
-        const recipient = await loadRecipient(client, row.recipient_user_id);
-        if (!recipient) {
-          throw new Error(`recipient not found: ${row.recipient_user_id}`);
-        }
-        const settings = await loadSettings(client, row.tenant_id);
-        const ctx: NotificationContext = {
-          notificationId: row.id,
-          tenantId: row.tenant_id,
-          requestId: row.request_id,
-          assignmentId: row.assignment_id,
-          recipientUserId: row.recipient_user_id,
-          recipientEmail: recipient.email,
-          recipientName: recipient.display_name,
-          kind: row.kind,
-          payload: row.payload_json,
-        };
-        await channel.send(ctx, settings);
-        await client.query(
-          `UPDATE notification SET status='sent', sent_at=now() WHERE id=$1`,
-          [row.id],
-        );
-      } catch (err) {
-        await client.query(
-          `UPDATE notification
-              SET status='failed',
-                  attempt_count = attempt_count + 1,
-                  error_message = $2
-            WHERE id = $1`,
-          [row.id, (err as Error).message],
-        );
-      }
+    if (rows.length > 0) {
+      await client.query(
+        `UPDATE notification SET status='sending' WHERE id = ANY($1::uuid[])`,
+        [rows.map((r) => r.id)],
+      );
     }
-
     await client.query('COMMIT');
+    return rows;
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function processOne(pool: pg.Pool, row: PendingRow): Promise<void> {
+  // Use a separate connection for each row's send + status update.
+  // No outer transaction — each UPDATE is its own implicit transaction.
+  const client = await pool.connect();
+  try {
+    const channel = getChannel(row.channel);
+    if (!channel) {
+      throw new Error(`unknown channel: ${row.channel}`);
+    }
+    const recipient = await loadRecipient(client, row.recipient_user_id, row.tenant_id);
+    if (!recipient) {
+      throw new Error(`recipient not found: ${row.recipient_user_id}`);
+    }
+    const settings = await loadSettings(client, row.tenant_id);
+    const ctx: NotificationContext = {
+      notificationId: row.id,
+      tenantId: row.tenant_id,
+      requestId: row.request_id,
+      assignmentId: row.assignment_id,
+      recipientUserId: row.recipient_user_id,
+      recipientEmail: recipient.email,
+      recipientName: recipient.display_name,
+      kind: row.kind,
+      payload: row.payload_json,
+    };
+    await channel.send(ctx, settings);
+    await client.query(
+      `UPDATE notification SET status='sent', sent_at=now() WHERE id=$1`,
+      [row.id],
+    );
+  } catch (err) {
+    await client.query(
+      `UPDATE notification
+          SET status='failed',
+              attempt_count = attempt_count + 1,
+              error_message = $2
+        WHERE id = $1`,
+      [row.id, (err as Error).message],
+    ).catch(() => {});
   } finally {
     client.release();
   }

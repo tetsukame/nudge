@@ -30,7 +30,6 @@ function makeSettings(overrides?: Partial<TenantSettings>): TenantSettings {
     reminderBeforeDays: 3,
     reNotifyIntervalDays: 7,
     reNotifyMaxCount: 3,
-    updatedAt: new Date(),
     ...overrides,
   };
 }

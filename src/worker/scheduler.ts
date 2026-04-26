@@ -158,7 +158,7 @@ async function generateReNotify(client: pg.PoolClient): Promise<void> {
           AND r.tenant_id = $1
           AND r.status = 'active'
           AND r.due_at IS NOT NULL
-          AND r.due_at < now()
+          AND r.due_at::date < (now())::date
           AND a.status IN ('unopened', 'opened')
           AND (
             SELECT COUNT(*) FROM notification n

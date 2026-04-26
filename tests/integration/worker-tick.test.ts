@@ -40,15 +40,13 @@ describe('worker tick (scheduler + sender)', () => {
       [s.tenantId],
     );
 
-    // Seed a request due today — set due_at to end-of-day so it satisfies
-    // due_at::date = today but is NOT < now(), preventing re_notify from firing.
+    // Seed a request due today
     const requestId = randomUUID();
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999);
+    const today = new Date();
     await getPool().query(
       `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, status, due_at)
        VALUES ($1, $2, $3, 'task', 'tick test', 'active', $4)`,
-      [requestId, s.tenantId, s.users.admin, endOfToday.toISOString()],
+      [requestId, s.tenantId, s.users.admin, today.toISOString()],
     );
     await getPool().query(
       `INSERT INTO assignment(tenant_id, request_id, user_id) VALUES ($1, $2, $3)`,

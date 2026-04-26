@@ -9,5 +9,4 @@ export type TenantSettings = {
   reminderBeforeDays: number;
   reNotifyIntervalDays: number;
   reNotifyMaxCount: number;
-  updatedAt: Date;
 };

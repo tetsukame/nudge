@@ -8,6 +8,7 @@ type Props = {
   tenantCode: string;
   displayName: string;
   isManager: boolean;
+  isTenantAdmin: boolean;
 };
 
 const BASE_NAV_ITEMS = [
@@ -16,12 +17,14 @@ const BASE_NAV_ITEMS = [
   { href: 'sent', label: '送信した依頼', icon: '📤' },
 ];
 
-export function Sidebar({ tenantCode, displayName, isManager }: Props) {
+export function Sidebar({ tenantCode, displayName, isManager, isTenantAdmin }: Props) {
   const pathname = usePathname();
 
-  const navItems = isManager
-    ? [...BASE_NAV_ITEMS, { href: 'subordinates', label: '部下の依頼', icon: '👥' }]
-    : BASE_NAV_ITEMS;
+  const navItems = [
+    ...BASE_NAV_ITEMS,
+    ...(isManager ? [{ href: 'subordinates', label: '部下の依頼', icon: '👥' }] : []),
+    ...(isTenantAdmin ? [{ href: 'settings/notification', label: '通知設定', icon: '⚙️' }] : []),
+  ];
 
   return (
     <aside className="hidden md:flex md:flex-col md:w-52 bg-slate-900 text-white min-h-screen shrink-0">

@@ -35,17 +35,27 @@ export default async function TenantLayout({
     );
   }
 
-  const isManager = await withTenant(appPool(), session.tenantId, async (client) => {
-    const { rows } = await client.query(
-      `SELECT 1 FROM org_unit_manager WHERE user_id = $1 LIMIT 1`,
-      [session.userId],
-    );
-    return rows.length > 0;
+  const { isManager, isTenantAdmin } = await withTenant(appPool(), session.tenantId, async (client) => {
+    const [managerResult, roleResult] = await Promise.all([
+      client.query(
+        `SELECT 1 FROM org_unit_manager WHERE user_id = $1 LIMIT 1`,
+        [session.userId],
+      ),
+      client.query<{ role: string }>(
+        `SELECT role FROM user_role WHERE user_id = $1`,
+        [session.userId],
+      ),
+    ]);
+    const roles = new Set(roleResult.rows.map((r) => r.role));
+    return {
+      isManager: managerResult.rows.length > 0,
+      isTenantAdmin: roles.has('tenant_admin'),
+    };
   });
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar tenantCode={code} displayName={session.displayName} isManager={isManager} />
+      <Sidebar tenantCode={code} displayName={session.displayName} isManager={isManager} isTenantAdmin={isTenantAdmin} />
       <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
         {children}
       </main>

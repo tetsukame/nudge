@@ -3,7 +3,7 @@ import type { AssignmentStatus, ActorRole } from '../types';
 export type ActionName =
   | 'open'
   | 'respond'
-  | 'unavailable'
+  | 'not_needed'
   | 'forward'
   | 'substitute'
   | 'exempt';
@@ -15,7 +15,7 @@ export type TransitionRule = {
   transitionKind:
     | 'auto_open'
     | 'user_respond'
-    | 'user_unavailable'
+    | 'user_not_needed'
     | 'user_forward'
     | 'manager_substitute'
     | 'admin_exempt';
@@ -32,7 +32,7 @@ const RULES: Record<AssignmentStatus, TransitionRule[]> = {
   unopened: [
     { to: 'opened',      action: 'open',       actor: 'assignee',     transitionKind: 'auto_open',          requiresReason: false },
     { to: 'responded',   action: 'respond',    actor: 'assignee',     transitionKind: 'user_respond',       requiresReason: false },
-    { to: 'unavailable', action: 'unavailable',actor: 'assignee',     transitionKind: 'user_unavailable',   requiresReason: true  },
+    { to: 'not_needed',  action: 'not_needed', actor: 'assignee',     transitionKind: 'user_not_needed',    requiresReason: true  },
     { to: 'forwarded',   action: 'forward',    actor: 'assignee',     transitionKind: 'user_forward',       requiresReason: false },
     { to: 'substituted', action: 'substitute', actor: 'requester',    transitionKind: 'manager_substitute', requiresReason: true  },
     { to: 'substituted', action: 'substitute', actor: 'manager',      transitionKind: 'manager_substitute', requiresReason: true  },
@@ -40,14 +40,14 @@ const RULES: Record<AssignmentStatus, TransitionRule[]> = {
   ],
   opened: [
     { to: 'responded',   action: 'respond',    actor: 'assignee',     transitionKind: 'user_respond',       requiresReason: false },
-    { to: 'unavailable', action: 'unavailable',actor: 'assignee',     transitionKind: 'user_unavailable',   requiresReason: true  },
+    { to: 'not_needed',  action: 'not_needed', actor: 'assignee',     transitionKind: 'user_not_needed',    requiresReason: true  },
     { to: 'forwarded',   action: 'forward',    actor: 'assignee',     transitionKind: 'user_forward',       requiresReason: false },
     { to: 'substituted', action: 'substitute', actor: 'requester',    transitionKind: 'manager_substitute', requiresReason: true  },
     { to: 'substituted', action: 'substitute', actor: 'manager',      transitionKind: 'manager_substitute', requiresReason: true  },
     { to: 'exempted',    action: 'exempt',     actor: 'tenant_admin', transitionKind: 'admin_exempt',       requiresReason: true  },
   ],
   responded:   [],
-  unavailable: [],
+  not_needed:  [],
   forwarded:   [],
   substituted: [],
   exempted:    [],

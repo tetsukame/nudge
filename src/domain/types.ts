@@ -2,7 +2,7 @@ export type AssignmentStatus =
   | 'unopened'
   | 'opened'
   | 'responded'
-  | 'unavailable'
+  | 'not_needed'
   | 'forwarded'
   | 'substituted'
   | 'exempted'

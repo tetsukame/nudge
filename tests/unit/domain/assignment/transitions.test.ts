@@ -8,16 +8,16 @@ import type { AssignmentStatus } from '../../../../src/domain/types.js';
 
 describe('assignment state machine', () => {
   const TERMINAL: AssignmentStatus[] = [
-    'responded', 'unavailable', 'forwarded', 'substituted', 'exempted', 'expired',
+    'responded', 'not_needed', 'forwarded', 'substituted', 'exempted', 'expired',
   ];
 
   it.each([
     ['unopened', 'opened', 'assignee', true],
     ['unopened', 'responded', 'assignee', true],
-    ['unopened', 'unavailable', 'assignee', true],
+    ['unopened', 'not_needed', 'assignee', true],
     ['unopened', 'forwarded', 'assignee', true],
     ['opened', 'responded', 'assignee', true],
-    ['opened', 'unavailable', 'assignee', true],
+    ['opened', 'not_needed', 'assignee', true],
     ['opened', 'forwarded', 'assignee', true],
     ['unopened', 'substituted', 'requester', true],
     ['unopened', 'substituted', 'manager', true],

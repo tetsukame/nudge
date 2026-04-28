@@ -71,7 +71,7 @@ async function emitCompletedToRequester(
   client: pg.PoolClient,
   actor: ActorContext,
   asg: AssignmentRow,
-  action: 'responded' | 'unavailable' | 'substituted',
+  action: 'responded' | 'not_needed' | 'substituted',
 ): Promise<void> {
   if (asg.created_by_user_id === actor.userId) return; // suppress self-completion
   const { rows: actorRows } = await client.query<{ display_name: string }>(
@@ -145,7 +145,7 @@ export async function respondAssignment(
   });
 }
 
-export async function unavailableAssignment(
+export async function notNeededAssignment(
   pool: pg.Pool,
   actor: ActorContext,
   assignmentId: string,
@@ -159,20 +159,20 @@ export async function unavailableAssignment(
     if (asg.user_id !== actor.userId) {
       throw new AssignmentActionError('not assignee', 'permission_denied');
     }
-    if (!canTransition({ from: asg.status, to: 'unavailable', actorRole: 'assignee' })) {
-      throw new AssignmentActionError('cannot mark unavailable', 'invalid_transition');
+    if (!canTransition({ from: asg.status, to: 'not_needed', actorRole: 'assignee' })) {
+      throw new AssignmentActionError('cannot mark not_needed', 'invalid_transition');
     }
     await client.query(
       `UPDATE assignment
-          SET status='unavailable', action_at=now()
+          SET status='not_needed', action_at=now()
         WHERE id=$1`,
       [assignmentId],
     );
     await recordHistory(
-      client, actor.tenantId, asg, 'unavailable', 'user_unavailable',
+      client, actor.tenantId, asg, 'not_needed', 'user_not_needed',
       actor.userId, input.reason, null,
     );
-    await emitCompletedToRequester(client, actor, asg, 'unavailable');
+    await emitCompletedToRequester(client, actor, asg, 'not_needed');
   });
 }
 

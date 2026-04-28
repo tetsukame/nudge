@@ -30,7 +30,7 @@ describe('assignment_status_history', () => {
   it('exists', async () => { await assertTableExists(pool, 'assignment_status_history'); });
 
   it('accepts all transition_kind values', async () => {
-    const kinds = ['auto_open','user_respond','user_unavailable','user_forward','manager_substitute','admin_exempt','auto_expire'];
+    const kinds = ['auto_open','user_respond','user_not_needed','user_forward','manager_substitute','admin_exempt','auto_expire'];
     for (const k of kinds) {
       await pool.query(
         `INSERT INTO assignment_status_history (tenant_id, assignment_id, to_status, transition_kind)

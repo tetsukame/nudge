@@ -7,7 +7,7 @@ describe('ProgressBar', () => {
   it('renders with correct width segments', () => {
     const { container } = render(
       <ProgressBar
-        counts={{ unopened: 2, opened: 1, responded: 5, unavailable: 1, other: 1 }}
+        counts={{ unopened: 2, opened: 1, responded: 5, notNeeded: 1, other: 1 }}
         total={10}
       />,
     );
@@ -18,7 +18,7 @@ describe('ProgressBar', () => {
   it('renders empty bar when total is 0', () => {
     const { container } = render(
       <ProgressBar
-        counts={{ unopened: 0, opened: 0, responded: 0, unavailable: 0, other: 0 }}
+        counts={{ unopened: 0, opened: 0, responded: 0, notNeeded: 0, other: 0 }}
         total={0}
       />,
     );

@@ -5,6 +5,15 @@ import type { AssignmentStatus } from '@/domain/types';
 
 type OrgNode = { id: string; name: string; memberCount: number; children: OrgNode[] };
 
+const DEFAULTS = {
+  q: '',
+  orgUnitId: '',
+  includeDescendants: true,
+  groupId: '',
+  statuses: [] as AssignmentStatus[],
+  hasUnread: false,
+};
+
 type Props = {
   tenantCode: string;
   onChange: (filters: {
@@ -62,11 +71,28 @@ export function AssigneeListFilters({ tenantCode, onChange }: Props) {
     return () => clearTimeout(timer);
   }, [q, orgUnitId, includeDescendants, groupId, statuses, hasUnread, onChange]);
 
+  const hasAnyFilter =
+    q !== DEFAULTS.q ||
+    orgUnitId !== DEFAULTS.orgUnitId ||
+    includeDescendants !== DEFAULTS.includeDescendants ||
+    groupId !== DEFAULTS.groupId ||
+    statuses.length !== 0 ||
+    hasUnread !== DEFAULTS.hasUnread;
+
+  function handleClear() {
+    setQ(DEFAULTS.q);
+    setOrgUnitId(DEFAULTS.orgUnitId);
+    setIncludeDescendants(DEFAULTS.includeDescendants);
+    setGroupId(DEFAULTS.groupId);
+    setStatuses(DEFAULTS.statuses);
+    setHasUnread(DEFAULTS.hasUnread);
+  }
+
   const statusOptions: Array<{ value: AssignmentStatus; label: string }> = [
     { value: 'unopened', label: '未開封' },
     { value: 'opened', label: '開封済み' },
     { value: 'responded', label: '対応済み' },
-    { value: 'unavailable', label: '対応不可' },
+    { value: 'not_needed', label: '対応不要' },
     { value: 'forwarded', label: '転送済み' },
     { value: 'substituted', label: '代理完了' },
     { value: 'exempted', label: '免除' },
@@ -145,6 +171,15 @@ export function AssigneeListFilters({ tenantCode, onChange }: Props) {
           />
           未読のみ
         </label>
+        {hasAnyFilter && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="ml-auto text-xs text-blue-600 hover:text-blue-800 underline"
+          >
+            クリア
+          </button>
+        )}
       </div>
     </div>
   );

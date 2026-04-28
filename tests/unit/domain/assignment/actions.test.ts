@@ -5,7 +5,7 @@ import { createDomainScenario } from '../../../helpers/fixtures/domain-scenario.
 import {
   openAssignment,
   respondAssignment,
-  unavailableAssignment,
+  notNeededAssignment,
   forwardAssignment,
   substituteAssignment,
   exemptAssignment,
@@ -73,11 +73,11 @@ describe('assignment actions', () => {
     expect(h[0].transition_kind).toBe('user_respond');
   });
 
-  it('unavailableAssignment requires reason', async () => {
+  it('notNeededAssignment requires reason', async () => {
     const s = await createDomainScenario(getPool());
     const { assignmentId } = await seedAssignment(s, s.users.memberA);
     await expect(
-      unavailableAssignment(getAppPool(), ctx(s, s.users.memberA), assignmentId, { reason: '' }),
+      notNeededAssignment(getAppPool(), ctx(s, s.users.memberA), assignmentId, { reason: '' }),
     ).rejects.toBeInstanceOf(AssignmentActionError);
   });
 
@@ -238,10 +238,10 @@ describe('assignment actions', () => {
     expect(rows[0].n).toBe(0);
   });
 
-  it('unavailableAssignment emits completed with action=unavailable', async () => {
+  it('notNeededAssignment emits completed with action=not_needed', async () => {
     const s = await createDomainScenario(getPool());
     const { assignmentId, requestId } = await seedAssignment(s, s.users.memberA);
-    await unavailableAssignment(
+    await notNeededAssignment(
       getAppPool(), ctx(s, s.users.memberA), assignmentId, { reason: 'busy' },
     );
 
@@ -251,7 +251,7 @@ describe('assignment actions', () => {
       [requestId, s.users.admin],
     );
     expect(rows.length).toBe(1);
-    expect(rows[0].payload_json.action).toBe('unavailable');
+    expect(rows[0].payload_json.action).toBe('not_needed');
   });
 
   it('substituteAssignment by non-requester emits completed with action=substituted', async () => {

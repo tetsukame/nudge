@@ -26,7 +26,7 @@ describe('assignment', () => {
   it('exists', async () => { await assertTableExists(pool, 'assignment'); });
 
   it('accepts 8 status values', async () => {
-    const statuses = ['unopened','opened','responded','unavailable','forwarded','substituted','exempted','expired'];
+    const statuses = ['unopened','opened','responded','not_needed','forwarded','substituted','exempted','expired'];
     for (const s of statuses) {
       const u = (await pool.query(
         `INSERT INTO users (tenant_id, keycloak_sub, email, display_name)

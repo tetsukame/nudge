@@ -50,7 +50,7 @@ export default async function RequestListPage({
   // Hardcoded status sets — NOT user input, safe to interpolate
   const statusSql =
     statusFilter === 'done'
-      ? `a.status IN ('responded','unavailable','forwarded','substituted','exempted','expired')`
+      ? `a.status IN ('responded','not_needed','forwarded','substituted','exempted','expired')`
       : `a.status IN ('unopened','opened')`;
 
   const { items, total } = await withTenant(

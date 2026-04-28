@@ -23,7 +23,7 @@ type AssigneeItem = {
 
 type Summary = {
   unopened: number; opened: number; responded: number;
-  unavailable: number; forwarded: number; substituted: number;
+  notNeeded: number; forwarded: number; substituted: number;
   exempted: number; expired: number; overdue: number;
 };
 
@@ -89,7 +89,7 @@ export function AssigneeList({ tenantCode, requestId, currentUserId, canSubstitu
           <span>未開封: {summary.unopened}</span>
           <span>開封: {summary.opened}</span>
           <span>対応済み: {summary.responded}</span>
-          <span>対応不可: {summary.unavailable}</span>
+          <span>対応不要: {summary.notNeeded}</span>
           {summary.overdue > 0 && (
             <span className="text-red-600 font-medium">期限切れ: {summary.overdue}</span>
           )}

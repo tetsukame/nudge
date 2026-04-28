@@ -86,7 +86,7 @@ export default async function SubordinatesPage({
                 unopened: item.unopened,
                 opened: item.opened,
                 responded: item.responded,
-                unavailable: item.unavailable,
+                notNeeded: item.notNeeded,
                 other: item.other,
               }}
               total={item.total}

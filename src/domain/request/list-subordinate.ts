@@ -23,7 +23,7 @@ export type SubordinateRequestItem = {
   unopened: number;
   opened: number;
   responded: number;
-  unavailable: number;
+  notNeeded: number;
   other: number;
   done: number;
   overdueCount: number;
@@ -39,7 +39,7 @@ export type ListSubordinateRequestsResult = {
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
 
-const DONE_STATUSES = `'responded','unavailable','forwarded','substituted','exempted','expired'`;
+const DONE_STATUSES = `'responded','not_needed','forwarded','substituted','exempted','expired'`;
 
 export async function listSubordinateRequests(
   pool: pg.Pool,
@@ -134,8 +134,8 @@ export async function listSubordinateRequests(
         COUNT(*) FILTER (WHERE a.status = 'unopened' AND a.user_id IN (SELECT user_id FROM my_subtree_users))::int AS unopened,
         COUNT(*) FILTER (WHERE a.status = 'opened' AND a.user_id IN (SELECT user_id FROM my_subtree_users))::int AS opened,
         COUNT(*) FILTER (WHERE a.status = 'responded' AND a.user_id IN (SELECT user_id FROM my_subtree_users))::int AS responded,
-        COUNT(*) FILTER (WHERE a.status = 'unavailable' AND a.user_id IN (SELECT user_id FROM my_subtree_users))::int AS unavailable,
-        COUNT(*) FILTER (WHERE a.status NOT IN ('unopened','opened','responded','unavailable') AND a.status NOT IN (${DONE_STATUSES}) AND a.user_id IN (SELECT user_id FROM my_subtree_users))::int AS other,
+        COUNT(*) FILTER (WHERE a.status = 'not_needed' AND a.user_id IN (SELECT user_id FROM my_subtree_users))::int AS not_needed,
+        COUNT(*) FILTER (WHERE a.status NOT IN ('unopened','opened','responded','not_needed') AND a.status NOT IN (${DONE_STATUSES}) AND a.user_id IN (SELECT user_id FROM my_subtree_users))::int AS other,
         COUNT(*) FILTER (WHERE a.status IN (${DONE_STATUSES}) AND a.user_id IN (SELECT user_id FROM my_subtree_users))::int AS done,
         COUNT(*) FILTER (
           WHERE a.status IN ('unopened','opened')
@@ -164,7 +164,7 @@ export async function listSubordinateRequests(
         unopened: r.unopened,
         opened: r.opened,
         responded: r.responded,
-        unavailable: r.unavailable,
+        notNeeded: r.not_needed,
         other: r.other,
         done: r.done,
         overdueCount: r.overdue_count,

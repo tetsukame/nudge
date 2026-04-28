@@ -232,7 +232,7 @@ export default async function RequestDetailPage({
             unopened: requesterSummary.summary.unopened,
             opened: requesterSummary.summary.opened,
             responded: requesterSummary.summary.responded,
-            unavailable: requesterSummary.summary.unavailable,
+            notNeeded: requesterSummary.summary.notNeeded,
             forwarded: requesterSummary.summary.forwarded,
             substituted: requesterSummary.summary.substituted,
             exempted: requesterSummary.summary.exempted,

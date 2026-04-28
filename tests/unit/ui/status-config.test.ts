@@ -8,7 +8,7 @@ describe('status-config', () => {
     expect(keys).toContain('unopened');
     expect(keys).toContain('opened');
     expect(keys).toContain('responded');
-    expect(keys).toContain('unavailable');
+    expect(keys).toContain('not_needed');
     expect(keys).toContain('forwarded');
     expect(keys).toContain('substituted');
     expect(keys).toContain('exempted');

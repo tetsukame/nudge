@@ -4,7 +4,7 @@ import { requireSession, isGuardFailure } from '../../_lib/session-guard';
 import {
   openAssignment,
   respondAssignment,
-  unavailableAssignment,
+  notNeededAssignment,
   forwardAssignment,
   substituteAssignment,
   exemptAssignment,
@@ -44,8 +44,8 @@ export async function PATCH(
         await openAssignment(appPool(), guard.actor, id); break;
       case 'respond':
         await respondAssignment(appPool(), guard.actor, id, { note: b.note }); break;
-      case 'unavailable':
-        await unavailableAssignment(appPool(), guard.actor, id, { reason: b.reason ?? '' }); break;
+      case 'not_needed':
+        await notNeededAssignment(appPool(), guard.actor, id, { reason: b.reason ?? '' }); break;
       case 'forward':
         if (!b.toUserId) {
           return NextResponse.json({ error: 'toUserId required' }, { status: 400 });

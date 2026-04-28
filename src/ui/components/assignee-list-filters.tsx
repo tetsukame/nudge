@@ -92,7 +92,7 @@ export function AssigneeListFilters({ tenantCode, onChange }: Props) {
     { value: 'unopened', label: '未開封' },
     { value: 'opened', label: '開封済み' },
     { value: 'responded', label: '対応済み' },
-    { value: 'unavailable', label: '対応不可' },
+    { value: 'not_needed', label: '対応不要' },
     { value: 'forwarded', label: '転送済み' },
     { value: 'substituted', label: '代理完了' },
     { value: 'exempted', label: '免除' },

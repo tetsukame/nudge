@@ -21,7 +21,7 @@ type Props = {
   status: string;
 };
 
-type DialogType = 'respond' | 'unavailable' | null;
+type DialogType = 'respond' | 'not_needed' | null;
 
 export function ActionButtons({ tenantCode, assignmentId, requestId, status }: Props) {
   const router = useRouter();
@@ -70,9 +70,9 @@ export function ActionButtons({ tenantCode, assignmentId, requestId, status }: P
         </Button>
         <Button
           variant="destructive"
-          onClick={() => { setOpen('unavailable'); setReason(''); setError(''); }}
+          onClick={() => { setOpen('not_needed'); setReason(''); setError(''); }}
         >
-          ❌ 対応不可
+          🚫 対応不要
         </Button>
         <Button
           variant="outline"
@@ -116,20 +116,20 @@ export function ActionButtons({ tenantCode, assignmentId, requestId, status }: P
         </DialogContent>
       </Dialog>
 
-      {/* Unavailable dialog */}
-      <Dialog open={open === 'unavailable'} onOpenChange={(v) => !v && setOpen(null)}>
+      {/* Not Needed dialog */}
+      <Dialog open={open === 'not_needed'} onOpenChange={(v) => !v && setOpen(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>対応不可にする</DialogTitle>
+            <DialogTitle>対応不要にする</DialogTitle>
             <DialogDescription>
-              対応できない理由を入力してください（必須）。
+              対応不要とする理由を入力してください（必須）。
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <Label htmlFor="unavailable-reason">理由（必須）</Label>
+            <Label htmlFor="not-needed-reason">理由（必須）</Label>
             <Textarea
-              id="unavailable-reason"
-              placeholder="対応できない理由を入力してください..."
+              id="not-needed-reason"
+              placeholder="対応不要とする理由を入力してください..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={3}
@@ -142,10 +142,10 @@ export function ActionButtons({ tenantCode, assignmentId, requestId, status }: P
             </Button>
             <Button
               variant="destructive"
-              onClick={() => dispatch('unavailable', { reason })}
+              onClick={() => dispatch('not_needed', { reason })}
               disabled={loading || !reason.trim()}
             >
-              {loading ? '送信中...' : '対応不可にする'}
+              {loading ? '送信中...' : '対応不要にする'}
             </Button>
           </DialogFooter>
         </DialogContent>

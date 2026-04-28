@@ -11,7 +11,7 @@ type Props = {
   canSubstitute: boolean;
   summary: {
     unopened: number; opened: number; responded: number;
-    unavailable: number; forwarded: number; substituted: number;
+    notNeeded: number; forwarded: number; substituted: number;
     exempted: number; expired: number;
   };
   total: number;
@@ -20,7 +20,7 @@ type Props = {
 export function RequesterSection({
   tenantCode, requestId, currentUserId, canSubstitute, summary, total,
 }: Props) {
-  const done = summary.responded + summary.unavailable + summary.forwarded
+  const done = summary.responded + summary.notNeeded + summary.forwarded
     + summary.substituted + summary.exempted + summary.expired;
   const other = summary.forwarded + summary.substituted + summary.exempted + summary.expired;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
@@ -39,7 +39,7 @@ export function RequesterSection({
             unopened: summary.unopened,
             opened: summary.opened,
             responded: summary.responded,
-            unavailable: summary.unavailable,
+            notNeeded: summary.notNeeded,
             other,
           }}
           total={total}

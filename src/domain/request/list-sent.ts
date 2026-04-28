@@ -22,7 +22,7 @@ export type SentRequestItem = {
   unopened: number;
   opened: number;
   responded: number;
-  unavailable: number;
+  notNeeded: number;
   other: number;
   done: number;
   overdueCount: number;
@@ -38,7 +38,7 @@ export type ListSentRequestsResult = {
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
 
-const DONE_STATUSES = `'responded','unavailable','forwarded','substituted','exempted','expired'`;
+const DONE_STATUSES = `'responded','not_needed','forwarded','substituted','exempted','expired'`;
 
 export async function listSentRequests(
   pool: pg.Pool,
@@ -101,8 +101,8 @@ export async function listSentRequests(
         COUNT(*) FILTER (WHERE a.status = 'unopened')::int AS unopened,
         COUNT(*) FILTER (WHERE a.status = 'opened')::int AS opened,
         COUNT(*) FILTER (WHERE a.status = 'responded')::int AS responded,
-        COUNT(*) FILTER (WHERE a.status = 'unavailable')::int AS unavailable,
-        COUNT(*) FILTER (WHERE a.status NOT IN ('unopened','opened','responded','unavailable') AND a.status NOT IN (${DONE_STATUSES}))::int AS other,
+        COUNT(*) FILTER (WHERE a.status = 'not_needed')::int AS not_needed,
+        COUNT(*) FILTER (WHERE a.status NOT IN ('unopened','opened','responded','not_needed') AND a.status NOT IN (${DONE_STATUSES}))::int AS other,
         COUNT(*) FILTER (WHERE a.status IN (${DONE_STATUSES}))::int AS done,
         COUNT(*) FILTER (
           WHERE a.status IN ('unopened','opened')
@@ -128,7 +128,7 @@ export async function listSentRequests(
         unopened: r.unopened,
         opened: r.opened,
         responded: r.responded,
-        unavailable: r.unavailable,
+        notNeeded: r.not_needed,
         other: r.other,
         done: r.done,
         overdueCount: r.overdue_count,

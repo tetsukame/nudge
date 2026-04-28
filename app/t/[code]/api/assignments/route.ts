@@ -25,7 +25,7 @@ export async function GET(
 
   const statusSql =
     statusFilter === 'done'
-      ? `a.status IN ('responded','unavailable','forwarded','substituted','exempted','expired')`
+      ? `a.status IN ('responded','not_needed','forwarded','substituted','exempted','expired')`
       : `a.status IN ('unopened','opened')`;
 
   return withTenant(appPool(), guard.tenantId, async (client) => {

@@ -44,7 +44,7 @@ export type AssigneeSummary = {
   unopened: number;
   opened: number;
   responded: number;
-  unavailable: number;
+  notNeeded: number;
   forwarded: number;
   substituted: number;
   exempted: number;
@@ -259,12 +259,12 @@ export async function listAssignees(
         COUNT(*) FILTER (WHERE a.status = 'unopened')::int AS unopened,
         COUNT(*) FILTER (WHERE a.status = 'opened')::int AS opened,
         COUNT(*) FILTER (WHERE a.status = 'responded')::int AS responded,
-        COUNT(*) FILTER (WHERE a.status = 'unavailable')::int AS unavailable,
+        COUNT(*) FILTER (WHERE a.status = 'not_needed')::int AS not_needed,
         COUNT(*) FILTER (WHERE a.status = 'forwarded')::int AS forwarded,
         COUNT(*) FILTER (WHERE a.status = 'substituted')::int AS substituted,
         COUNT(*) FILTER (WHERE a.status = 'exempted')::int AS exempted,
         COUNT(*) FILTER (WHERE a.status = 'expired')::int AS expired,
-        COUNT(*) FILTER (WHERE a.status NOT IN ('unopened','opened','responded','unavailable','forwarded','substituted','exempted','expired'))::int AS other,
+        COUNT(*) FILTER (WHERE a.status NOT IN ('unopened','opened','responded','not_needed','forwarded','substituted','exempted','expired'))::int AS other,
         COUNT(*) FILTER (WHERE a.status IN ('unopened','opened') AND r.due_at IS NOT NULL AND r.due_at < now())::int AS overdue
       FROM assignment a
       JOIN users u ON u.id = a.user_id
@@ -300,7 +300,7 @@ export async function listAssignees(
         unopened: sr.unopened,
         opened: sr.opened,
         responded: sr.responded,
-        unavailable: sr.unavailable,
+        notNeeded: sr.not_needed,
         forwarded: sr.forwarded,
         substituted: sr.substituted,
         exempted: sr.exempted,

@@ -18,6 +18,7 @@ export type RequestListItem = {
   dueAt: string | null;
   createdAt: string;
   createdByUserId: string;
+  estimatedMinutes: number;
 };
 
 export type ListRequestsResult = {
@@ -81,7 +82,7 @@ export async function listRequests(
     params.push(pageSize, offset);
     const itemSql = `
       SELECT r.id, r.title, r.type, r.status,
-             r.due_at, r.created_at, r.created_by_user_id
+             r.due_at, r.created_at, r.created_by_user_id, r.estimated_minutes
         FROM request r
         ${where}
        ORDER BY r.created_at DESC
@@ -97,6 +98,7 @@ export async function listRequests(
         dueAt: r.due_at ? new Date(r.due_at).toISOString() : null,
         createdAt: new Date(r.created_at).toISOString(),
         createdByUserId: r.created_by_user_id,
+        estimatedMinutes: r.estimated_minutes,
       })),
       total,
       page,

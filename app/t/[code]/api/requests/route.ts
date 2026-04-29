@@ -31,6 +31,7 @@ export async function POST(
   const b = body as {
     title?: string; body?: string; dueAt?: string;
     type?: 'survey' | 'task';
+    estimatedMinutes?: number;
     targets?: unknown[];
   };
   if (!b.title || !b.type || !Array.isArray(b.targets)) {
@@ -43,6 +44,7 @@ export async function POST(
       body: b.body ?? '',
       dueAt: b.dueAt ?? new Date().toISOString(),
       type: b.type,
+      estimatedMinutes: b.estimatedMinutes,
       targets: b.targets as TargetSpec[],
     });
     return NextResponse.json(result, { status: 201 });

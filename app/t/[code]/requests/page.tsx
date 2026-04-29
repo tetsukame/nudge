@@ -6,6 +6,7 @@ import { loadConfig } from '@/config';
 import { appPool } from '@/db/pools';
 import { withTenant } from '@/db/with-tenant';
 import { StatusBadge } from '@/ui/components/status-badge';
+import { formatMinutes } from '@/lib/format-duration';
 
 export const runtime = 'nodejs';
 
@@ -53,18 +54,20 @@ export default async function RequestListPage({
       ? `a.status IN ('responded','not_needed','forwarded','substituted','exempted','expired')`
       : `a.status IN ('unopened','opened')`;
 
-  const { items, total } = await withTenant(
+  const { items, total, totalMinutes } = await withTenant(
     appPool(),
     session.tenantId,
     async (client) => {
-      const { rows: countRows } = await client.query<{ n: string }>(
-        `SELECT COUNT(*)::text AS n
+      const { rows: countRows } = await client.query<{ n: string; sum_minutes: string | null }>(
+        `SELECT COUNT(*)::text AS n,
+                COALESCE(SUM(r.estimated_minutes), 0)::text AS sum_minutes
            FROM assignment a
            JOIN request r ON r.id = a.request_id
           WHERE a.user_id = $1 AND ${statusSql}`,
         [session.userId],
       );
       const total = parseInt(countRows[0].n, 10);
+      const totalMinutes = parseInt(countRows[0].sum_minutes ?? '0', 10);
 
       const { rows } = await client.query<AssignmentRow>(
         `SELECT
@@ -91,7 +94,7 @@ export default async function RequestListPage({
         [session.userId, PAGE_SIZE, offset],
       );
 
-      return { items: rows, total };
+      return { items: rows, total, totalMinutes };
     },
   );
 
@@ -134,6 +137,17 @@ export default async function RequestListPage({
           完了
         </Link>
       </div>
+
+      {/* Total time summary */}
+      {total > 0 && (
+        <div className="mb-3 text-sm text-gray-600">
+          {statusFilter === 'pending' ? '⏱ 残り作業時間' : '✅ 完了済み合計'}:{' '}
+          <span className="font-semibold text-gray-900">
+            {formatMinutes(totalMinutes)}
+          </span>
+          <span className="ml-1 text-gray-500">（{total} 件）</span>
+        </div>
+      )}
 
       {/* Assignment cards */}
       {items.length === 0 ? (

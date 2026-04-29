@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { TargetPicker } from '@/ui/components/target-picker';
 import type { TargetSpec } from '@/domain/request/expand-targets';
 import { cn } from '@/lib/utils';
+import { DURATION_PRESETS, formatMinutes } from '@/lib/format-duration';
 
 type RequestType = 'task' | 'survey';
 
@@ -22,6 +23,7 @@ export default function NewRequestPage() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [dueAt, setDueAt] = useState('');
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number>(5);
   const [targets, setTargets] = useState<TargetSpec[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -51,6 +53,7 @@ export default function NewRequestPage() {
           body: body.trim(),
           type,
           dueAt: dueAt || undefined,
+          estimatedMinutes,
           targets,
         }),
       });
@@ -142,6 +145,45 @@ export default function NewRequestPage() {
             onChange={(e) => setDueAt(e.target.value)}
             className="w-48"
           />
+        </div>
+
+        {/* Estimated minutes */}
+        <div className="space-y-2">
+          <Label htmlFor="req-estimated">想定所要時間 <span className="text-red-500">*</span></Label>
+          <div className="flex flex-wrap gap-2">
+            {DURATION_PRESETS.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setEstimatedMinutes(m)}
+                className={cn(
+                  'px-3 py-1.5 text-sm rounded-md border transition-colors',
+                  estimatedMinutes === m
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                )}
+              >
+                {formatMinutes(m)}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <Input
+              id="req-estimated"
+              type="number"
+              min={1}
+              step={1}
+              value={estimatedMinutes}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (Number.isFinite(n) && n > 0) setEstimatedMinutes(Math.floor(n));
+              }}
+              className="w-24"
+            />
+            <span className="text-sm text-gray-600">
+              分（{formatMinutes(estimatedMinutes)}）
+            </span>
+          </div>
         </div>
       </div>
 

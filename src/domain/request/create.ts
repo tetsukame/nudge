@@ -15,6 +15,10 @@ export type CreateRequestInput = {
   dueAt: string; // ISO8601
   type: 'survey' | 'task';
   estimatedMinutes?: number;
+  // undefined: use the user's primary org_unit (default)
+  // null:      explicit personal request (no sender org)
+  // string:    UUID of an org_unit the user belongs to
+  senderOrgUnitId?: string | null;
   targets: TargetSpec[];
 };
 
@@ -98,12 +102,48 @@ export async function createRequest(
       }
     }
 
+    // Resolve sender_org_unit_id:
+    //  - undefined → look up actor's is_primary org_unit (NULL if none).
+    //  - null      → explicit personal request (NULL).
+    //  - string    → validate the actor belongs to it.
+    let senderOrgUnitId: string | null;
+    if (input.senderOrgUnitId === null) {
+      senderOrgUnitId = null;
+    } else if (input.senderOrgUnitId === undefined) {
+      const { rows } = await client.query<{ org_unit_id: string }>(
+        `SELECT org_unit_id FROM user_org_unit
+          WHERE user_id = $1 AND is_primary = true
+          LIMIT 1`,
+        [actor.userId],
+      );
+      senderOrgUnitId = rows[0]?.org_unit_id ?? null;
+    } else {
+      const { rows } = await client.query<{ ok: boolean }>(
+        `SELECT EXISTS(
+           SELECT 1 FROM user_org_unit
+            WHERE user_id = $1 AND org_unit_id = $2
+         ) AS ok`,
+        [actor.userId, input.senderOrgUnitId],
+      );
+      if (!rows[0].ok) {
+        throw new CreateRequestError(
+          'senderOrgUnitId is not one of the actor\'s org_units',
+          'validation',
+        );
+      }
+      senderOrgUnitId = input.senderOrgUnitId;
+    }
+
     const { rows: reqRows } = await client.query<{ id: string }>(
       `INSERT INTO request
-         (tenant_id, created_by_user_id, type, title, body, due_at, status, estimated_minutes)
-       VALUES ($1, $2, $3, $4, $5, $6, 'active', $7)
+         (tenant_id, created_by_user_id, type, title, body, due_at, status,
+          estimated_minutes, sender_org_unit_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8)
        RETURNING id`,
-      [actor.tenantId, actor.userId, input.type, input.title, input.body, input.dueAt, estimatedMinutes],
+      [
+        actor.tenantId, actor.userId, input.type, input.title, input.body,
+        input.dueAt, estimatedMinutes, senderOrgUnitId,
+      ],
     );
     const requestId = reqRows[0].id;
 

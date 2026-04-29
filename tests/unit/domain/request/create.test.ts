@@ -4,7 +4,9 @@ import { createDomainScenario } from '../../../helpers/fixtures/domain-scenario.
 import { createRequest, CreateRequestError } from '../../../../src/domain/request/create.js';
 import type { ActorContext } from '../../../../src/domain/types.js';
 
-function adminCtx(s: { tenantId: string; users: { admin: string } }): ActorContext {
+function adminCtx(
+  s: { tenantId: string; users: { admin: string } },
+): ActorContext {
   return {
     userId: s.users.admin, tenantId: s.tenantId,
     isTenantAdmin: true, isTenantWideRequester: false,
@@ -149,6 +151,49 @@ describe('createRequest', () => {
         dueAt: new Date(Date.now() + 86400000).toISOString(),
         type: 'task',
         estimatedMinutes: -10,
+        targets: [{ type: 'user', userId: s.users.memberA }],
+      }),
+    ).rejects.toThrow(CreateRequestError);
+  });
+
+  it('defaults senderOrgUnitId to actor primary org_unit', async () => {
+    const s = await createDomainScenario(getPool());
+    const result = await createRequest(getAppPool(), adminCtx(s), {
+      title: 'sender default', body: '',
+      dueAt: new Date(Date.now() + 86400000).toISOString(),
+      type: 'task',
+      targets: [{ type: 'user', userId: s.users.memberA }],
+    });
+    const { rows } = await getPool().query<{ sender_org_unit_id: string | null }>(
+      `SELECT sender_org_unit_id FROM request WHERE id=$1`, [result.id],
+    );
+    // admin's primary is orgRoot per fixture
+    expect(rows[0].sender_org_unit_id).toBe(s.orgRoot);
+  });
+
+  it('senderOrgUnitId=null marks the request as personal', async () => {
+    const s = await createDomainScenario(getPool());
+    const result = await createRequest(getAppPool(), adminCtx(s), {
+      title: 'sender personal', body: '',
+      dueAt: new Date(Date.now() + 86400000).toISOString(),
+      type: 'task',
+      senderOrgUnitId: null,
+      targets: [{ type: 'user', userId: s.users.memberA }],
+    });
+    const { rows } = await getPool().query<{ sender_org_unit_id: string | null }>(
+      `SELECT sender_org_unit_id FROM request WHERE id=$1`, [result.id],
+    );
+    expect(rows[0].sender_org_unit_id).toBeNull();
+  });
+
+  it('rejects senderOrgUnitId pointing to an org the actor does not belong to', async () => {
+    const s = await createDomainScenario(getPool());
+    await expect(
+      createRequest(getAppPool(), adminCtx(s), {
+        title: 'sender bad', body: '',
+        dueAt: new Date(Date.now() + 86400000).toISOString(),
+        type: 'task',
+        senderOrgUnitId: s.orgSibling, // admin is not a member of Sibling
         targets: [{ type: 'user', userId: s.users.memberA }],
       }),
     ).rejects.toThrow(CreateRequestError);

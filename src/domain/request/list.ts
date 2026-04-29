@@ -19,6 +19,8 @@ export type RequestListItem = {
   createdAt: string;
   createdByUserId: string;
   estimatedMinutes: number;
+  senderOrgUnitId: string | null;
+  senderOrgUnitName: string | null;
 };
 
 export type ListRequestsResult = {
@@ -82,8 +84,10 @@ export async function listRequests(
     params.push(pageSize, offset);
     const itemSql = `
       SELECT r.id, r.title, r.type, r.status,
-             r.due_at, r.created_at, r.created_by_user_id, r.estimated_minutes
+             r.due_at, r.created_at, r.created_by_user_id, r.estimated_minutes,
+             r.sender_org_unit_id, ou.name AS sender_org_unit_name
         FROM request r
+        LEFT JOIN org_unit ou ON ou.id = r.sender_org_unit_id
         ${where}
        ORDER BY r.created_at DESC
        LIMIT $${params.length - 1} OFFSET $${params.length}`;
@@ -99,6 +103,8 @@ export async function listRequests(
         createdAt: new Date(r.created_at).toISOString(),
         createdByUserId: r.created_by_user_id,
         estimatedMinutes: r.estimated_minutes,
+        senderOrgUnitId: r.sender_org_unit_id ?? null,
+        senderOrgUnitName: r.sender_org_unit_name ?? null,
       })),
       total,
       page,

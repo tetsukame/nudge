@@ -47,10 +47,12 @@ export default async function RequestDetailPage({
   const data = await withTenant(pool, session.tenantId, async (client) => {
     const { rows: reqRows } = await client.query(
       `SELECT r.id, r.title, r.body, r.type, r.status, r.due_at, r.created_at,
-              r.created_by_user_id, r.estimated_minutes,
-              u.display_name AS sender_name
+              r.created_by_user_id, r.estimated_minutes, r.sender_org_unit_id,
+              u.display_name AS sender_name,
+              ou.name AS sender_org_unit_name
          FROM request r
          LEFT JOIN users u ON u.id = r.created_by_user_id
+         LEFT JOIN org_unit ou ON ou.id = r.sender_org_unit_id
         WHERE r.id = $1`,
       [id],
     );
@@ -164,6 +166,9 @@ export default async function RequestDetailPage({
           {req.sender_name && (
             <div>
               <span className="font-medium">依頼者:</span> {req.sender_name}
+              {req.sender_org_unit_name && (
+                <span className="text-gray-500">（{req.sender_org_unit_name}）</span>
+              )}
             </div>
           )}
           {req.due_at && (

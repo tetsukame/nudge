@@ -19,6 +19,7 @@ type AssignmentRow = {
   is_overdue: boolean;
   has_unread: boolean;
   sender_name: string | null;
+  sender_org_unit_name: string | null;
 };
 
 const PAGE_SIZE = 20;
@@ -84,10 +85,12 @@ export default async function RequestListPage({
               WHERE rc.request_id = r.id
                 AND (rc.assignment_id IS NULL OR rc.assignment_id = a.id)
            ) AS has_unread,
-           u.display_name AS sender_name
+           u.display_name AS sender_name,
+           ou.name AS sender_org_unit_name
          FROM assignment a
          JOIN request r ON r.id = a.request_id
          LEFT JOIN users u ON u.id = r.created_by_user_id
+         LEFT JOIN org_unit ou ON ou.id = r.sender_org_unit_id
         WHERE a.user_id = $1 AND ${statusSql}
         ORDER BY r.due_at ASC NULLS LAST, a.created_at DESC
         LIMIT $2 OFFSET $3`,
@@ -176,7 +179,12 @@ export default async function RequestListPage({
                     </div>
                     <div className="flex items-center gap-3 text-xs text-gray-500">
                       {item.sender_name && (
-                        <span>依頼者: {item.sender_name}</span>
+                        <span>
+                          依頼者: {item.sender_name}
+                          {item.sender_org_unit_name && (
+                            <span className="text-gray-400">（{item.sender_org_unit_name}）</span>
+                          )}
+                        </span>
                       )}
                       {item.due_at && (
                         <span className={item.is_overdue ? 'text-red-600 font-medium' : ''}>

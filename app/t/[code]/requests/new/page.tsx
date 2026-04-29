@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ import { DURATION_PRESETS, formatMinutes } from '@/lib/format-duration';
 
 type RequestType = 'task' | 'survey';
 
+type OrgUnitOption = { id: string; name: string; isPrimary: boolean };
+
 export default function NewRequestPage() {
   const params = useParams<{ code: string }>();
   const { code } = params;
@@ -25,8 +27,23 @@ export default function NewRequestPage() {
   const [dueAt, setDueAt] = useState('');
   const [estimatedMinutes, setEstimatedMinutes] = useState<number>(5);
   const [targets, setTargets] = useState<TargetSpec[]>([]);
+  const [orgUnits, setOrgUnits] = useState<OrgUnitOption[]>([]);
+  const [senderOrgUnitId, setSenderOrgUnitId] = useState<string | null>(null);
+  const [isPersonal, setIsPersonal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetch(`/t/${code}/api/me/org-units`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
+      .then((data: { orgUnits: OrgUnitOption[]; primaryOrgUnitId: string | null }) => {
+        setOrgUnits(data.orgUnits);
+        setSenderOrgUnitId(data.primaryOrgUnitId);
+      })
+      .catch(() => {
+        // Fallback: leave dropdown empty; the request will be sent as personal.
+      });
+  }, [code]);
 
   function countTargets(): number {
     return targets.length;
@@ -54,6 +71,7 @@ export default function NewRequestPage() {
           type,
           dueAt: dueAt || undefined,
           estimatedMinutes,
+          senderOrgUnitId: isPersonal ? null : senderOrgUnitId,
           targets,
         }),
       });
@@ -140,6 +158,43 @@ export default function NewRequestPage() {
             className="w-48"
           />
         </div>
+
+        {/* Sender org */}
+        {orgUnits.length > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="req-sender-org">依頼元</Label>
+            {orgUnits.length === 1 ? (
+              <p className="text-sm text-gray-700">
+                {orgUnits[0].name}
+                <span className="text-xs text-gray-500 ml-1">（あなたの所属）</span>
+              </p>
+            ) : (
+              <select
+                id="req-sender-org"
+                value={senderOrgUnitId ?? ''}
+                onChange={(e) => setSenderOrgUnitId(e.target.value || null)}
+                disabled={isPersonal}
+                className="w-full max-w-sm px-3 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400"
+              >
+                {orgUnits.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                    {o.isPrimary ? '（主所属）' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={isPersonal}
+                onChange={(e) => setIsPersonal(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              個人として依頼（所属を表示しない）
+            </label>
+          </div>
+        )}
 
         {/* Estimated minutes */}
         <div className="space-y-2">

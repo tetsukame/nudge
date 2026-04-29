@@ -32,6 +32,7 @@ export async function POST(
     title?: string; body?: string; dueAt?: string;
     type?: 'survey' | 'task';
     estimatedMinutes?: number;
+    senderOrgUnitId?: string | null;
     targets?: unknown[];
   };
   if (!b.title || !b.type || !Array.isArray(b.targets)) {
@@ -45,6 +46,7 @@ export async function POST(
       dueAt: b.dueAt ?? new Date().toISOString(),
       type: b.type,
       estimatedMinutes: b.estimatedMinutes,
+      senderOrgUnitId: b.senderOrgUnitId,
       targets: b.targets as TargetSpec[],
     });
     return NextResponse.json(result, { status: 201 });

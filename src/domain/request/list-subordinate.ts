@@ -15,7 +15,6 @@ export type ListSubordinateRequestsInput = {
 export type SubordinateRequestItem = {
   id: string;
   title: string;
-  type: string;
   status: string;
   dueAt: string | null;
   createdAt: string;
@@ -106,7 +105,7 @@ export async function listSubordinateRequests(
       )
       ${qClause}
       ${orgUnitClause}
-      GROUP BY r.id, r.title, r.type, r.status, r.due_at, r.created_at
+      GROUP BY r.id, r.title, r.status, r.due_at, r.created_at
       ${havingClause}
     `;
 
@@ -126,7 +125,6 @@ export async function listSubordinateRequests(
       SELECT
         r.id,
         r.title,
-        r.type,
         r.status,
         r.due_at,
         r.created_at,
@@ -156,7 +154,6 @@ export async function listSubordinateRequests(
       items: rows.map((r) => ({
         id: r.id,
         title: r.title,
-        type: r.type,
         status: r.status,
         dueAt: r.due_at ? new Date(r.due_at).toISOString() : null,
         createdAt: new Date(r.created_at).toISOString(),

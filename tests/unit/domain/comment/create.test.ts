@@ -24,7 +24,6 @@ describe('createComment', () => {
       title: 'Broadcast test',
       body: '',
       dueAt: new Date(Date.now() + 86400000).toISOString(),
-      type: 'task',
       targets: [{ type: 'user', userId: s.users.memberA }],
     });
 
@@ -53,7 +52,6 @@ describe('createComment', () => {
       title: 'Individual test',
       body: '',
       dueAt: new Date(Date.now() + 86400000).toISOString(),
-      type: 'task',
       targets: [{ type: 'user', userId: s.users.memberA }],
     });
 
@@ -89,7 +87,6 @@ describe('createComment', () => {
       title: 'Permission test',
       body: '',
       dueAt: new Date(Date.now() + 86400000).toISOString(),
-      type: 'task',
       targets: [{ type: 'user', userId: s.users.memberA }],
     });
 

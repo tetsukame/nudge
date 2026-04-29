@@ -22,8 +22,8 @@ describe('request.estimated_minutes', () => {
 
   it('column exists with default 5', async () => {
     const id = (await pool.query<{ id: string }>(
-      `INSERT INTO request (tenant_id, created_by_user_id, type, title)
-       VALUES ($1,$2,'task','T') RETURNING id`, [tenantId, userId],
+      `INSERT INTO request (tenant_id, created_by_user_id, title)
+       VALUES ($1,$2,'T') RETURNING id`, [tenantId, userId],
     )).rows[0].id;
     const { rows } = await pool.query<{ estimated_minutes: number }>(
       `SELECT estimated_minutes FROM request WHERE id = $1`, [id],
@@ -33,8 +33,8 @@ describe('request.estimated_minutes', () => {
 
   it('accepts explicit positive value', async () => {
     const id = (await pool.query<{ id: string }>(
-      `INSERT INTO request (tenant_id, created_by_user_id, type, title, estimated_minutes)
-       VALUES ($1,$2,'task','T',90) RETURNING id`, [tenantId, userId],
+      `INSERT INTO request (tenant_id, created_by_user_id, title, estimated_minutes)
+       VALUES ($1,$2,'T',90) RETURNING id`, [tenantId, userId],
     )).rows[0].id;
     const { rows } = await pool.query<{ estimated_minutes: number }>(
       `SELECT estimated_minutes FROM request WHERE id = $1`, [id],
@@ -45,14 +45,14 @@ describe('request.estimated_minutes', () => {
   it('rejects zero or negative', async () => {
     await expect(
       pool.query(
-        `INSERT INTO request (tenant_id, created_by_user_id, type, title, estimated_minutes)
-         VALUES ($1,$2,'task','T',0)`, [tenantId, userId],
+        `INSERT INTO request (tenant_id, created_by_user_id, title, estimated_minutes)
+         VALUES ($1,$2,'T',0)`, [tenantId, userId],
       ),
     ).rejects.toThrow(/check/i);
     await expect(
       pool.query(
-        `INSERT INTO request (tenant_id, created_by_user_id, type, title, estimated_minutes)
-         VALUES ($1,$2,'task','T',-5)`, [tenantId, userId],
+        `INSERT INTO request (tenant_id, created_by_user_id, title, estimated_minutes)
+         VALUES ($1,$2,'T',-5)`, [tenantId, userId],
       ),
     ).rejects.toThrow(/check/i);
   });

@@ -27,7 +27,6 @@ describe('listComments', () => {
       title: 'Visibility test',
       body: '',
       dueAt: new Date(Date.now() + 86400000).toISOString(),
-      type: 'task',
       targets: [
         { type: 'user', userId: s.users.memberA },
         { type: 'user', userId: s.users.memberB },
@@ -86,7 +85,6 @@ describe('listComments', () => {
       title: 'Requester view test',
       body: '',
       dueAt: new Date(Date.now() + 86400000).toISOString(),
-      type: 'task',
       targets: [
         { type: 'user', userId: s.users.memberA },
         { type: 'user', userId: s.users.memberB },

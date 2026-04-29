@@ -21,8 +21,8 @@ async function seedRequest(
   const pool = getPool();
   const requestId = randomUUID();
   await pool.query(
-    `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, status, due_at)
-     VALUES ($1,$2,$3,'task','req title','active',$4)`,
+    `INSERT INTO request(id, tenant_id, created_by_user_id, title, status, due_at)
+     VALUES ($1,$2,$3,'req title','active',$4)`,
     [requestId, s.tenantId, creatorId, dueAt ?? null],
   );
   const assignmentIds: string[] = [];

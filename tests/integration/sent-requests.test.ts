@@ -20,7 +20,7 @@ describe('GET /t/:code/api/requests?scope=sent', () => {
         method: 'POST',
         headers: { 'content-type': 'application/json', cookie: adminCookie },
         body: JSON.stringify({
-          title: 'SentTest', type: 'task',
+          title: 'SentTest',
           dueAt: new Date(Date.now() + 86400000).toISOString(),
           targets: [
             { type: 'user', userId: s.users.memberA },

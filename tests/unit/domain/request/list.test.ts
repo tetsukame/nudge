@@ -24,7 +24,6 @@ describe('listRequests', () => {
     await createRequest(getAppPool(), adminCtx, {
       title: 'R1', body: '',
       dueAt: new Date(Date.now() + 86400000).toISOString(),
-      type: 'task',
       targets: [{ type: 'user', userId: s.users.memberA }],
     });
     const memberCtx = ctx(s.tenantId, s.users.memberA);
@@ -39,7 +38,6 @@ describe('listRequests', () => {
     await createRequest(getAppPool(), adminCtx, {
       title: 'R2', body: '',
       dueAt: new Date(Date.now() + 86400000).toISOString(),
-      type: 'task',
       targets: [{ type: 'user', userId: s.users.memberA }],
     });
     const managerCtx = ctx(s.tenantId, s.users.manager);
@@ -68,7 +66,6 @@ describe('listRequests', () => {
     await createRequest(getAppPool(), adminCtx, {
       title: 'R3', body: '',
       dueAt: new Date(Date.now() + 86400000).toISOString(),
-      type: 'task',
       targets: [{ type: 'user', userId: s.users.memberA }],
     });
     const wideCtx = ctx(s.tenantId, s.users.wideReq, { isTenantWideRequester: true });

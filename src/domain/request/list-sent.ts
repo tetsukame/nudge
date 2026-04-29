@@ -14,7 +14,6 @@ export type ListSentRequestsInput = {
 export type SentRequestItem = {
   id: string;
   title: string;
-  type: string;
   status: string;
   dueAt: string | null;
   createdAt: string;
@@ -74,7 +73,7 @@ export async function listSentRequests(
       LEFT JOIN assignment a ON a.request_id = r.id
       WHERE r.created_by_user_id = $1
         ${qClause}
-      GROUP BY r.id, r.title, r.type, r.status, r.due_at, r.created_at
+      GROUP BY r.id, r.title, r.status, r.due_at, r.created_at
       ${havingClause}
     `;
 
@@ -93,7 +92,6 @@ export async function listSentRequests(
       SELECT
         r.id,
         r.title,
-        r.type,
         r.status,
         r.due_at,
         r.created_at,
@@ -120,7 +118,6 @@ export async function listSentRequests(
       items: rows.map((r) => ({
         id: r.id,
         title: r.title,
-        type: r.type,
         status: r.status,
         dueAt: r.due_at ? new Date(r.due_at).toISOString() : null,
         createdAt: new Date(r.created_at).toISOString(),

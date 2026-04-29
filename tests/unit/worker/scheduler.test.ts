@@ -42,8 +42,8 @@ async function setupRequestWithDue(
       : `now() - interval '${Math.abs(daysFromNow)} days'`;
 
   await pool.query(
-    `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, due_at, status)
-     VALUES ($1, $2, $3, 'task', 'Sched Test', ${dueExpr}, 'active')`,
+    `INSERT INTO request(id, tenant_id, created_by_user_id, title, due_at, status)
+     VALUES ($1, $2, $3, 'Sched Test', ${dueExpr}, 'active')`,
     [requestId, scenario.tenantId, scenario.users.admin],
   );
   await pool.query(

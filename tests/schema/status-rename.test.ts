@@ -17,8 +17,8 @@ describe('status rename: unavailable → not_needed', () => {
        VALUES ($1, 'rn', 'rn@x', 'RN') RETURNING id`, [tenantId],
     )).rows[0].id;
     requestId = (await pool.query(
-      `INSERT INTO request (tenant_id, created_by_user_id, type, title)
-       VALUES ($1,$2,'task','T') RETURNING id`, [tenantId, userId],
+      `INSERT INTO request (tenant_id, created_by_user_id, title)
+       VALUES ($1,$2,'T') RETURNING id`, [tenantId, userId],
     )).rows[0].id;
     asgId = (await pool.query(
       `INSERT INTO assignment (tenant_id, request_id, user_id)

@@ -21,8 +21,8 @@ describe('migration 027: request_target allows target_type=all', () => {
       [userId, tenantId, 'kc-' + userId, 'a@x', 'A'],
     );
     await pool.query(
-      `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, status)
-       VALUES ($1,$2,$3,'task','t','active')`,
+      `INSERT INTO request(id, tenant_id, created_by_user_id, title, status)
+       VALUES ($1,$2,$3,'t','active')`,
       [reqId, tenantId, userId],
     );
     await pool.query(
@@ -54,8 +54,8 @@ describe('migration 027: request_target allows target_type=all', () => {
       [userId, tenantId, 'kc-' + userId, 'b@x', 'B'],
     );
     await pool.query(
-      `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, status)
-       VALUES ($1,$2,$3,'task','t','active')`,
+      `INSERT INTO request(id, tenant_id, created_by_user_id, title, status)
+       VALUES ($1,$2,$3,'t','active')`,
       [reqId, tenantId, userId],
     );
     await expect(
@@ -82,8 +82,8 @@ describe('migration 027: request_target allows target_type=all', () => {
       [userId, tenantId, 'kc-' + userId, 'c@x', 'C'],
     );
     await pool.query(
-      `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, status)
-       VALUES ($1,$2,$3,'task','t','active')`,
+      `INSERT INTO request(id, tenant_id, created_by_user_id, title, status)
+       VALUES ($1,$2,$3,'t','active')`,
       [reqId, tenantId, userId],
     );
     await expect(

@@ -15,7 +15,7 @@ async function seedOne(tenantCode: string, adminId: string, memberA: string, ten
       method: 'POST',
       headers: { 'content-type': 'application/json', cookie: adminCookie },
       body: JSON.stringify({
-        title: 'Sub', type: 'task',
+        title: 'Sub',
         dueAt: new Date(Date.now() + 86400000).toISOString(),
         targets: [{ type: 'user', userId: memberA }],
       }),

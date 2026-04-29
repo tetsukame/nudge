@@ -44,8 +44,8 @@ describe('worker tick (scheduler + sender)', () => {
     const requestId = randomUUID();
     const today = new Date();
     await getPool().query(
-      `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, status, due_at)
-       VALUES ($1, $2, $3, 'task', 'tick test', 'active', $4)`,
+      `INSERT INTO request(id, tenant_id, created_by_user_id, title, status, due_at)
+       VALUES ($1, $2, $3, 'tick test', 'active', $4)`,
       [requestId, s.tenantId, s.users.admin, today.toISOString()],
     );
     await getPool().query(

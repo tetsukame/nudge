@@ -18,7 +18,7 @@ async function seed(
       method: 'POST',
       headers: { 'content-type': 'application/json', cookie },
       body: JSON.stringify({
-        title: 'Ex', type: 'task',
+        title: 'Ex',
         dueAt: new Date(Date.now() + 86400000).toISOString(),
         targets: [{ type: 'user', userId: memberA }],
       }),

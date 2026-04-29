@@ -17,8 +17,8 @@ describe('assignment', () => {
        VALUES ($1, 'a', 'a@x', 'A') RETURNING id`, [tenantId],
     )).rows[0].id;
     requestId = (await pool.query(
-      `INSERT INTO request (tenant_id, created_by_user_id, type, title)
-       VALUES ($1,$2,'task','T') RETURNING id`, [tenantId, userId],
+      `INSERT INTO request (tenant_id, created_by_user_id, title)
+       VALUES ($1,$2,'T') RETURNING id`, [tenantId, userId],
     )).rows[0].id;
   });
   afterAll(async () => { await stopTestDb(); });

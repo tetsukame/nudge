@@ -13,6 +13,7 @@ import { StatusBadge } from '@/ui/components/status-badge';
 import { ActionButtons } from '@/ui/components/action-buttons';
 import { CommentSection } from '@/ui/components/comment-thread';
 import { RequesterSection } from '@/ui/components/requester-section';
+import { formatMinutes } from '@/lib/format-duration';
 
 export const runtime = 'nodejs';
 
@@ -46,7 +47,7 @@ export default async function RequestDetailPage({
   const data = await withTenant(pool, session.tenantId, async (client) => {
     const { rows: reqRows } = await client.query(
       `SELECT r.id, r.title, r.body, r.type, r.status, r.due_at, r.created_at,
-              r.created_by_user_id,
+              r.created_by_user_id, r.estimated_minutes,
               u.display_name AS sender_name
          FROM request r
          LEFT JOIN users u ON u.id = r.created_by_user_id
@@ -176,6 +177,12 @@ export default async function RequestDetailPage({
             <div>
               <span className="font-medium">依頼日:</span>{' '}
               {formatDate(req.created_at)}
+            </div>
+          )}
+          {typeof req.estimated_minutes === 'number' && (
+            <div>
+              <span className="font-medium">想定所要時間:</span>{' '}
+              {formatMinutes(req.estimated_minutes)}
             </div>
           )}
         </div>

@@ -14,6 +14,7 @@ export type CreateRequestInput = {
   body: string;
   dueAt: string; // ISO8601
   type: 'survey' | 'task';
+  estimatedMinutes?: number;
   targets: TargetSpec[];
 };
 
@@ -47,6 +48,10 @@ export async function createRequest(
   }
   if (input.targets.length === 0) {
     throw new CreateRequestError('targets required', 'validation');
+  }
+  const estimatedMinutes = input.estimatedMinutes ?? 5;
+  if (!Number.isInteger(estimatedMinutes) || estimatedMinutes <= 0) {
+    throw new CreateRequestError('estimatedMinutes must be a positive integer', 'validation');
   }
 
   return withTenant(pool, actor.tenantId, async (client) => {
@@ -95,10 +100,10 @@ export async function createRequest(
 
     const { rows: reqRows } = await client.query<{ id: string }>(
       `INSERT INTO request
-         (tenant_id, created_by_user_id, type, title, body, due_at, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'active')
+         (tenant_id, created_by_user_id, type, title, body, due_at, status, estimated_minutes)
+       VALUES ($1, $2, $3, $4, $5, $6, 'active', $7)
        RETURNING id`,
-      [actor.tenantId, actor.userId, input.type, input.title, input.body, input.dueAt],
+      [actor.tenantId, actor.userId, input.type, input.title, input.body, input.dueAt, estimatedMinutes],
     );
     const requestId = reqRows[0].id;
 

@@ -102,4 +102,55 @@ describe('createRequest', () => {
       }),
     ).rejects.toThrow(/no targets expanded/);
   });
+
+  it('defaults estimatedMinutes to 5 when omitted', async () => {
+    const s = await createDomainScenario(getPool());
+    const result = await createRequest(getAppPool(), adminCtx(s), {
+      title: 'EM default', body: '',
+      dueAt: new Date(Date.now() + 86400000).toISOString(),
+      type: 'task',
+      targets: [{ type: 'user', userId: s.users.memberA }],
+    });
+    const { rows } = await getPool().query<{ estimated_minutes: number }>(
+      `SELECT estimated_minutes FROM request WHERE id=$1`, [result.id],
+    );
+    expect(rows[0].estimated_minutes).toBe(5);
+  });
+
+  it('persists explicit estimatedMinutes', async () => {
+    const s = await createDomainScenario(getPool());
+    const result = await createRequest(getAppPool(), adminCtx(s), {
+      title: 'EM explicit', body: '',
+      dueAt: new Date(Date.now() + 86400000).toISOString(),
+      type: 'task',
+      estimatedMinutes: 90,
+      targets: [{ type: 'user', userId: s.users.memberA }],
+    });
+    const { rows } = await getPool().query<{ estimated_minutes: number }>(
+      `SELECT estimated_minutes FROM request WHERE id=$1`, [result.id],
+    );
+    expect(rows[0].estimated_minutes).toBe(90);
+  });
+
+  it('rejects non-positive estimatedMinutes with validation error', async () => {
+    const s = await createDomainScenario(getPool());
+    await expect(
+      createRequest(getAppPool(), adminCtx(s), {
+        title: 'EM bad', body: '',
+        dueAt: new Date(Date.now() + 86400000).toISOString(),
+        type: 'task',
+        estimatedMinutes: 0,
+        targets: [{ type: 'user', userId: s.users.memberA }],
+      }),
+    ).rejects.toThrow(CreateRequestError);
+    await expect(
+      createRequest(getAppPool(), adminCtx(s), {
+        title: 'EM bad', body: '',
+        dueAt: new Date(Date.now() + 86400000).toISOString(),
+        type: 'task',
+        estimatedMinutes: -10,
+        targets: [{ type: 'user', userId: s.users.memberA }],
+      }),
+    ).rejects.toThrow(CreateRequestError);
+  });
 });

@@ -13,7 +13,6 @@ export type CreateRequestInput = {
   title: string;
   body: string;
   dueAt: string; // ISO8601
-  type: 'survey' | 'task';
   estimatedMinutes?: number;
   // undefined: use the user's primary org_unit (default)
   // null:      explicit personal request (no sender org)
@@ -136,12 +135,12 @@ export async function createRequest(
 
     const { rows: reqRows } = await client.query<{ id: string }>(
       `INSERT INTO request
-         (tenant_id, created_by_user_id, type, title, body, due_at, status,
+         (tenant_id, created_by_user_id, title, body, due_at, status,
           estimated_minutes, sender_org_unit_id)
-       VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8)
+       VALUES ($1, $2, $3, $4, $5, 'active', $6, $7)
        RETURNING id`,
       [
-        actor.tenantId, actor.userId, input.type, input.title, input.body,
+        actor.tenantId, actor.userId, input.title, input.body,
         input.dueAt, estimatedMinutes, senderOrgUnitId,
       ],
     );

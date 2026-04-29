@@ -13,8 +13,8 @@ describe('emitNotification', () => {
     const s = await createDomainScenario(getPool());
     const reqId = randomUUID();
     await getPool().query(
-      `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, status)
-       VALUES ($1,$2,$3,'task','t','active')`,
+      `INSERT INTO request(id, tenant_id, created_by_user_id, title, status)
+       VALUES ($1,$2,$3,'t','active')`,
       [reqId, s.tenantId, s.users.admin],
     );
     await withTenant(getAppPool(), s.tenantId, async (client) => {
@@ -46,8 +46,8 @@ describe('emitNotification', () => {
     const s = await createDomainScenario(getPool());
     const reqId = randomUUID();
     await getPool().query(
-      `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, status)
-       VALUES ($1,$2,$3,'task','t','active')`,
+      `INSERT INTO request(id, tenant_id, created_by_user_id, title, status)
+       VALUES ($1,$2,$3,'t','active')`,
       [reqId, s.tenantId, s.users.admin],
     );
     await withTenant(getAppPool(), s.tenantId, async (client) => {

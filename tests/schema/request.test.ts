@@ -21,31 +21,18 @@ describe('request', () => {
 
   it('exists', async () => { await assertTableExists(pool, 'request'); });
 
-  it('accepts survey and task type', async () => {
+  it('accepts insert without a type column (NDG-7 dropped it)', async () => {
     await pool.query(
-      `INSERT INTO request (tenant_id, created_by_user_id, type, title, status)
-       VALUES ($1, $2, 'survey', 'S', 'active')`, [tenantId, creator],
+      `INSERT INTO request (tenant_id, created_by_user_id, title, status)
+       VALUES ($1, $2, 'T', 'active')`, [tenantId, creator],
     );
-    await pool.query(
-      `INSERT INTO request (tenant_id, created_by_user_id, type, title, status)
-       VALUES ($1, $2, 'task', 'T', 'draft')`, [tenantId, creator],
-    );
-  });
-
-  it('rejects invalid type', async () => {
-    await expect(
-      pool.query(
-        `INSERT INTO request (tenant_id, created_by_user_id, type, title)
-         VALUES ($1, $2, 'poll', 'P')`, [tenantId, creator],
-      ),
-    ).rejects.toThrow(/check constraint/i);
   });
 
   it('rejects invalid status', async () => {
     await expect(
       pool.query(
-        `INSERT INTO request (tenant_id, created_by_user_id, type, title, status)
-         VALUES ($1, $2, 'task', 'X', 'archived')`, [tenantId, creator],
+        `INSERT INTO request (tenant_id, created_by_user_id, title, status)
+         VALUES ($1, $2, 'X', 'archived')`, [tenantId, creator],
       ),
     ).rejects.toThrow(/check constraint/i);
   });

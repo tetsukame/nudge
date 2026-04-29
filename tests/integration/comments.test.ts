@@ -31,7 +31,6 @@ describe('comments broadcast + individual round-trip', () => {
         headers: { 'content-type': 'application/json', cookie: adminCookie },
         body: JSON.stringify({
           title: 'Comment Test',
-          type: 'task',
           dueAt: new Date(Date.now() + 86400000).toISOString(),
           targets: [{ type: 'user', userId: s.users.memberA }],
         }),

@@ -47,7 +47,7 @@ export default async function RequestDetailPage({
   // Fetch request + my assignment from DB
   const data = await withTenant(pool, session.tenantId, async (client) => {
     const { rows: reqRows } = await client.query(
-      `SELECT r.id, r.title, r.body, r.type, r.status, r.due_at, r.created_at,
+      `SELECT r.id, r.title, r.body, r.status, r.due_at, r.created_at,
               r.created_by_user_id, r.estimated_minutes, r.sender_org_unit_id,
               u.display_name AS sender_name,
               ou.name AS sender_org_unit_name
@@ -138,12 +138,6 @@ export default async function RequestDetailPage({
     void markViewedByRequester(appPool(), actor, id).catch(() => {});
   }
 
-  const typeLabelMap: Record<string, string> = {
-    task: 'タスク',
-    survey: 'アンケート',
-  };
-  const typeLabel = typeLabelMap[req.type as string] ?? req.type;
-
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
       {/* Back link */}
@@ -156,12 +150,7 @@ export default async function RequestDetailPage({
 
       {/* Header */}
       <div className="bg-white rounded-lg border border-gray-200 p-5 space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <h1 className="text-lg font-bold text-gray-900 flex-1">{req.title}</h1>
-          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-            {typeLabel}
-          </span>
-        </div>
+        <h1 className="text-lg font-bold text-gray-900">{req.title}</h1>
 
         <div className="flex flex-wrap gap-4 text-sm text-gray-600">
           {req.sender_name && (

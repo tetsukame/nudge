@@ -24,7 +24,7 @@ describe('forward via REST', () => {
         method: 'POST',
         headers: { 'content-type': 'application/json', cookie: adminCookie },
         body: JSON.stringify({
-          title: 'Fwd', type: 'task',
+          title: 'Fwd',
           dueAt: new Date(Date.now() + 86400000).toISOString(),
           targets: [{ type: 'user', userId: s.users.memberA }],
         }),

@@ -13,7 +13,6 @@ export type ListRequestsInput = {
 export type RequestListItem = {
   id: string;
   title: string;
-  type: string;
   status: string;
   dueAt: string | null;
   createdAt: string;
@@ -83,7 +82,7 @@ export async function listRequests(
 
     params.push(pageSize, offset);
     const itemSql = `
-      SELECT r.id, r.title, r.type, r.status,
+      SELECT r.id, r.title, r.status,
              r.due_at, r.created_at, r.created_by_user_id, r.estimated_minutes,
              r.sender_org_unit_id, ou.name AS sender_org_unit_name
         FROM request r
@@ -97,7 +96,6 @@ export async function listRequests(
       items: rows.map((r) => ({
         id: r.id,
         title: r.title,
-        type: r.type,
         status: r.status,
         dueAt: r.due_at ? new Date(r.due_at).toISOString() : null,
         createdAt: new Date(r.created_at).toISOString(),

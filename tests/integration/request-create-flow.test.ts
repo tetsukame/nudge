@@ -19,7 +19,6 @@ describe('POST /t/:code/api/requests', () => {
       headers: { 'content-type': 'application/json', cookie },
       body: JSON.stringify({
         title: 'Integration R',
-        type: 'task',
         dueAt: new Date(Date.now() + 86400000).toISOString(),
         targets: [{ type: 'user', userId: s.users.memberA }],
       }),

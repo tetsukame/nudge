@@ -26,8 +26,8 @@ describe('request.sender_org_unit_id', () => {
 
   it('column is nullable and defaults to NULL', async () => {
     const id = (await pool.query<{ id: string }>(
-      `INSERT INTO request (tenant_id, created_by_user_id, type, title)
-       VALUES ($1,$2,'task','T') RETURNING id`, [tenantId, userId],
+      `INSERT INTO request (tenant_id, created_by_user_id, title)
+       VALUES ($1,$2,'T') RETURNING id`, [tenantId, userId],
     )).rows[0].id;
     const { rows } = await pool.query<{ sender_org_unit_id: string | null }>(
       `SELECT sender_org_unit_id FROM request WHERE id = $1`, [id],
@@ -37,8 +37,8 @@ describe('request.sender_org_unit_id', () => {
 
   it('accepts a valid org_unit FK', async () => {
     const id = (await pool.query<{ id: string }>(
-      `INSERT INTO request (tenant_id, created_by_user_id, type, title, sender_org_unit_id)
-       VALUES ($1,$2,'task','T',$3) RETURNING id`,
+      `INSERT INTO request (tenant_id, created_by_user_id, title, sender_org_unit_id)
+       VALUES ($1,$2,'T',$3) RETURNING id`,
       [tenantId, userId, orgUnitId],
     )).rows[0].id;
     const { rows } = await pool.query<{ sender_org_unit_id: string }>(
@@ -50,8 +50,8 @@ describe('request.sender_org_unit_id', () => {
   it('rejects non-existent org_unit FK', async () => {
     await expect(
       pool.query(
-        `INSERT INTO request (tenant_id, created_by_user_id, type, title, sender_org_unit_id)
-         VALUES ($1,$2,'task','T','00000000-0000-0000-0000-000000000000')`,
+        `INSERT INTO request (tenant_id, created_by_user_id, title, sender_org_unit_id)
+         VALUES ($1,$2,'T','00000000-0000-0000-0000-000000000000')`,
         [tenantId, userId],
       ),
     ).rejects.toThrow(/foreign key/i);

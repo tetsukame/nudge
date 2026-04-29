@@ -8,8 +8,8 @@ import { expandTargets, type TargetSpec } from '../../../../src/domain/request/e
 async function mkRequest(pool: import('pg').Pool, tenantId: string, createdBy: string): Promise<string> {
   const id = randomUUID();
   await pool.query(
-    `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, status)
-     VALUES ($1,$2,$3,'task','t','active')`,
+    `INSERT INTO request(id, tenant_id, created_by_user_id, title, status)
+     VALUES ($1,$2,$3,'t','active')`,
     [id, tenantId, createdBy],
   );
   return id;

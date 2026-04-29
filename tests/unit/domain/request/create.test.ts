@@ -29,7 +29,6 @@ describe('createRequest', () => {
       title: 'Survey 1',
       body: 'please fill',
       dueAt: new Date(Date.now() + 86400000).toISOString(),
-      type: 'survey',
       targets: [
         { type: 'user', userId: s.users.memberA },
         { type: 'user', userId: s.users.memberB },
@@ -65,7 +64,7 @@ describe('createRequest', () => {
       createRequest(getAppPool(), plainCtx(s), {
         title: 'T', body: '',
         dueAt: new Date(Date.now() + 86400000).toISOString(),
-        type: 'task', targets: [{ type: 'all' }],
+        targets: [{ type: 'all' }],
       }),
     ).rejects.toBeInstanceOf(CreateRequestError);
   });
@@ -81,7 +80,6 @@ describe('createRequest', () => {
       createRequest(getAppPool(), plainCtx(s), {
         title: 'T', body: '',
         dueAt: new Date(Date.now() + 86400000).toISOString(),
-        type: 'task',
         targets: [{ type: 'org_unit', orgUnitId: sibling, includeDescendants: false }],
       }),
     ).rejects.toThrow(/outside visible scope/);
@@ -99,7 +97,6 @@ describe('createRequest', () => {
       createRequest(getAppPool(), adminCtx(s), {
         title: 'T', body: '',
         dueAt: new Date(Date.now() + 86400000).toISOString(),
-        type: 'task',
         targets: [{ type: 'group', groupId: emptyGroup }],
       }),
     ).rejects.toThrow(/no targets expanded/);
@@ -110,7 +107,6 @@ describe('createRequest', () => {
     const result = await createRequest(getAppPool(), adminCtx(s), {
       title: 'EM default', body: '',
       dueAt: new Date(Date.now() + 86400000).toISOString(),
-      type: 'task',
       targets: [{ type: 'user', userId: s.users.memberA }],
     });
     const { rows } = await getPool().query<{ estimated_minutes: number }>(
@@ -124,7 +120,6 @@ describe('createRequest', () => {
     const result = await createRequest(getAppPool(), adminCtx(s), {
       title: 'EM explicit', body: '',
       dueAt: new Date(Date.now() + 86400000).toISOString(),
-      type: 'task',
       estimatedMinutes: 90,
       targets: [{ type: 'user', userId: s.users.memberA }],
     });
@@ -140,7 +135,6 @@ describe('createRequest', () => {
       createRequest(getAppPool(), adminCtx(s), {
         title: 'EM bad', body: '',
         dueAt: new Date(Date.now() + 86400000).toISOString(),
-        type: 'task',
         estimatedMinutes: 0,
         targets: [{ type: 'user', userId: s.users.memberA }],
       }),
@@ -149,7 +143,6 @@ describe('createRequest', () => {
       createRequest(getAppPool(), adminCtx(s), {
         title: 'EM bad', body: '',
         dueAt: new Date(Date.now() + 86400000).toISOString(),
-        type: 'task',
         estimatedMinutes: -10,
         targets: [{ type: 'user', userId: s.users.memberA }],
       }),
@@ -161,7 +154,6 @@ describe('createRequest', () => {
     const result = await createRequest(getAppPool(), adminCtx(s), {
       title: 'sender default', body: '',
       dueAt: new Date(Date.now() + 86400000).toISOString(),
-      type: 'task',
       targets: [{ type: 'user', userId: s.users.memberA }],
     });
     const { rows } = await getPool().query<{ sender_org_unit_id: string | null }>(
@@ -176,7 +168,6 @@ describe('createRequest', () => {
     const result = await createRequest(getAppPool(), adminCtx(s), {
       title: 'sender personal', body: '',
       dueAt: new Date(Date.now() + 86400000).toISOString(),
-      type: 'task',
       senderOrgUnitId: null,
       targets: [{ type: 'user', userId: s.users.memberA }],
     });
@@ -192,7 +183,6 @@ describe('createRequest', () => {
       createRequest(getAppPool(), adminCtx(s), {
         title: 'sender bad', body: '',
         dueAt: new Date(Date.now() + 86400000).toISOString(),
-        type: 'task',
         senderOrgUnitId: s.orgSibling, // admin is not a member of Sibling
         targets: [{ type: 'user', userId: s.users.memberA }],
       }),

@@ -28,8 +28,8 @@ async function seedRequest(scenario: DomainScenario): Promise<string> {
   const pool = getPool();
   const id = randomUUID();
   await pool.query(
-    `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, status)
-     VALUES ($1, $2, $3, 'task', 'Test Request', 'active')`,
+    `INSERT INTO request(id, tenant_id, created_by_user_id, title, status)
+     VALUES ($1, $2, $3, 'Test Request', 'active')`,
     [id, scenario.tenantId, scenario.users.admin],
   );
   return id;

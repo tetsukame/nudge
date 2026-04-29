@@ -19,8 +19,8 @@ async function seedAssignment(
 ): Promise<{ requestId: string; assignmentId: string }> {
   const requestId = randomUUID();
   await getPool().query(
-    `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, status)
-     VALUES ($1, $2, $3, 'task', 'view-test', 'active')`,
+    `INSERT INTO request(id, tenant_id, created_by_user_id, title, status)
+     VALUES ($1, $2, $3, 'view-test', 'active')`,
     [requestId, s.tenantId, s.users.admin],
   );
   const { rows } = await getPool().query<{ id: string }>(

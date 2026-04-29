@@ -17,8 +17,8 @@ describe('request_target', () => {
        VALUES ($1, 's', 's@x', 'S') RETURNING id`, [tenantId],
     )).rows[0].id;
     requestId = (await pool.query(
-      `INSERT INTO request (tenant_id, created_by_user_id, type, title)
-       VALUES ($1,$2,'task','X') RETURNING id`, [tenantId, creator],
+      `INSERT INTO request (tenant_id, created_by_user_id, title)
+       VALUES ($1,$2,'X') RETURNING id`, [tenantId, creator],
     )).rows[0].id;
   });
   afterAll(async () => { await stopTestDb(); });
@@ -47,8 +47,8 @@ describe('request_target', () => {
 
   it('cascades on request delete', async () => {
     const r = (await pool.query(
-      `INSERT INTO request (tenant_id, created_by_user_id, type, title)
-       VALUES ($1,$2,'task','Y') RETURNING id`, [tenantId, creator],
+      `INSERT INTO request (tenant_id, created_by_user_id, title)
+       VALUES ($1,$2,'Y') RETURNING id`, [tenantId, creator],
     )).rows[0].id;
     await pool.query(
       `INSERT INTO request_target (tenant_id, request_id, target_type, target_id)

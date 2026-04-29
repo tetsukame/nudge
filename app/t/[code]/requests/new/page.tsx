@@ -12,8 +12,6 @@ import type { TargetSpec } from '@/domain/request/expand-targets';
 import { cn } from '@/lib/utils';
 import { DURATION_PRESETS, formatMinutes } from '@/lib/format-duration';
 
-type RequestType = 'task' | 'survey';
-
 type OrgUnitOption = { id: string; name: string; isPrimary: boolean };
 
 export default function NewRequestPage() {
@@ -21,7 +19,6 @@ export default function NewRequestPage() {
   const { code } = params;
   const router = useRouter();
 
-  const [type, setType] = useState<RequestType>('task');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [dueAt, setDueAt] = useState('');
@@ -68,7 +65,6 @@ export default function NewRequestPage() {
         body: JSON.stringify({
           title: title.trim(),
           body: body.trim(),
-          type,
           dueAt: dueAt || undefined,
           estimatedMinutes,
           senderOrgUnitId: isPersonal ? null : senderOrgUnitId,
@@ -99,37 +95,6 @@ export default function NewRequestPage() {
       <h1 className="text-xl font-bold text-gray-900">新規依頼作成</h1>
 
       <div className="bg-white rounded-lg border border-gray-200 p-5 space-y-5">
-        {/* Type toggle */}
-        <div className="space-y-2">
-          <Label>依頼種別</Label>
-          <div className="flex rounded-md border border-gray-200 overflow-hidden w-fit">
-            <button
-              type="button"
-              onClick={() => setType('task')}
-              className={cn(
-                'px-4 py-2 text-sm font-medium transition-colors',
-                type === 'task'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-50',
-              )}
-            >
-              タスク
-            </button>
-            <button
-              type="button"
-              onClick={() => setType('survey')}
-              className={cn(
-                'px-4 py-2 text-sm font-medium transition-colors border-l border-gray-200',
-                type === 'survey'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-50',
-              )}
-            >
-              アンケート
-            </button>
-          </div>
-        </div>
-
         {/* Title */}
         <div className="space-y-2">
           <Label htmlFor="req-title">タイトル <span className="text-red-500">*</span></Label>

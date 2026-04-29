@@ -30,12 +30,11 @@ export async function POST(
   }
   const b = body as {
     title?: string; body?: string; dueAt?: string;
-    type?: 'survey' | 'task';
     estimatedMinutes?: number;
     senderOrgUnitId?: string | null;
     targets?: unknown[];
   };
-  if (!b.title || !b.type || !Array.isArray(b.targets)) {
+  if (!b.title || !Array.isArray(b.targets)) {
     return NextResponse.json({ error: 'invalid payload' }, { status: 400 });
   }
 
@@ -44,7 +43,6 @@ export async function POST(
       title: b.title,
       body: b.body ?? '',
       dueAt: b.dueAt ?? new Date().toISOString(),
-      type: b.type,
       estimatedMinutes: b.estimatedMinutes,
       senderOrgUnitId: b.senderOrgUnitId,
       targets: b.targets as TargetSpec[],

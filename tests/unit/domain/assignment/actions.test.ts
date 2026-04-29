@@ -20,8 +20,8 @@ async function seedAssignment(
   const pool = getPool();
   const requestId = randomUUID();
   await pool.query(
-    `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, status)
-     VALUES ($1,$2,$3,'task','t','active')`,
+    `INSERT INTO request(id, tenant_id, created_by_user_id, title, status)
+     VALUES ($1,$2,$3,'t','active')`,
     [requestId, s.tenantId, s.users.admin],
   );
   const { rows } = await pool.query<{ id: string }>(
@@ -218,8 +218,8 @@ describe('assignment actions', () => {
     const s = await createDomainScenario(getPool());
     const reqId = randomUUID();
     await getPool().query(
-      `INSERT INTO request(id, tenant_id, created_by_user_id, type, title, status)
-       VALUES ($1,$2,$3,'task','self','active')`,
+      `INSERT INTO request(id, tenant_id, created_by_user_id, title, status)
+       VALUES ($1,$2,$3,'self','active')`,
       [reqId, s.tenantId, s.users.admin],
     );
     const { rows: asgRows } = await getPool().query<{ id: string }>(

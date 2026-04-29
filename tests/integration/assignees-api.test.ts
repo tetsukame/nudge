@@ -23,7 +23,6 @@ describe('GET /t/:code/api/requests/:id/assignees', () => {
         headers: { 'content-type': 'application/json', cookie: adminCookie },
         body: JSON.stringify({
           title: 'AssigneesTest',
-          type: 'task',
           dueAt: new Date(Date.now() + 86400000).toISOString(),
           targets: [
             { type: 'user', userId: s.users.memberA },
@@ -67,7 +66,6 @@ describe('GET /t/:code/api/requests/:id/assignees', () => {
         headers: { 'content-type': 'application/json', cookie: adminCookie },
         body: JSON.stringify({
           title: 'OutsiderTest',
-          type: 'task',
           dueAt: new Date(Date.now() + 86400000).toISOString(),
           targets: [{ type: 'user', userId: s.users.memberA }],
         }),

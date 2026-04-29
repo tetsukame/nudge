@@ -15,7 +15,7 @@ export async function GET(
 
   return withTenant(appPool(), guard.tenantId, async (client) => {
     const { rows: reqRows } = await client.query(
-      `SELECT id, title, body, type, status, due_at, created_at, created_by_user_id
+      `SELECT id, title, body, status, due_at, created_at, created_by_user_id
          FROM request WHERE id=$1`,
       [id],
     );
@@ -67,7 +67,6 @@ export async function GET(
       id: r.id,
       title: r.title,
       body: r.body,
-      type: r.type,
       status: r.status,
       dueAt: r.due_at,
       createdAt: r.created_at,

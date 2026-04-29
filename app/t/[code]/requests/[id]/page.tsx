@@ -13,6 +13,7 @@ import { StatusBadge } from '@/ui/components/status-badge';
 import { ActionButtons } from '@/ui/components/action-buttons';
 import { CommentSection } from '@/ui/components/comment-thread';
 import { RequesterSection } from '@/ui/components/requester-section';
+import { MarkdownRenderer } from '@/ui/components/markdown-renderer';
 import { formatMinutes } from '@/lib/format-duration';
 
 export const runtime = 'nodejs';
@@ -201,7 +202,7 @@ export default async function RequestDetailPage({
 
         {req.body && (
           <div className="pt-2 border-t border-gray-100">
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{req.body}</p>
+            <MarkdownRenderer body={req.body} />
           </div>
         )}
       </div>

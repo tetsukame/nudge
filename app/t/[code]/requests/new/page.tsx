@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { TargetPicker } from '@/ui/components/target-picker';
+import { MarkdownEditor } from '@/ui/components/markdown-editor';
 import type { TargetSpec } from '@/domain/request/expand-targets';
 import { cn } from '@/lib/utils';
 import { DURATION_PRESETS, formatMinutes } from '@/lib/format-duration';
@@ -125,14 +125,8 @@ export default function NewRequestPage() {
 
         {/* Body */}
         <div className="space-y-2">
-          <Label htmlFor="req-body">本文</Label>
-          <Textarea
-            id="req-body"
-            placeholder="依頼の詳細を入力..."
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={4}
-          />
+          <Label>本文</Label>
+          <MarkdownEditor value={body} onChange={setBody} />
         </div>
 
         {/* Due date */}

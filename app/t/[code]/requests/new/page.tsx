@@ -127,9 +127,6 @@ export default function NewRequestPage() {
         <div className="space-y-2">
           <Label>本文</Label>
           <MarkdownEditor value={body} onChange={setBody} />
-          <p className="text-xs text-gray-500">
-            Markdown 記法で書けます（見出し / リスト / 太字 / リンク / コードブロック / GFM テーブル対応）。
-          </p>
         </div>
 
         {/* Due date */}

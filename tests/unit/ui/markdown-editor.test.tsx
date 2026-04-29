@@ -37,4 +37,11 @@ describe('MarkdownEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: '編集' }));
     expect(screen.getByRole('textbox')).toBeDefined();
   });
+
+  it('renders Markdown cheatsheet at the bottom', () => {
+    render(<MarkdownEditor value="" onChange={() => {}} />);
+    expect(screen.getByText(/Markdown 記法:/)).toBeDefined();
+    expect(screen.getByText(/見出し/)).toBeDefined();
+    expect(screen.getByText(/箇条書き/)).toBeDefined();
+  });
 });

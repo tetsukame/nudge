@@ -69,6 +69,18 @@ export function MarkdownEditor({ value, onChange, placeholder, rows = 8 }: Props
           )}
         </div>
       )}
+      <div className="px-3 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-600 leading-relaxed">
+        <span className="font-medium text-gray-700">Markdown 記法:</span>{' '}
+        <code className="font-mono bg-white px-1 rounded border border-gray-200">#</code> 見出し /{' '}
+        <code className="font-mono bg-white px-1 rounded border border-gray-200">- </code>箇条書き /{' '}
+        <code className="font-mono bg-white px-1 rounded border border-gray-200">1. </code>番号付き /{' '}
+        <code className="font-mono bg-white px-1 rounded border border-gray-200">**太字**</code> /{' '}
+        <code className="font-mono bg-white px-1 rounded border border-gray-200">*斜体*</code> /{' '}
+        <code className="font-mono bg-white px-1 rounded border border-gray-200">[文字](URL)</code>リンク /{' '}
+        <code className="font-mono bg-white px-1 rounded border border-gray-200">`code`</code> /{' '}
+        <code className="font-mono bg-white px-1 rounded border border-gray-200">```</code> コードブロック /{' '}
+        <code className="font-mono bg-white px-1 rounded border border-gray-200">| 列 |</code> 表
+      </div>
     </div>
   );
 }

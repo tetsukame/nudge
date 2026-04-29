@@ -1,51 +1,74 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { Editor, rootCtx, defaultValueCtx } from '@milkdown/core';
-import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react';
-import { commonmark } from '@milkdown/preset-commonmark';
-import { gfm } from '@milkdown/preset-gfm';
-import { nord } from '@milkdown/theme-nord';
-import { listener, listenerCtx } from '@milkdown/plugin-listener';
-
-import '@milkdown/theme-nord/style.css';
+import { useState } from 'react';
+import { Textarea } from '@/components/ui/textarea';
+import { MarkdownRenderer } from './markdown-renderer';
+import { cn } from '@/lib/utils';
 
 type Props = {
   value: string;
   onChange: (markdown: string) => void;
   placeholder?: string;
+  rows?: number;
 };
 
-function EditorInner({ value, onChange }: Props) {
-  const valueRef = useRef(value);
-  const onChangeRef = useRef(onChange);
-  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+const PLACEHOLDER = `Markdown で書けます。例:
+# 見出し
+**太字** *斜体*
+- 箇条書き
+[リンク](https://example.com)
+\`\`\`
+コードブロック
+\`\`\``;
 
-  useEditor((root) =>
-    Editor.make()
-      .config((ctx) => {
-        ctx.set(rootCtx, root);
-        ctx.set(defaultValueCtx, valueRef.current);
-        ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
-          onChangeRef.current(markdown);
-        });
-      })
-      .config(nord)
-      .use(commonmark)
-      .use(gfm)
-      .use(listener),
-  );
+export function MarkdownEditor({ value, onChange, placeholder, rows = 8 }: Props) {
+  const [tab, setTab] = useState<'edit' | 'preview'>('edit');
 
-  return <Milkdown />;
-}
-
-export function MarkdownEditor(props: Props) {
   return (
-    <MilkdownProvider>
-      <div className="milkdown-wrapper border border-gray-200 rounded-md bg-white min-h-[140px] focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-400 transition-colors">
-        <EditorInner {...props} />
+    <div className="border border-gray-200 rounded-md bg-white overflow-hidden">
+      <div className="flex border-b border-gray-200 bg-gray-50">
+        <button
+          type="button"
+          onClick={() => setTab('edit')}
+          className={cn(
+            'px-4 py-2 text-sm font-medium transition-colors',
+            tab === 'edit'
+              ? 'bg-white text-gray-900 border-b-2 border-blue-600 -mb-px'
+              : 'text-gray-500 hover:text-gray-700',
+          )}
+        >
+          編集
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('preview')}
+          className={cn(
+            'px-4 py-2 text-sm font-medium transition-colors',
+            tab === 'preview'
+              ? 'bg-white text-gray-900 border-b-2 border-blue-600 -mb-px'
+              : 'text-gray-500 hover:text-gray-700',
+          )}
+        >
+          プレビュー
+        </button>
       </div>
-    </MilkdownProvider>
+      {tab === 'edit' ? (
+        <Textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder ?? PLACEHOLDER}
+          rows={rows}
+          className="border-0 rounded-none font-mono text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
+        />
+      ) : (
+        <div className="px-4 py-3 min-h-[200px]">
+          {value.trim() ? (
+            <MarkdownRenderer body={value} />
+          ) : (
+            <p className="text-gray-400 text-sm">プレビューする内容がありません。</p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
-

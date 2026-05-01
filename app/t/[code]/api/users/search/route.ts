@@ -14,6 +14,9 @@ export async function GET(
   if (isGuardFailure(guard)) return guard;
 
   const q = req.nextUrl.searchParams.get('q') ?? '';
-  const results = await searchUsers(appPool(), guard.actor, q);
+  const orgUnitId = req.nextUrl.searchParams.get('orgUnitId') ?? undefined;
+  const limitRaw = Number(req.nextUrl.searchParams.get('limit'));
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(200, Math.floor(limitRaw)) : 20;
+  const results = await searchUsers(appPool(), guard.actor, q, limit, { orgUnitId });
   return NextResponse.json(results);
 }

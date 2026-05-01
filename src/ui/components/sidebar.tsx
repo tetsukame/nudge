@@ -16,6 +16,7 @@ const BASE_NAV_ITEMS = [
   { href: 'requests', label: '自分宛の依頼', icon: '📥' },
   { href: 'requests/new', label: '新規依頼作成', icon: '➕' },
   { href: 'sent', label: '送信した依頼', icon: '📤' },
+  { href: 'groups', label: 'グループ', icon: '👨‍👩‍👧‍👦' },
 ];
 
 export function Sidebar({ tenantCode, displayName, isManager, isTenantAdmin }: Props) {

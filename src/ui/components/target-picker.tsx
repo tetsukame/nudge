@@ -1,9 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { TargetSpec } from '@/domain/request/expand-targets';
 import { OrgTreePicker, type SelectedOrg } from './org-tree-picker';
 import { UserSearch, type UserResult } from './user-search';
+
+type GroupOption = {
+  id: string;
+  name: string;
+  source: 'nudge' | 'keycloak';
+  memberCount: number;
+};
 
 type Props = {
   tenantCode: string;
@@ -19,6 +26,29 @@ export function TargetPicker({ tenantCode, targets, onChange, showAllTab = false
   // Keep metadata for display purposes (id -> name)
   const [userMeta, setUserMeta] = useState<Map<string, UserResult>>(new Map());
   const [orgMeta, setOrgMeta] = useState<Map<string, string>>(new Map());
+  const [groups, setGroups] = useState<GroupOption[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+
+  useEffect(() => {
+    setGroupsLoading(true);
+    fetch(`/t/${tenantCode}/api/groups`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data: { items: GroupOption[] }) => setGroups(data.items ?? []))
+      .catch(() => {})
+      .finally(() => setGroupsLoading(false));
+  }, [tenantCode]);
+
+  const selectedGroupIds = new Set(
+    targets.filter((t) => t.type === 'group').map((t) => (t as Extract<TargetSpec, { type: 'group' }>).groupId),
+  );
+
+  function toggleGroup(groupId: string) {
+    if (selectedGroupIds.has(groupId)) {
+      onChange(targets.filter((t) => !(t.type === 'group' && t.groupId === groupId)));
+    } else {
+      onChange([...targets, { type: 'group', groupId }]);
+    }
+  }
 
   // Derive selected orgs from targets
   const selectedOrgs: SelectedOrg[] = targets
@@ -148,8 +178,43 @@ export function TargetPicker({ tenantCode, targets, onChange, showAllTab = false
       )}
 
       {tab === 'group' && (
-        <div className="py-4 text-center text-sm text-gray-500">
-          今後実装予定
+        <div className="space-y-2">
+          {groupsLoading ? (
+            <p className="text-xs text-gray-500 px-1 py-3">読み込み中...</p>
+          ) : groups.length === 0 ? (
+            <p className="text-sm text-gray-500 px-1 py-3">
+              ターゲットに使えるグループがありません。
+            </p>
+          ) : (
+            <ul className="border border-gray-200 rounded-md divide-y divide-gray-100 bg-white max-h-72 overflow-y-auto">
+              {groups.map((g) => {
+                const checked = selectedGroupIds.has(g.id);
+                return (
+                  <li key={g.id}>
+                    <label className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleGroup(g.id)}
+                        className="rounded border-gray-300"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-gray-900 truncate">{g.name}</p>
+                          {g.source === 'keycloak' && (
+                            <span className="text-[10px] px-1 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                              KC連携
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500">{g.memberCount} 名</p>
+                      </div>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       )}
 

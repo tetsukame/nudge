@@ -85,7 +85,7 @@ export default async function AdminSentPage({
         {result.items.map((item) => (
           <Link
             key={item.id}
-            href={`/t/${code}/requests/${item.id}`}
+            href={`/t/${code}/requests/${item.id}?from=admin/sent`}
             className="block bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 no-underline"
           >
             <div className="flex items-start justify-between gap-2 mb-2">

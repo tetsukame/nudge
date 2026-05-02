@@ -54,7 +54,7 @@ export default async function SentRequestsPage({
           <p className="text-gray-500 text-center py-8">送信した依頼はありません</p>
         )}
         {result.items.map((item) => (
-          <Link key={item.id} href={`/t/${code}/requests/${item.id}`}
+          <Link key={item.id} href={`/t/${code}/requests/${item.id}?from=sent`}
             className="block bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 no-underline">
             <div className="flex items-start justify-between gap-2 mb-2">
               <span className="font-medium text-gray-900 truncate">{item.title}</span>

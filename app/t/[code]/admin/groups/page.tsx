@@ -92,7 +92,7 @@ export default async function AdminGroupsPage({
                   <td className="px-3 py-2 text-gray-600">{g.memberCount}</td>
                   <td className="px-3 py-2 text-right">
                     <Link
-                      href={`/t/${code}/groups/${g.id}`}
+                      href={`/t/${code}/groups/${g.id}?from=admin/groups`}
                       className="text-blue-600 hover:underline text-xs"
                     >
                       詳細 →

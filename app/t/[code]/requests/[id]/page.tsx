@@ -32,10 +32,21 @@ function isOverdue(dueAt: Date | null | string, status: string): boolean {
 
 export default async function RequestDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string; id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { code, id } = await params;
+  const { from } = await searchParams;
+  const backHref =
+    from === 'sent' ? `/t/${code}/sent`
+    : from === 'admin/sent' ? `/t/${code}/admin/sent`
+    : `/t/${code}/requests`;
+  const backLabel =
+    from === 'sent' ? '← 送信した依頼に戻る'
+    : from === 'admin/sent' ? '← 管理: 全テナント依頼に戻る'
+    : '← 一覧に戻る';
 
   const cfg = loadConfig();
   const sealed = (await cookies()).get('nudge_session')?.value;
@@ -151,10 +162,10 @@ export default async function RequestDetailPage({
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
       {/* Back link */}
       <Link
-        href={`/t/${code}/requests`}
+        href={backHref}
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
       >
-        ← 一覧に戻る
+        {backLabel}
       </Link>
 
       {/* Header */}

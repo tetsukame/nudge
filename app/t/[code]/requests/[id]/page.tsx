@@ -96,14 +96,39 @@ export default async function RequestDetailPage({
   const isRequester = req.created_by_user_id === session.userId && !myAssignment;
   const overdue = isOverdue(req.due_at, myAssignment?.status ?? req.status);
 
+  const isRequesterStrict = req.created_by_user_id === session.userId;
+
+  const { isManagerOfAny, isAdmin } = await withTenant(appPool(), session.tenantId, async (client) => {
+    const [mgrRes, roleRes] = await Promise.all([
+      client.query<{ ok: boolean }>(
+        `SELECT EXISTS(
+           SELECT 1 FROM assignment a
+           JOIN user_org_unit uou ON uou.user_id = a.user_id
+           JOIN org_unit_closure c ON c.descendant_id = uou.org_unit_id
+           JOIN org_unit_manager m ON m.org_unit_id = c.ancestor_id
+           WHERE a.request_id = $1 AND m.user_id = $2
+         ) AS ok`,
+        [id, session.userId],
+      ),
+      client.query<{ ok: boolean }>(
+        `SELECT EXISTS(
+           SELECT 1 FROM user_role
+            WHERE user_id = $1 AND role = 'tenant_admin'
+         ) AS ok`,
+        [session.userId],
+      ),
+    ]);
+    return { isManagerOfAny: mgrRes.rows[0].ok, isAdmin: roleRes.rows[0].ok };
+  });
+
   const actor = {
     userId: session.userId,
     tenantId: session.tenantId,
-    isTenantAdmin: false,
+    isTenantAdmin: isAdmin,
     isTenantWideRequester: false,
   };
 
-  // Auto-open and mark-viewed: fire-and-forget
+  // Auto-open and mark-viewed: fire-and-forget (assignee context only)
   if (myAssignment?.status === 'unopened') {
     void openAssignment(pool, actor, myAssignment.id).catch(() => {});
   }
@@ -111,23 +136,7 @@ export default async function RequestDetailPage({
     void markViewed(pool, actor, myAssignment.id).catch(() => {});
   }
 
-  const isRequesterStrict = req.created_by_user_id === session.userId;
-
-  const isManagerOfAny = await withTenant(appPool(), session.tenantId, async (client) => {
-    const { rows } = await client.query(
-      `SELECT EXISTS(
-         SELECT 1 FROM assignment a
-         JOIN user_org_unit uou ON uou.user_id = a.user_id
-         JOIN org_unit_closure c ON c.descendant_id = uou.org_unit_id
-         JOIN org_unit_manager m ON m.org_unit_id = c.ancestor_id
-         WHERE a.request_id = $1 AND m.user_id = $2
-       ) AS ok`,
-      [id, session.userId],
-    );
-    return rows[0].ok;
-  });
-
-  const canViewRequesterSection = isRequesterStrict || isManagerOfAny;
+  const canViewRequesterSection = isRequesterStrict || isManagerOfAny || isAdmin;
 
   let requesterSummary: Awaited<ReturnType<typeof listAssignees>> | null = null;
   if (canViewRequesterSection) {
@@ -223,13 +232,13 @@ export default async function RequestDetailPage({
         currentUserId={session.userId}
       />
 
-      {/* Requester / manager section */}
+      {/* Requester / manager / tenant_admin section */}
       {canViewRequesterSection && requesterSummary && (
         <RequesterSection
           tenantCode={code}
           requestId={id}
           currentUserId={session.userId}
-          canSubstitute={isRequesterStrict || isManagerOfAny}
+          canSubstitute={isRequesterStrict || isManagerOfAny || isAdmin}
           summary={{
             unopened: requesterSummary.summary.unopened,
             opened: requesterSummary.summary.opened,

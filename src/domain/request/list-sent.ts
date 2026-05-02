@@ -9,6 +9,11 @@ export type ListSentRequestsInput = {
   q?: string;
   page?: number;
   pageSize?: number;
+  /**
+   * tenant 全体の依頼一覧として扱う場合 true（tenant_admin 専用）。
+   * default = false: actor が作成した依頼のみ。
+   */
+  tenantWide?: boolean;
 };
 
 export type SentRequestItem = {
@@ -17,6 +22,7 @@ export type SentRequestItem = {
   status: string;
   dueAt: string | null;
   createdAt: string;
+  createdByName: string | null;
   total: number;
   unopened: number;
   opened: number;
@@ -51,13 +57,25 @@ export async function listSentRequests(
   const offset = (page - 1) * pageSize;
   const filter = input.filter ?? 'all';
 
+  const tenantWide = input.tenantWide ?? false;
+  if (tenantWide && !actor.isTenantAdmin) {
+    throw new Error('tenantWide listing requires tenant_admin');
+  }
+
   return withTenant(pool, actor.tenantId, async (client) => {
-    const params: unknown[] = [actor.userId];
+    const params: unknown[] = [];
+    let creatorClause: string;
+    if (tenantWide) {
+      creatorClause = '';
+    } else {
+      params.push(actor.userId);
+      creatorClause = `WHERE r.created_by_user_id = $${params.length}`;
+    }
 
     let qClause = '';
     if (input.q && input.q.trim()) {
       params.push(`%${input.q.trim()}%`);
-      qClause = `AND r.title ILIKE $${params.length}`;
+      qClause = `${creatorClause === '' ? 'WHERE' : 'AND'} r.title ILIKE $${params.length}`;
     }
 
     let havingClause = '';
@@ -71,9 +89,10 @@ export async function listSentRequests(
     const baseSql = `
       FROM request r
       LEFT JOIN assignment a ON a.request_id = r.id
-      WHERE r.created_by_user_id = $1
-        ${qClause}
-      GROUP BY r.id, r.title, r.status, r.due_at, r.created_at
+      LEFT JOIN users cu ON cu.id = r.created_by_user_id
+      ${creatorClause}
+      ${qClause}
+      GROUP BY r.id, r.title, r.status, r.due_at, r.created_at, cu.display_name
       ${havingClause}
     `;
 
@@ -95,6 +114,7 @@ export async function listSentRequests(
         r.status,
         r.due_at,
         r.created_at,
+        cu.display_name AS created_by_name,
         COUNT(a.id)::int AS total,
         COUNT(*) FILTER (WHERE a.status = 'unopened')::int AS unopened,
         COUNT(*) FILTER (WHERE a.status = 'opened')::int AS opened,
@@ -121,6 +141,7 @@ export async function listSentRequests(
         status: r.status,
         dueAt: r.due_at ? new Date(r.due_at).toISOString() : null,
         createdAt: new Date(r.created_at).toISOString(),
+        createdByName: r.created_by_name ?? null,
         total: r.total,
         unopened: r.unopened,
         opened: r.opened,

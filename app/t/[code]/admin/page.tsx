@@ -49,13 +49,13 @@ export default async function AdminDashboardPage({
           sub={`Nudge ${stats.groups.nudge} / KC ${stats.groups.keycloak}`}
         />
         <StatCard
-          href={`/t/${code}/sent`}
+          href={`/t/${code}/admin/sent?filter=in_progress`}
           title="進行中の依頼"
           primary={`${stats.requests.active} 件`}
-          sub="status='active'"
+          sub="テナント全体の status='active'"
         />
         <StatCard
-          href={`/t/${code}/admin/audit`}
+          href={`/t/${code}/admin/sent?filter=in_progress`}
           title="未対応 assignment"
           primary={`${stats.assignments.pending} 件`}
           sub={
@@ -77,6 +77,7 @@ export default async function AdminDashboardPage({
       <section className="bg-white rounded-lg border border-gray-200 p-5 space-y-2">
         <h2 className="text-sm font-medium text-gray-700">管理メニュー</h2>
         <ul className="text-sm space-y-1">
+          <AdminLink href={`/t/${code}/admin/sent`} label="📤 テナント全体の依頼（進行中 / 完了）" />
           <AdminLink href={`/t/${code}/admin/users`} label="👥 ユーザー管理（一覧 / 主所属 / ロール）" />
           <AdminLink href={`/t/${code}/admin/audit`} label="📋 監査ログ" />
           <AdminLink href={`/t/${code}/admin/failed-notifications`} label="⚠️ 失敗通知の手動再送" />

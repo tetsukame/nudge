@@ -108,8 +108,9 @@ export default async function RequestDetailPage({
   const overdue = isOverdue(req.due_at, myAssignment?.status ?? req.status);
 
   const isRequesterStrict = req.created_by_user_id === session.userId;
+  const isAssignee = myAssignment != null;
 
-  const { isManagerOfAny, isAdmin } = await withTenant(appPool(), session.tenantId, async (client) => {
+  const { isManagerOfAny, isAdmin, isWide } = await withTenant(appPool(), session.tenantId, async (client) => {
     const [mgrRes, roleRes] = await Promise.all([
       client.query<{ ok: boolean }>(
         `SELECT EXISTS(
@@ -121,22 +122,42 @@ export default async function RequestDetailPage({
          ) AS ok`,
         [id, session.userId],
       ),
-      client.query<{ ok: boolean }>(
-        `SELECT EXISTS(
-           SELECT 1 FROM user_role
-            WHERE user_id = $1 AND role = 'tenant_admin'
-         ) AS ok`,
+      client.query<{ role: string }>(
+        `SELECT role FROM user_role WHERE user_id = $1`,
         [session.userId],
       ),
     ]);
-    return { isManagerOfAny: mgrRes.rows[0].ok, isAdmin: roleRes.rows[0].ok };
+    const roles = new Set(roleRes.rows.map((r) => r.role));
+    return {
+      isManagerOfAny: mgrRes.rows[0].ok,
+      isAdmin: roles.has('tenant_admin'),
+      isWide: roles.has('tenant_wide_requester'),
+    };
   });
+
+  // Permission gate: only creator / assignee / manager-of-assignee /
+  // tenant_admin / tenant_wide_requester can view the request page.
+  // (API /api/requests/[id] enforces the same check; this is the page-side equivalent.)
+  const canView = isRequesterStrict || isAssignee || isManagerOfAny || isAdmin || isWide;
+  if (!canView) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-12 text-center space-y-3">
+        <p className="text-lg font-medium text-gray-900">🔒 アクセス権がありません</p>
+        <p className="text-sm text-gray-600">
+          この依頼の閲覧権限がありません。送信者・対応者・管理者のみが閲覧できます。
+        </p>
+        <Link href={`/t/${code}/requests`} className="inline-block text-sm text-blue-600 hover:underline">
+          ← トップに戻る
+        </Link>
+      </div>
+    );
+  }
 
   const actor = {
     userId: session.userId,
     tenantId: session.tenantId,
     isTenantAdmin: isAdmin,
-    isTenantWideRequester: false,
+    isTenantWideRequester: isWide,
   };
 
   // Auto-open and mark-viewed: fire-and-forget (assignee context only)

@@ -6,6 +6,7 @@ import { appPool } from '@/db/pools';
 import { withTenant } from '@/db/with-tenant';
 import { Sidebar } from '@/ui/components/sidebar';
 import { BottomTabs } from '@/ui/components/bottom-tabs';
+import { countFailedNotifications } from '@/domain/admin/dashboard';
 
 export default async function TenantLayout({
   children,
@@ -53,9 +54,19 @@ export default async function TenantLayout({
     };
   });
 
+  const failedNotifications = isTenantAdmin
+    ? await countFailedNotifications(appPool(), session.tenantId).catch(() => 0)
+    : 0;
+
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar tenantCode={code} displayName={session.displayName} isManager={isManager} isTenantAdmin={isTenantAdmin} />
+      <Sidebar
+        tenantCode={code}
+        displayName={session.displayName}
+        isManager={isManager}
+        isTenantAdmin={isTenantAdmin}
+        failedNotifications={failedNotifications}
+      />
       <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
         {children}
       </main>

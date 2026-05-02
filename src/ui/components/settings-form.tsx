@@ -46,6 +46,43 @@ function Toggle({
   );
 }
 
+function TestSendRow({
+  label, state, onClick, hint,
+}: {
+  label: string;
+  state: { busy: boolean; result: { ok: boolean; error?: string } | null };
+  onClick: () => void;
+  hint?: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 pt-2 border-t border-gray-100">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={state.busy}
+        className="text-xs px-3 py-1.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors whitespace-nowrap"
+      >
+        {state.busy ? '送信中...' : label}
+      </button>
+      <div className="flex-1 text-xs">
+        {state.result == null && hint && (
+          <span className="text-gray-500">{hint}</span>
+        )}
+        {state.result?.ok && (
+          <span className="text-green-700 bg-green-50 px-2 py-0.5 rounded">
+            ✅ 送信成功
+          </span>
+        )}
+        {state.result && !state.result.ok && (
+          <span className="text-red-700 bg-red-50 px-2 py-0.5 rounded break-all">
+            ❌ {state.result.error}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SecretField({
   hasExisting,
   value,
@@ -118,6 +155,53 @@ export function SettingsForm({ tenantCode, initial }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  type TestState = { busy: boolean; result: { ok: boolean; error?: string } | null };
+  const [testEmail, setTestEmail] = useState<TestState>({ busy: false, result: null });
+  const [testTeams, setTestTeams] = useState<TestState>({ busy: false, result: null });
+  const [testSlack, setTestSlack] = useState<TestState>({ busy: false, result: null });
+
+  function buildTestPayload(channel: 'email' | 'teams' | 'slack'): Record<string, unknown> {
+    return {
+      channel,
+      smtp: channel === 'email' ? {
+        host: smtp.host || null,
+        port: smtp.port === '' ? null : Number(smtp.port),
+        user: smtp.user || null,
+        from: smtp.from || null,
+        secure: smtp.secure,
+        ...(smtpPassword !== null ? { password: smtpPassword } : {}),
+      } : undefined,
+      teams: channel === 'teams' ? {
+        ...(teamsUrl !== null ? { webhookUrl: teamsUrl } : {}),
+      } : undefined,
+      slack: channel === 'slack' ? {
+        ...(slackUrl !== null ? { webhookUrl: slackUrl } : {}),
+      } : undefined,
+    };
+  }
+
+  async function runTest(channel: 'email' | 'teams' | 'slack') {
+    const set = channel === 'email' ? setTestEmail
+      : channel === 'teams' ? setTestTeams
+      : setTestSlack;
+    set({ busy: true, result: null });
+    try {
+      const res = await fetch(`/t/${tenantCode}/api/admin/settings/notification/test`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(buildTestPayload(channel)),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        set({ busy: false, result: { ok: false, error: (data as { error?: string }).error ?? 'エラー' } });
+        return;
+      }
+      set({ busy: false, result: data as { ok: boolean; error?: string } });
+    } catch (e) {
+      set({ busy: false, result: { ok: false, error: e instanceof Error ? e.message : '不明なエラー' } });
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -225,6 +309,12 @@ export function SettingsForm({ tenantCode, initial }: Props) {
           onChange={(v) => setSmtp((s) => ({ ...s, secure: v }))}
           label="SSL/TLS を使用する"
         />
+        <TestSendRow
+          label="メールでテスト送信"
+          state={testEmail}
+          onClick={() => runTest('email')}
+          hint="自分のアカウントのメールアドレスにテストメールが送られます。"
+        />
       </Section>
 
       {/* Teams */}
@@ -241,6 +331,12 @@ export function SettingsForm({ tenantCode, initial }: Props) {
             onChange={setTeamsUrl}
           />
         </Field>
+        <TestSendRow
+          label="Teams にテスト送信"
+          state={testTeams}
+          onClick={() => runTest('teams')}
+          hint="設定済みの Webhook 宛にテストメッセージが送られます。"
+        />
       </Section>
 
       {/* Slack */}
@@ -257,6 +353,12 @@ export function SettingsForm({ tenantCode, initial }: Props) {
             onChange={setSlackUrl}
           />
         </Field>
+        <TestSendRow
+          label="Slack にテスト送信"
+          state={testSlack}
+          onClick={() => runTest('slack')}
+          hint="設定済みの Webhook 宛にテストメッセージが送られます。"
+        />
       </Section>
 
       {/* In-App */}

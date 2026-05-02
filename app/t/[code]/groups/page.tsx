@@ -60,7 +60,7 @@ export default async function GroupListPage({
           {items.map((g) => (
             <li key={g.id}>
               <Link
-                href={`/t/${code}/groups/${g.id}`}
+                href={`/t/${code}/groups/${g.id}?from=groups`}
                 className="block bg-white rounded-lg border border-gray-200 px-4 py-3 hover:border-blue-300 hover:shadow-sm transition-all"
               >
                 <div className="flex items-start justify-between gap-3">

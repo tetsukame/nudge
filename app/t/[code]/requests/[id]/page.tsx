@@ -32,10 +32,21 @@ function isOverdue(dueAt: Date | null | string, status: string): boolean {
 
 export default async function RequestDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string; id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { code, id } = await params;
+  const { from } = await searchParams;
+  const backHref =
+    from === 'sent' ? `/t/${code}/sent`
+    : from === 'admin/sent' ? `/t/${code}/admin/sent`
+    : `/t/${code}/requests`;
+  const backLabel =
+    from === 'sent' ? '← 送信した依頼に戻る'
+    : from === 'admin/sent' ? '← 管理: 全テナント依頼に戻る'
+    : '← 一覧に戻る';
 
   const cfg = loadConfig();
   const sealed = (await cookies()).get('nudge_session')?.value;
@@ -96,14 +107,60 @@ export default async function RequestDetailPage({
   const isRequester = req.created_by_user_id === session.userId && !myAssignment;
   const overdue = isOverdue(req.due_at, myAssignment?.status ?? req.status);
 
+  const isRequesterStrict = req.created_by_user_id === session.userId;
+  const isAssignee = myAssignment != null;
+
+  const { isManagerOfAny, isAdmin, isWide } = await withTenant(appPool(), session.tenantId, async (client) => {
+    const [mgrRes, roleRes] = await Promise.all([
+      client.query<{ ok: boolean }>(
+        `SELECT EXISTS(
+           SELECT 1 FROM assignment a
+           JOIN user_org_unit uou ON uou.user_id = a.user_id
+           JOIN org_unit_closure c ON c.descendant_id = uou.org_unit_id
+           JOIN org_unit_manager m ON m.org_unit_id = c.ancestor_id
+           WHERE a.request_id = $1 AND m.user_id = $2
+         ) AS ok`,
+        [id, session.userId],
+      ),
+      client.query<{ role: string }>(
+        `SELECT role FROM user_role WHERE user_id = $1`,
+        [session.userId],
+      ),
+    ]);
+    const roles = new Set(roleRes.rows.map((r) => r.role));
+    return {
+      isManagerOfAny: mgrRes.rows[0].ok,
+      isAdmin: roles.has('tenant_admin'),
+      isWide: roles.has('tenant_wide_requester'),
+    };
+  });
+
+  // Permission gate: only creator / assignee / manager-of-assignee /
+  // tenant_admin / tenant_wide_requester can view the request page.
+  // (API /api/requests/[id] enforces the same check; this is the page-side equivalent.)
+  const canView = isRequesterStrict || isAssignee || isManagerOfAny || isAdmin || isWide;
+  if (!canView) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-12 text-center space-y-3">
+        <p className="text-lg font-medium text-gray-900">🔒 アクセス権がありません</p>
+        <p className="text-sm text-gray-600">
+          この依頼の閲覧権限がありません。送信者・対応者・管理者のみが閲覧できます。
+        </p>
+        <Link href={`/t/${code}/requests`} className="inline-block text-sm text-blue-600 hover:underline">
+          ← トップに戻る
+        </Link>
+      </div>
+    );
+  }
+
   const actor = {
     userId: session.userId,
     tenantId: session.tenantId,
-    isTenantAdmin: false,
-    isTenantWideRequester: false,
+    isTenantAdmin: isAdmin,
+    isTenantWideRequester: isWide,
   };
 
-  // Auto-open and mark-viewed: fire-and-forget
+  // Auto-open and mark-viewed: fire-and-forget (assignee context only)
   if (myAssignment?.status === 'unopened') {
     void openAssignment(pool, actor, myAssignment.id).catch(() => {});
   }
@@ -111,23 +168,7 @@ export default async function RequestDetailPage({
     void markViewed(pool, actor, myAssignment.id).catch(() => {});
   }
 
-  const isRequesterStrict = req.created_by_user_id === session.userId;
-
-  const isManagerOfAny = await withTenant(appPool(), session.tenantId, async (client) => {
-    const { rows } = await client.query(
-      `SELECT EXISTS(
-         SELECT 1 FROM assignment a
-         JOIN user_org_unit uou ON uou.user_id = a.user_id
-         JOIN org_unit_closure c ON c.descendant_id = uou.org_unit_id
-         JOIN org_unit_manager m ON m.org_unit_id = c.ancestor_id
-         WHERE a.request_id = $1 AND m.user_id = $2
-       ) AS ok`,
-      [id, session.userId],
-    );
-    return rows[0].ok;
-  });
-
-  const canViewRequesterSection = isRequesterStrict || isManagerOfAny;
+  const canViewRequesterSection = isRequesterStrict || isManagerOfAny || isAdmin;
 
   let requesterSummary: Awaited<ReturnType<typeof listAssignees>> | null = null;
   if (canViewRequesterSection) {
@@ -142,10 +183,10 @@ export default async function RequestDetailPage({
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
       {/* Back link */}
       <Link
-        href={`/t/${code}/requests`}
+        href={backHref}
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
       >
-        ← 一覧に戻る
+        {backLabel}
       </Link>
 
       {/* Header */}
@@ -223,13 +264,13 @@ export default async function RequestDetailPage({
         currentUserId={session.userId}
       />
 
-      {/* Requester / manager section */}
+      {/* Requester / manager / tenant_admin section */}
       {canViewRequesterSection && requesterSummary && (
         <RequesterSection
           tenantCode={code}
           requestId={id}
           currentUserId={session.userId}
-          canSubstitute={isRequesterStrict || isManagerOfAny}
+          canSubstitute={isRequesterStrict || isManagerOfAny || isAdmin}
           summary={{
             unopened: requesterSummary.summary.unopened,
             opened: requesterSummary.summary.opened,

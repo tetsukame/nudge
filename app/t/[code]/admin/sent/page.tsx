@@ -1,14 +1,15 @@
 import { cookies } from 'next/headers';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { unsealSession } from '@/auth/session';
 import { loadConfig } from '@/config';
 import { appPool } from '@/db/pools';
 import { listSentRequests } from '@/domain/request/list-sent';
 import { ProgressBar } from '@/ui/components/progress-bar';
-import Link from 'next/link';
 
 export const runtime = 'nodejs';
 
-export default async function SentRequestsPage({
+export default async function AdminSentPage({
   params,
   searchParams,
 }: {
@@ -16,49 +17,85 @@ export default async function SentRequestsPage({
   searchParams: Promise<{ filter?: string; q?: string; page?: string }>;
 }) {
   const { code } = await params;
-  const { filter = 'all', q, page: pageStr = '1' } = await searchParams;
+  const sp = await searchParams;
+  const filter = sp.filter ?? 'in_progress';
+  const q = sp.q;
+  const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const cfg = loadConfig();
   const sealed = (await cookies()).get('nudge_session')?.value;
   const session = await unsealSession(sealed, cfg.IRON_SESSION_PASSWORD);
-  if (!session) return <div>Unauthorized</div>;
+  if (!session) redirect(`/t/${code}/login`);
 
-  const page = Math.max(1, Number(pageStr) || 1);
   const result = await listSentRequests(
     appPool(),
-    { userId: session.userId, tenantId: session.tenantId, isTenantAdmin: false, isTenantWideRequester: false },
-    { filter: filter as 'all' | 'in_progress' | 'done', q, page, pageSize: 20 },
+    {
+      userId: session.userId,
+      tenantId: session.tenantId,
+      isTenantAdmin: true,
+      isTenantWideRequester: false,
+    },
+    { filter: filter as 'all' | 'in_progress' | 'done', q, page, pageSize: 20, tenantWide: true },
   );
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl">
-      <h1 className="text-xl font-bold mb-4">📤 送信した依頼</h1>
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <Link
+        href={`/t/${code}/admin`}
+        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+      >
+        ← 管理に戻る
+      </Link>
+      <h1 className="text-xl font-bold text-gray-900">📤 テナント全体の依頼</h1>
+      <p className="text-sm text-gray-600">
+        テナント内のすべての依頼（送信者を問わず）を一覧表示します。
+      </p>
 
-      <div className="flex gap-0 border-b-2 border-gray-200 mb-4">
-        <Link href={`/t/${code}/sent?filter=all`}
+      <div className="flex gap-0 border-b-2 border-gray-200 mb-2">
+        <Link
+          href={`/t/${code}/admin/sent?filter=all`}
           className={`px-4 py-2 text-sm font-medium no-underline -mb-0.5 ${
             filter === 'all' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'
-          }`}>すべて</Link>
-        <Link href={`/t/${code}/sent?filter=in_progress`}
+          }`}
+        >
+          すべて ({result.total})
+        </Link>
+        <Link
+          href={`/t/${code}/admin/sent?filter=in_progress`}
           className={`px-4 py-2 text-sm font-medium no-underline -mb-0.5 ${
             filter === 'in_progress' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'
-          }`}>進行中</Link>
-        <Link href={`/t/${code}/sent?filter=done`}
+          }`}
+        >
+          進行中
+        </Link>
+        <Link
+          href={`/t/${code}/admin/sent?filter=done`}
           className={`px-4 py-2 text-sm font-medium no-underline -mb-0.5 ${
             filter === 'done' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'
-          }`}>完了</Link>
+          }`}
+        >
+          完了
+        </Link>
       </div>
 
       <div className="space-y-2">
         {result.items.length === 0 && (
-          <p className="text-gray-500 text-center py-8">送信した依頼はありません</p>
+          <p className="text-gray-500 text-center py-8">該当する依頼はありません</p>
         )}
         {result.items.map((item) => (
-          <Link key={item.id} href={`/t/${code}/requests/${item.id}?from=sent`}
-            className="block bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 no-underline">
+          <Link
+            key={item.id}
+            href={`/t/${code}/requests/${item.id}?from=admin/sent`}
+            className="block bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 no-underline"
+          >
             <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="font-medium text-gray-900 truncate">{item.title}</span>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 truncate">{item.title}</p>
+                {item.createdByName && (
+                  <p className="text-xs text-gray-500 mt-0.5">送信者: {item.createdByName}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
                 {item.overdueCount > 0 && (
                   <span className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-full">
                     ⚠️ 期限切れ {item.overdueCount}
@@ -90,8 +127,10 @@ export default async function SentRequestsPage({
 
       {result.total > page * 20 && (
         <div className="text-center mt-4">
-          <Link href={`/t/${code}/sent?filter=${filter}&page=${page + 1}`}
-            className="text-blue-600 text-sm hover:underline">
+          <Link
+            href={`/t/${code}/admin/sent?filter=${filter}&page=${page + 1}`}
+            className="text-blue-600 text-sm hover:underline"
+          >
             もっと見る
           </Link>
         </div>

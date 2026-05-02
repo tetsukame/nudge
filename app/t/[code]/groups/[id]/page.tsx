@@ -14,10 +14,19 @@ export const runtime = 'nodejs';
 
 export default async function GroupDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string; id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { code, id } = await params;
+  const { from } = await searchParams;
+  const backHref =
+    from === 'admin/groups' ? `/t/${code}/admin/groups`
+    : `/t/${code}/groups`;
+  const backLabel =
+    from === 'admin/groups' ? '← 管理: グループ一覧に戻る'
+    : '← 一覧に戻る';
 
   const cfg = loadConfig();
   const sealed = (await cookies()).get('nudge_session')?.value;
@@ -52,10 +61,10 @@ export default async function GroupDetailPage({
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
       <Link
-        href={`/t/${code}/groups`}
+        href={backHref}
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
       >
-        ← 一覧に戻る
+        {backLabel}
       </Link>
 
       <div className="bg-white rounded-lg border border-gray-200 p-5 space-y-3">
@@ -88,7 +97,7 @@ export default async function GroupDetailPage({
           <h2 className="text-sm font-medium text-gray-700">メンバー（{members.length} 名）</h2>
           {canEdit && (
             <Link
-              href={`/t/${code}/groups/${id}/members`}
+              href={`/t/${code}/groups/${id}/members${from ? `?from=${encodeURIComponent(from)}` : ''}`}
               className="text-sm text-blue-600 hover:underline"
             >
               ➕ メンバーを追加

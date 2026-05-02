@@ -246,6 +246,20 @@ export async function forwardAssignment(
       kind: 'created',
       payload: { forwardedFrom: actor.userId },
     });
+    await client.query(
+      `INSERT INTO audit_log
+         (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
+       VALUES ($1, $2, 'assignment.forwarded', 'assignment', $3, $4::jsonb)`,
+      [
+        actor.tenantId, actor.userId, asg.id,
+        JSON.stringify({
+          requestId: asg.request_id,
+          toUserId: input.toUserId,
+          newAssignmentId,
+          reason: input.reason ?? null,
+        }),
+      ],
+    );
     return { newAssignmentId };
   });
 }
@@ -307,6 +321,19 @@ export async function substituteAssignment(
       });
     }
     await emitCompletedToRequester(client, actor, asg, 'substituted');
+    await client.query(
+      `INSERT INTO audit_log
+         (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
+       VALUES ($1, $2, 'assignment.substituted', 'assignment', $3, $4::jsonb)`,
+      [
+        actor.tenantId, actor.userId, asg.id,
+        JSON.stringify({
+          requestId: asg.request_id,
+          assigneeUserId: asg.user_id,
+          reason: input.reason,
+        }),
+      ],
+    );
   });
 }
 
@@ -334,6 +361,19 @@ export async function exemptAssignment(
     await recordHistory(
       client, actor.tenantId, asg, 'exempted', 'admin_exempt',
       actor.userId, input.reason, null,
+    );
+    await client.query(
+      `INSERT INTO audit_log
+         (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
+       VALUES ($1, $2, 'assignment.exempted', 'assignment', $3, $4::jsonb)`,
+      [
+        actor.tenantId, actor.userId, asg.id,
+        JSON.stringify({
+          requestId: asg.request_id,
+          assigneeUserId: asg.user_id,
+          reason: input.reason,
+        }),
+      ],
     );
   });
 }

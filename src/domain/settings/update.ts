@@ -113,5 +113,29 @@ export async function updateNotificationSettings(
         [actor.tenantId, ch, enabled],
       );
     }
+
+    // 監査ログ記録: 機微情報 (password / webhook URL) は payload に残さない
+    await client.query(
+      `INSERT INTO audit_log
+         (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
+       VALUES ($1, $2, 'settings.notification.updated', 'tenant', $1, $3::jsonb)`,
+      [
+        actor.tenantId, actor.userId,
+        JSON.stringify({
+          channels: input.channels,
+          reminders: input.reminders,
+          smtp: {
+            host: input.smtp.host ?? null,
+            port: input.smtp.port ?? null,
+            user: input.smtp.user ?? null,
+            from: input.smtp.from ?? null,
+            secure: input.smtp.secure ?? false,
+            passwordChanged: input.smtp.password !== undefined,
+          },
+          teams: { webhookUrlChanged: input.teams.webhookUrl !== undefined },
+          slack: { webhookUrlChanged: input.slack.webhookUrl !== undefined },
+        }),
+      ],
+    );
   });
 }

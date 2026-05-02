@@ -5,27 +5,40 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { LogoutLink } from './logout-link';
 
+type NavItem = { href: string; label: string; icon: string; badge?: number };
+
 type Props = {
   tenantCode: string;
   displayName: string;
   isManager: boolean;
   isTenantAdmin: boolean;
+  failedNotifications?: number;
 };
 
-const BASE_NAV_ITEMS = [
+const BASE_NAV_ITEMS: NavItem[] = [
   { href: 'requests', label: '自分宛の依頼', icon: '📥' },
   { href: 'requests/new', label: '新規依頼作成', icon: '➕' },
   { href: 'sent', label: '送信した依頼', icon: '📤' },
   { href: 'groups', label: 'グループ', icon: '👨‍👩‍👧‍👦' },
 ];
 
-export function Sidebar({ tenantCode, displayName, isManager, isTenantAdmin }: Props) {
+export function Sidebar({
+  tenantCode, displayName, isManager, isTenantAdmin,
+  failedNotifications = 0,
+}: Props) {
   const pathname = usePathname();
 
-  const navItems = [
+  const navItems: NavItem[] = [
     ...BASE_NAV_ITEMS,
     ...(isManager ? [{ href: 'subordinates', label: '部下の依頼', icon: '👥' }] : []),
-    ...(isTenantAdmin ? [{ href: 'settings/notification', label: '通知設定', icon: '⚙️' }] : []),
+    ...(isTenantAdmin
+      ? [
+          { href: 'admin', label: '管理', icon: '⚙️' },
+          ...(failedNotifications > 0
+            ? [{ href: 'admin/failed-notifications', label: '失敗通知', icon: '⚠️', badge: failedNotifications }]
+            : []),
+        ]
+      : []),
   ];
 
   return (
@@ -55,7 +68,12 @@ export function Sidebar({ tenantCode, displayName, isManager, isTenantAdmin }: P
               )}
             >
               <span>{item.icon}</span>
-              <span>{item.label}</span>
+              <span className="flex-1">{item.label}</span>
+              {item.badge != null && item.badge > 0 && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-500 text-white">
+                  {item.badge}
+                </span>
+              )}
             </Link>
           );
         })}

@@ -30,8 +30,7 @@ export async function retryNotifications(
               attempt_count = 0,
               next_attempt_at = NULL,
               scheduled_at = now(),
-              last_error = NULL,
-              updated_at = now()
+              error_message = NULL
         WHERE id = ANY($1::uuid[])
           AND status = 'failed'
           AND next_attempt_at IS NULL`,

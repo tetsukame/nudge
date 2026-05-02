@@ -63,18 +63,18 @@ export async function listFailedNotifications(
       request_id: string | null;
       request_title: string | null;
       attempt_count: number;
-      last_error: string | null;
-      updated_at: Date;
+      error_message: string | null;
+      created_at: Date;
     }>(
       `SELECT n.id, n.channel, n.kind, n.recipient_user_id,
               u.display_name AS recipient_name, u.email AS recipient_email,
               n.request_id, r.title AS request_title,
-              n.attempt_count, n.last_error, n.updated_at
+              n.attempt_count, n.error_message, n.created_at
          FROM notification n
          LEFT JOIN users u ON u.id = n.recipient_user_id
          LEFT JOIN request r ON r.id = n.request_id
         WHERE n.status = 'failed' AND n.next_attempt_at IS NULL
-        ORDER BY n.updated_at DESC
+        ORDER BY n.created_at DESC
         LIMIT $1 OFFSET $2`,
       [safePageSize, offset],
     );
@@ -90,8 +90,8 @@ export async function listFailedNotifications(
         requestId: r.request_id,
         requestTitle: r.request_title,
         attemptCount: r.attempt_count,
-        lastError: r.last_error,
-        failedAt: new Date(r.updated_at).toISOString(),
+        lastError: r.error_message,
+        failedAt: new Date(r.created_at).toISOString(),
       })),
       total,
       page: safePage,

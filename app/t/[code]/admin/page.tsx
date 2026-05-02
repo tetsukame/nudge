@@ -38,7 +38,6 @@ export default async function AdminDashboardPage({
           sub={`active / 総 ${stats.users.total} 名（inactive ${stats.users.inactive}）`}
         />
         <StatCard
-          href={`/t/${code}/admin/orgs`}
           title="組織"
           primary={`${stats.orgUnits} 件`}
           sub="org_unit テーブル"
@@ -91,21 +90,24 @@ export default async function AdminDashboardPage({
 function StatCard({
   href, title, primary, sub, tone = 'normal',
 }: {
-  href: string; title: string; primary: string; sub?: string;
+  href?: string; title: string; primary: string; sub?: string;
   tone?: 'normal' | 'warn';
 }) {
-  return (
-    <Link
-      href={href}
-      className="block bg-white rounded-lg border border-gray-200 p-5 hover:border-blue-300 hover:shadow-sm transition-all"
-    >
+  const className =
+    'block bg-white rounded-lg border border-gray-200 p-5 transition-all'
+    + (href ? ' hover:border-blue-300 hover:shadow-sm' : '');
+  const inner = (
+    <>
       <p className="text-xs text-gray-500 mb-1">{title}</p>
       <p className={tone === 'warn' && primary !== '0 件' ? 'text-2xl font-bold text-orange-600' : 'text-2xl font-bold text-gray-900'}>
         {primary}
       </p>
       {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
-    </Link>
+    </>
   );
+  return href
+    ? <Link href={href} className={className}>{inner}</Link>
+    : <div className={className}>{inner}</div>;
 }
 
 function AdminLink({ href, label }: { href: string; label: string }) {

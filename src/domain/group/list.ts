@@ -19,10 +19,11 @@ export type GroupListItem = {
 
 export type ListGroupsInput = {
   /**
-   * 'visible': groups the actor can see (member / creator / tenant_admin)
-   * 'targetable': groups the actor can address as a target (= visible).
+   * 'visible': groups the actor can see as member / creator (personal scope).
+   *            tenant_admin auto-bypass は適用しない。`/groups` (個人ページ) で使う。
+   * 'all_tenant': テナント内の全グループ。tenant_admin 必須。`/admin/groups` で使う。
    */
-  scope?: 'visible' | 'targetable';
+  scope?: 'visible' | 'all_tenant';
 };
 
 export async function listGroups(
@@ -30,8 +31,18 @@ export async function listGroups(
   actor: ActorContext,
   input: ListGroupsInput = {},
 ): Promise<GroupListItem[]> {
-  const _ = input.scope; void _; // currently both scopes have identical visibility rules
+  const scope = input.scope ?? 'visible';
+  if (scope === 'all_tenant' && !actor.isTenantAdmin) {
+    throw new Error('all_tenant scope requires tenant_admin');
+  }
   return withTenant(pool, actor.tenantId, async (client) => {
+    const whereClause = scope === 'all_tenant'
+      ? `WHERE TRUE`
+      : `WHERE g.created_by_user_id = $1
+             OR EXISTS(
+               SELECT 1 FROM group_member gm
+                WHERE gm.group_id = g.id AND gm.user_id = $1
+             )`;
     const { rows } = await client.query<{
       id: string;
       name: string;
@@ -55,15 +66,9 @@ export async function listGroups(
               (g.created_by_user_id = $1) AS is_creator
          FROM "group" g
          LEFT JOIN users cu ON cu.id = g.created_by_user_id
-        WHERE
-          $2::boolean
-          OR g.created_by_user_id = $1
-          OR EXISTS(
-            SELECT 1 FROM group_member gm
-             WHERE gm.group_id = g.id AND gm.user_id = $1
-          )
+        ${whereClause}
         ORDER BY g.name ASC`,
-      [actor.userId, actor.isTenantAdmin],
+      [actor.userId],
     );
     return rows.map((r) => ({
       id: r.id,

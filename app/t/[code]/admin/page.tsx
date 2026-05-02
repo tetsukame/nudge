@@ -43,7 +43,7 @@ export default async function AdminDashboardPage({
           sub="org_unit テーブル"
         />
         <StatCard
-          href={`/t/${code}/groups`}
+          href={`/t/${code}/admin/groups`}
           title="グループ"
           primary={`${stats.groups.total} 件`}
           sub={`Nudge ${stats.groups.nudge} / KC ${stats.groups.keycloak}`}
@@ -79,6 +79,7 @@ export default async function AdminDashboardPage({
         <ul className="text-sm space-y-1">
           <AdminLink href={`/t/${code}/admin/sent`} label="📤 テナント全体の依頼（進行中 / 完了）" />
           <AdminLink href={`/t/${code}/admin/users`} label="👥 ユーザー管理（一覧 / 主所属 / ロール）" />
+          <AdminLink href={`/t/${code}/admin/groups`} label="👨‍👩‍👧‍👦 グループ管理（テナント全体）" />
           <AdminLink href={`/t/${code}/admin/audit`} label="📋 監査ログ" />
           <AdminLink href={`/t/${code}/admin/failed-notifications`} label="⚠️ 失敗通知の手動再送" />
           <AdminLink href={`/t/${code}/settings/notification`} label="📨 通知設定 (SMTP / Teams / Slack)" />

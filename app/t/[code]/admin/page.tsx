@@ -38,9 +38,10 @@ export default async function AdminDashboardPage({
           sub={`active / 総 ${stats.users.total} 名（inactive ${stats.users.inactive}）`}
         />
         <StatCard
+          href={`/t/${code}/admin/orgs`}
           title="組織"
           primary={`${stats.orgUnits} 件`}
-          sub="org_unit テーブル"
+          sub="active のみ。archived も含めて表示するには「組織管理」へ"
         />
         <StatCard
           href={`/t/${code}/admin/groups`}
@@ -80,6 +81,7 @@ export default async function AdminDashboardPage({
           <AdminLink href={`/t/${code}/admin/sent`} label="📤 テナント全体の依頼（進行中 / 完了）" />
           <AdminLink href={`/t/${code}/admin/users`} label="👥 ユーザー管理（一覧 / 主所属 / ロール）" />
           <AdminLink href={`/t/${code}/admin/groups`} label="👨‍👩‍👧‍👦 グループ管理（テナント全体）" />
+          <AdminLink href={`/t/${code}/admin/orgs`} label="🏢 組織管理（作成 / アーカイブ）" />
           <AdminLink href={`/t/${code}/admin/audit`} label="📋 監査ログ" />
           <AdminLink href={`/t/${code}/admin/failed-notifications`} label="⚠️ 失敗通知の手動再送" />
           <AdminLink href={`/t/${code}/settings/notification`} label="📨 通知設定 (SMTP / Teams / Slack)" />

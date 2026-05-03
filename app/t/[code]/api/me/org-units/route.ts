@@ -24,7 +24,7 @@ export async function GET(
       `SELECT ou.id, ou.name, uou.is_primary
          FROM user_org_unit uou
          JOIN org_unit ou ON ou.id = uou.org_unit_id
-        WHERE uou.user_id = $1
+        WHERE uou.user_id = $1 AND ou.status = 'active'
         ORDER BY uou.is_primary DESC, ou.name ASC`,
       [guard.actor.userId],
     );

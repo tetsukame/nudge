@@ -23,3 +23,14 @@ if (!process.env.OIDC_REDIRECT_URI_BASE) {
 }
 // DATABASE_URL_ADMIN and DATABASE_URL_APP are intentionally left unset here;
 // startTestDb() sets them to the testcontainer URIs at runtime.
+
+import { afterEach } from 'vitest';
+import { cleanup } from '@testing-library/react';
+
+// vitest の globals=true でも @testing-library/react の auto-cleanup は
+// 自動検出されないため、明示的に afterEach で unmount させる。
+// これがないと UI テストファイル間で DOM が累積し getByText が
+// 「Found multiple elements」で落ちる。
+afterEach(() => {
+  cleanup();
+});

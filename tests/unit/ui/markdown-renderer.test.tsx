@@ -34,6 +34,28 @@ describe('MarkdownRenderer', () => {
     expect(a?.getAttribute('rel')).toContain('noopener');
   });
 
+  it('autolinks bare URLs in body text', () => {
+    const { container } = render(
+      <MarkdownRenderer body={'参考: https://example.com/docs を確認してください'} />,
+    );
+    const a = container.querySelector('a');
+    expect(a).not.toBeNull();
+    expect(a?.getAttribute('href')).toBe('https://example.com/docs');
+    expect(a?.getAttribute('target')).toBe('_blank');
+    expect(a?.getAttribute('rel')).toContain('noopener');
+    expect(a?.textContent).toBe('https://example.com/docs');
+  });
+
+  it('autolinks multiple bare URLs separately', () => {
+    const { container } = render(
+      <MarkdownRenderer body={'A: https://example.com/a と B: https://example.com/b'} />,
+    );
+    const links = container.querySelectorAll('a');
+    expect(links.length).toBe(2);
+    expect(links[0]?.getAttribute('href')).toBe('https://example.com/a');
+    expect(links[1]?.getAttribute('href')).toBe('https://example.com/b');
+  });
+
   it('does not render raw <script> tags', () => {
     // react-markdown disables raw HTML by default; rehype-sanitize is a
     // belt-and-suspenders layer. Verify no <script> element is created.

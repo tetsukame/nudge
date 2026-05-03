@@ -16,7 +16,7 @@ const PLACEHOLDER = `Markdown で書けます。例:
 # 見出し
 **太字** *斜体*
 - 箇条書き
-[リンク](https://example.com)
+[リンク](https://example.com) または https://example.com（裸 URL も自動リンク化）
 \`\`\`
 コードブロック
 \`\`\``;
@@ -76,7 +76,7 @@ export function MarkdownEditor({ value, onChange, placeholder, rows = 8 }: Props
         <code className="font-mono bg-white px-1 rounded border border-gray-200">1. </code>番号付き /{' '}
         <code className="font-mono bg-white px-1 rounded border border-gray-200">**太字**</code> /{' '}
         <code className="font-mono bg-white px-1 rounded border border-gray-200">*斜体*</code> /{' '}
-        <code className="font-mono bg-white px-1 rounded border border-gray-200">[文字](URL)</code>リンク /{' '}
+        <code className="font-mono bg-white px-1 rounded border border-gray-200">[文字](URL)</code>リンク（裸 URL も自動リンク化） /{' '}
         <code className="font-mono bg-white px-1 rounded border border-gray-200">`code`</code> /{' '}
         <code className="font-mono bg-white px-1 rounded border border-gray-200">```</code> コードブロック /{' '}
         <code className="font-mono bg-white px-1 rounded border border-gray-200">| 列 |</code> 表

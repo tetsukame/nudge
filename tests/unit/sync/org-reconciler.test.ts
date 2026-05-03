@@ -88,15 +88,22 @@ describe('reconcileOrgs', () => {
     expect(rows[0].name).toBe('New');
   });
 
-  it('removes org_unit with no members when missing from source', async () => {
+  it('archives org_unit (no members) when missing from source, preserving the row', async () => {
     await reconcileOrgs(adminPool, tenantId, mockOrgSource([
       { externalId: 'gone', name: 'Gone', parentExternalId: null, level: 0 },
     ]));
     const result = await reconcileOrgs(adminPool, tenantId, mockOrgSource([]));
     expect(result.removed).toBe(1);
+    const { rows } = await adminPool.query<{ status: string; archived_at: Date | null }>(
+      `SELECT status, archived_at FROM org_unit WHERE tenant_id = $1 AND external_id = 'gone'`,
+      [tenantId],
+    );
+    expect(rows.length).toBe(1);
+    expect(rows[0].status).toBe('archived');
+    expect(rows[0].archived_at).not.toBeNull();
   });
 
-  it('keeps org_unit with members when missing from source', async () => {
+  it('archives org_unit (with members) when missing from source, preserving membership rows', async () => {
     await reconcileOrgs(adminPool, tenantId, mockOrgSource([
       { externalId: 'kept', name: 'Kept', parentExternalId: null, level: 0 },
     ]));
@@ -112,7 +119,32 @@ describe('reconcileOrgs', () => {
       [tenantId, userId, ouId],
     );
     const result = await reconcileOrgs(adminPool, tenantId, mockOrgSource([]));
-    expect(result.removed).toBe(0);
+    expect(result.removed).toBe(1);
+    const { rows: orgRows } = await adminPool.query<{ status: string }>(
+      `SELECT status FROM org_unit WHERE id = $1`, [ouId],
+    );
+    expect(orgRows[0].status).toBe('archived');
+    const { rows: memberRows } = await adminPool.query(
+      `SELECT 1 FROM user_org_unit WHERE org_unit_id = $1 AND user_id = $2`, [ouId, userId],
+    );
+    expect(memberRows.length).toBe(1);
+  });
+
+  it('restores archived org_unit when it reappears in source', async () => {
+    await reconcileOrgs(adminPool, tenantId, mockOrgSource([
+      { externalId: 'cycle', name: 'Cycle', parentExternalId: null, level: 0 },
+    ]));
+    await reconcileOrgs(adminPool, tenantId, mockOrgSource([])); // archive
+    const result = await reconcileOrgs(adminPool, tenantId, mockOrgSource([
+      { externalId: 'cycle', name: 'Cycle', parentExternalId: null, level: 0 },
+    ]));
+    expect(result.updated).toBe(1);
+    const { rows } = await adminPool.query<{ status: string; archived_at: Date | null }>(
+      `SELECT status, archived_at FROM org_unit WHERE tenant_id = $1 AND external_id = 'cycle'`,
+      [tenantId],
+    );
+    expect(rows[0].status).toBe('active');
+    expect(rows[0].archived_at).toBeNull();
   });
 
   it('syncs memberships from source', async () => {

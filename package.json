@@ -1,7 +1,17 @@
 {
-  "name": "nudge-db",
-  "version": "0.1.0",
+  "name": "nudge",
+  "version": "0.15.0",
   "private": true,
+  "license": "MIT",
+  "description": "組織内の依頼事項を軽く促して対応状況を可視化する OSS タスク管理ツール",
+  "homepage": "https://github.com/tetsukame/nudge",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tetsukame/nudge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tetsukame/nudge/issues"
+  },
   "type": "module",
   "scripts": {
     "dev": "next dev",

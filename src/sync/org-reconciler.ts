@@ -16,14 +16,21 @@ export async function reconcileOrgs(
   const seenExternalIds = new Set(allOrgs.map((o) => o.externalId));
 
   // Upsert org_units (parent_id set to NULL initially)
+  // KC で再登場したら status='active' に戻す（restore from archived）
   const extIdToDbId = new Map<string, string>();
   for (const org of allOrgs) {
     const { rows } = await adminPool.query<{ id: string; action: string }>(
-      `INSERT INTO org_unit (tenant_id, external_id, name, level, parent_id)
-       VALUES ($1, $2, $3, $4, NULL)
+      `INSERT INTO org_unit (tenant_id, external_id, name, level, parent_id, status)
+       VALUES ($1, $2, $3, $4, NULL, 'active')
        ON CONFLICT (tenant_id, external_id) WHERE external_id IS NOT NULL
-       DO UPDATE SET name = EXCLUDED.name, level = EXCLUDED.level
-       WHERE org_unit.name != EXCLUDED.name OR org_unit.level != EXCLUDED.level
+       DO UPDATE SET
+         name = EXCLUDED.name,
+         level = EXCLUDED.level,
+         status = 'active',
+         archived_at = NULL
+       WHERE org_unit.name != EXCLUDED.name
+          OR org_unit.level != EXCLUDED.level
+          OR org_unit.status != 'active'
        RETURNING id, CASE WHEN xmax = 0 THEN 'created' ELSE 'updated' END AS action`,
       [tenantId, org.externalId, org.name, org.level],
     );
@@ -53,20 +60,20 @@ export async function reconcileOrgs(
     }
   }
 
-  // Remove orgs not in source (only if no members)
-  const { rows: existingOrgs } = await adminPool.query<{ id: string; external_id: string }>(
-    `SELECT id, external_id FROM org_unit WHERE tenant_id = $1 AND external_id IS NOT NULL`, [tenantId],
+  // KC に存在しなくなった org は archive (論理削除)
+  // メンバー有無に関わらず archive する。物理削除はしない (履歴保持)
+  const { rows: existingOrgs } = await adminPool.query<{ id: string; external_id: string; status: string }>(
+    `SELECT id, external_id, status FROM org_unit
+      WHERE tenant_id = $1 AND external_id IS NOT NULL`,
+    [tenantId],
   );
   for (const existing of existingOrgs) {
-    if (!seenExternalIds.has(existing.external_id)) {
-      const { rows: members } = await adminPool.query(
-        `SELECT 1 FROM user_org_unit WHERE org_unit_id = $1 LIMIT 1`, [existing.id],
+    if (!seenExternalIds.has(existing.external_id) && existing.status === 'active') {
+      await adminPool.query(
+        `UPDATE org_unit SET status = 'archived', archived_at = now() WHERE id = $1`,
+        [existing.id],
       );
-      if (members.length === 0) {
-        await adminPool.query(`DELETE FROM org_unit_closure WHERE ancestor_id = $1 OR descendant_id = $1`, [existing.id]);
-        await adminPool.query(`DELETE FROM org_unit WHERE id = $1`, [existing.id]);
-        result.removed++;
-      }
+      result.removed++; // result.removed は「archived 化された数」として再利用
     }
   }
 

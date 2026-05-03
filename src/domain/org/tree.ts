@@ -34,6 +34,8 @@ export async function getOrgTree(
 
     let rows: OrgUnitRow[];
 
+    // active な組織のみ取得（archived は除外）。
+    // archived も含めたい admin ビューは別 API または includeArchived option (将来)。
     if (visibleIds === null) {
       // Load all org units
       const { rows: r } = await client.query<OrgUnitRow>(
@@ -42,6 +44,7 @@ export async function getOrgTree(
                    JOIN users u ON u.id = uou.user_id
                   WHERE uou.org_unit_id = ou.id AND u.status = 'active') AS member_count
            FROM org_unit ou
+          WHERE ou.status = 'active'
           ORDER BY ou.level ASC, ou.name ASC`,
       );
       rows = r;
@@ -52,7 +55,7 @@ export async function getOrgTree(
                    JOIN users u ON u.id = uou.user_id
                   WHERE uou.org_unit_id = ou.id AND u.status = 'active') AS member_count
            FROM org_unit ou
-          WHERE ou.id = ANY($1)
+          WHERE ou.id = ANY($1) AND ou.status = 'active'
           ORDER BY ou.level ASC, ou.name ASC`,
         [visibleIds],
       );

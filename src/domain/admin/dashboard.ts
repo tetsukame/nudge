@@ -45,7 +45,7 @@ export async function getDashboardStats(
       `SELECT
          (SELECT COUNT(*)::text FROM users WHERE status = 'active') AS users_active,
          (SELECT COUNT(*)::text FROM users WHERE status = 'inactive') AS users_inactive,
-         (SELECT COUNT(*)::text FROM org_unit) AS org_units,
+         (SELECT COUNT(*)::text FROM org_unit WHERE status = 'active') AS org_units,
          (SELECT COUNT(*)::text FROM "group" WHERE source = 'nudge') AS groups_nudge,
          (SELECT COUNT(*)::text FROM "group" WHERE source = 'keycloak') AS groups_keycloak,
          (SELECT COUNT(*)::text FROM request WHERE status = 'active') AS requests_active,

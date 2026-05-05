@@ -313,6 +313,24 @@ docker compose -f docker-compose.byo-kc.yml up -d
 # 以下、テナント登録 / platform_admin 作成は同梱モードと同じ
 ```
 
+## 既存 PostgreSQL を共有する場合（参考）
+
+Nudge は PG 17 以降の独立した database を要求します。Pleasanter 等と PG インスタンスを共有する想定の場合：
+
+- 共有 PG に `nudge` database を別途作成（`CREATE DATABASE nudge`）
+- `nudge_app` ロールは `nudge` database 専用とし、他 DB への権限を与えない
+- `docker-compose.byo-kc.yml` から `postgres` / `migrate` サービスを削除し、`.env` の `DATABASE_URL_ADMIN` / `DATABASE_URL_APP` を外部 PG 向けに設定
+- `migrate` は別途手動実行（`pnpm migrate` または `npm run migrate:prod`）
+
+ただし共有時は以下のリスクをユーザー側で評価する必要：
+
+- バックアップ / リストアの粒度が PG インスタンス単位になる
+- PG バージョンアップ（17→18 等）を共有サービス全体で揃える必要
+- 重い同居サービスからのリソース競合
+- PG インスタンス障害が複数サービス同時ダウンに繋がる
+
+これらの本番運用観点は Phase 5e（本番セルフホスト構成、後続リリース）で正式に整備します。Phase 5b では「OSS デモ用にすぐ動く」を最優先とし、共有 PG モードはユーザー側 Compose 編集で対応する位置付け。
+
 ## テスト方針
 
 - **動作確認 1**: `docker compose up` から `http://localhost:3000/t/dev/login` までの 3 ステップが README 通りに動くことを Windows / macOS / Linux で確認

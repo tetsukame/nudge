@@ -45,7 +45,7 @@ docker compose up -d --build
 # 1. 初期テナント登録
 docker compose exec postgres psql -U postgres -d nudge -c \
   "INSERT INTO tenant (code, name, keycloak_realm, keycloak_issuer_url) \
-   VALUES ('dev', 'Dev', 'nudge', 'http://localhost:8080/realms/nudge');"
+   VALUES ('dev', 'Dev', 'nudge', 'http://host.docker.internal:8080/realms/nudge');"
 
 # 2. platform_admin 作成
 docker compose exec web pnpm tsx src/scripts/create-platform-admin.ts \
@@ -61,13 +61,15 @@ docker compose exec keycloak /opt/keycloak/bin/kcadm.sh set-password -r nudge \
   --username testuser --new-password test123
 ```
 
-→ http://localhost:3000/t/dev/login にアクセスして "testuser / test123" でログイン。
+→ http://host.docker.internal:3000/t/dev/login にアクセスして "testuser / test123" でログイン。
 
-各サービスの URL：
+各サービスの URL（Docker Desktop が `host.docker.internal` を hosts ファイルに自動追加します。Linux native の場合は `--add-host=host.docker.internal:host-gateway` 相当の設定が必要）：
 
-- Nudge: http://localhost:3000
-- Keycloak admin console: http://localhost:8080/admin/master/console (admin/admin)
-- MailHog UI（送信メール確認）: http://localhost:8025
+- Nudge: http://host.docker.internal:3000
+- Keycloak admin console: http://host.docker.internal:8080/admin/master/console (admin/admin)
+- MailHog UI（送信メール確認）: http://host.docker.internal:8025
+
+> ℹ️ なぜ `host.docker.internal` か：Docker Compose 内の web container が KC への OIDC discovery を行う際、ブラウザと web container 双方から同じ URL で KC にアクセスできる必要があります。`localhost` は container 内で container 自身を指すので使えません。`host.docker.internal` は Docker Desktop が自動的にホスト側を指すよう解決してくれます。
 
 > ⚠️ デフォルトの `OIDC_CLIENT_SECRET` / `IRON_SESSION_PASSWORD` はデモ用にハードコードされています。本番転用は不可。`.env` で必ず上書きしてください。
 

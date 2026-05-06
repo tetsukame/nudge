@@ -22,10 +22,16 @@
       "directAccessGrantsEnabled": false,
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": true,
-      "redirectUris": ["http://localhost:3000/t/*/auth/callback"],
-      "webOrigins": ["http://localhost:3000"],
+      "redirectUris": [
+        "http://host.docker.internal:3000/t/*/auth/callback",
+        "http://localhost:3000/t/*/auth/callback"
+      ],
+      "webOrigins": [
+        "http://host.docker.internal:3000",
+        "http://localhost:3000"
+      ],
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3000/*"
+        "post.logout.redirect.uris": "http://host.docker.internal:3000/*##http://localhost:3000/*"
       },
       "defaultClientScopes": ["email", "profile", "roles"],
       "optionalClientScopes": []

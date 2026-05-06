@@ -30,7 +30,7 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-      KC_HOSTNAME: localhost
+      KC_HOSTNAME: host.docker.internal
       KC_HTTP_ENABLED: "true"
       KC_HEALTH_ENABLED: "true"
     ports:
@@ -74,7 +74,7 @@ services:
       IRON_SESSION_PASSWORD: ${IRON_SESSION_PASSWORD:-nudge-demo-session-key-change-me-in-production}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-nudge-web}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-nudge-demo-client-secret-change-me}
-      OIDC_REDIRECT_URI_BASE: ${OIDC_REDIRECT_URI_BASE:-http://localhost:3000}
+      OIDC_REDIRECT_URI_BASE: ${OIDC_REDIRECT_URI_BASE:-http://host.docker.internal:3000}
       NODE_ENV: production
     ports:
       - "3000:3000"
@@ -99,8 +99,10 @@ services:
       IRON_SESSION_PASSWORD: ${IRON_SESSION_PASSWORD:-nudge-demo-session-key-change-me-in-production}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-nudge-web}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-nudge-demo-client-secret-change-me}
-      OIDC_REDIRECT_URI_BASE: ${OIDC_REDIRECT_URI_BASE:-http://localhost:3000}
+      OIDC_REDIRECT_URI_BASE: ${OIDC_REDIRECT_URI_BASE:-http://host.docker.internal:3000}
       NODE_ENV: production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       migrate:
         condition: service_completed_successfully

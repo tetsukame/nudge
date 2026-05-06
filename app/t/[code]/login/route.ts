@@ -4,6 +4,7 @@ import { adminPool } from '@/db/pools';
 import { resolveTenant } from '@/tenant/resolver';
 import { getOidcClient } from '@/auth/oidc-client';
 import { sealOidcState, OIDC_STATE_COOKIE_NAME } from '@/auth/state-cookie';
+import { cookieSecure } from '@/auth/cookie-flags';
 import { loadConfig } from '@/config';
 
 export const runtime = 'nodejs';
@@ -51,7 +52,7 @@ export async function GET(
   const response = NextResponse.redirect(authorizationUrl);
   response.cookies.set(OIDC_STATE_COOKIE_NAME, sealed, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: cookieSecure(),
     sameSite: 'lax',
     path: `/t/${code}/`,
     maxAge: 10 * 60,

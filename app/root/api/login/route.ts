@@ -3,6 +3,7 @@ import { adminPool } from '@/db/pools';
 import { loadConfig } from '@/config';
 import { authenticatePlatformAdmin } from '@/domain/platform/auth';
 import { sealRootSession, ROOT_SESSION_COOKIE } from '@/auth/root-session';
+import { cookieSecure } from '@/auth/cookie-flags';
 
 export const runtime = 'nodejs';
 
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
   res.cookies.set(ROOT_SESSION_COOKIE, sealed, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: cookieSecure(),
     path: '/root',
     maxAge: 4 * 60 * 60, // 4 hours
   });

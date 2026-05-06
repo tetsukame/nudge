@@ -9,6 +9,7 @@ import {
 import { jitUpsertUser } from '@/auth/callback';
 import { sealSession } from '@/auth/session';
 import type { NudgeSession } from '@/auth/session';
+import { cookieSecure } from '@/auth/cookie-flags';
 import { loadConfig } from '@/config';
 
 export const runtime = 'nodejs';
@@ -88,7 +89,7 @@ export async function GET(
 
   const maxAge = 14 * 24 * 60 * 60;
   const expires = new Date(Date.now() + maxAge * 1000).toUTCString();
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  const secure = cookieSecure() ? '; Secure' : '';
 
   const headers = new Headers();
   headers.set('Location', returnUrl.toString());

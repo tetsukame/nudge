@@ -23,8 +23,8 @@
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": true,
       "redirectUris": [
-        "http://host.docker.internal:3000/t/*/auth/callback",
-        "http://localhost:3000/t/*/auth/callback"
+        "http://host.docker.internal:3000/*",
+        "http://localhost:3000/*"
       ],
       "webOrigins": [
         "http://host.docker.internal:3000",

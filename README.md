@@ -36,8 +36,19 @@
 ```bash
 git clone https://github.com/tetsukame/nudge.git
 cd nudge
-docker compose up -d --build
+# 既存の .env ファイルがある場合 (開発者) は --env-file 経由でデモ専用設定を読ませる
+docker compose --env-file .env.demo up -d --build
+# 初めて触る場合 (.env が無い) は --env-file 省略でも OK (compose のデフォルト値が効く)
+# docker compose up -d --build
 ```
+
+> ⚠️ **Windows + Docker Desktop の場合**: `host.docker.internal` を `127.0.0.1` に向ける hosts ファイル設定が必要です。`C:\Windows\System32\drivers\etc\hosts` に以下を追加（管理者権限）：
+>
+> ```
+> 127.0.0.1 host.docker.internal
+> ```
+>
+> Docker Desktop は通常自動で設定しますが、何らかの理由で LAN IP に向いている場合は明示的な書き換えが必要です。
 
 初回は Keycloak の起動に約 60 秒かかります。`docker compose ps` ですべてのサービスが Healthy になったら、以下の **3 ステップ** を実行してログイン画面まで到達：
 

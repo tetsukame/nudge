@@ -20,77 +20,100 @@
 - **ルート管理**: platform_admin によるテナント追加・削除、ローカル認証
 - **組織のソフトデリート**: `org_unit.status = archived` で履歴保持。Keycloak で消えた組織は自動 archived 化、復活時に自動 active 化
 
-リポジトリは活発に開発中で、`v1.0` 安定版に向けて API 互換性は変更され得ます。バージョニング方針は [docs/versioning.md](docs/versioning.md)（Phase 5b 以降で整備予定）参照。
+リポジトリは活発に開発中で、`v1.0` 安定版に向けて API 互換性は変更され得ます。
 
 ## 必要環境
 
-- Node.js 20+
-- pnpm 9+
-- Docker Desktop（ローカル PostgreSQL とテストコンテナ用）
-- Keycloak 26（別途用意。OSS 同梱 Docker Compose は Phase 5b で対応予定）
+- Docker Desktop または互換のコンテナランタイム
+- （オプション）Node.js 20+ / pnpm 9+ — `pnpm dev` でローカル開発する場合のみ
 
 ## クイックスタート
+
+### OSS デモ（Docker Compose、所要時間 5 分）
+
+すべてのサービス（web / worker / PostgreSQL / Keycloak / MailHog）を Docker Compose で立ち上げる：
 
 ```bash
 git clone https://github.com/tetsukame/nudge.git
 cd nudge
-pnpm install
-cp .env.example .env   # DATABASE_URL_* / IRON_SESSION_PASSWORD / OIDC_* を設定
-docker compose -f docker-compose.dev.yml up -d   # ローカル PostgreSQL を起動
-pnpm migrate           # マイグレーションを実行
-pnpm dev               # http://localhost:3000 で開発サーバ起動
+docker compose up -d --build
 ```
 
-別ターミナルで通知ワーカーも起動する：
+初回は Keycloak の起動に約 60 秒かかります。`docker compose ps` ですべてのサービスが Healthy になったら、以下の **3 ステップ** を実行してログイン画面まで到達：
+
+```bash
+# 1. 初期テナント登録
+docker compose exec postgres psql -U postgres -d nudge -c \
+  "INSERT INTO tenant (code, name, keycloak_realm, keycloak_issuer_url) \
+   VALUES ('dev', 'Dev', 'nudge', 'http://localhost:8080/realms/nudge');"
+
+# 2. platform_admin 作成
+docker compose exec web pnpm tsx src/scripts/create-platform-admin.ts \
+  admin@example.com "Admin" 'Strong-Password-2026!'
+
+# 3. Keycloak テストユーザー作成
+docker compose exec keycloak /opt/keycloak/bin/kcadm.sh config credentials \
+  --server http://localhost:8080 --realm master --user admin --password admin
+docker compose exec keycloak /opt/keycloak/bin/kcadm.sh create users -r nudge \
+  -s username=testuser -s email=testuser@example.com \
+  -s emailVerified=true -s enabled=true
+docker compose exec keycloak /opt/keycloak/bin/kcadm.sh set-password -r nudge \
+  --username testuser --new-password test123
+```
+
+→ http://localhost:3000/t/dev/login にアクセスして "testuser / test123" でログイン。
+
+各サービスの URL：
+
+- Nudge: http://localhost:3000
+- Keycloak admin console: http://localhost:8080/admin/master/console (admin/admin)
+- MailHog UI（送信メール確認）: http://localhost:8025
+
+> ⚠️ デフォルトの `OIDC_CLIENT_SECRET` / `IRON_SESSION_PASSWORD` はデモ用にハードコードされています。本番転用は不可。`.env` で必ず上書きしてください。
+
+### Bring Your Own Keycloak（既存 KC 接続）
+
+既存の Keycloak を使う場合は `docker-compose.byo-kc.yml` を使用：
+
+```bash
+# 1. .env を作成（OIDC 系は必須）
+cp .env.example .env
+# 編集して OIDC_CLIENT_ID / OIDC_CLIENT_SECRET / OIDC_REDIRECT_URI_BASE
+# IRON_SESSION_PASSWORD を設定
+
+# 2. 既存 KC に nudge realm を import
+#    docker/keycloak/nudge-realm.json を KC admin UI から手動 import、または:
+docker run --rm -v $(pwd)/docker/keycloak:/realms quay.io/keycloak/keycloak:26 \
+  start --import-realm --optimized --dir /realms
+
+# 3. 起動
+docker compose -f docker-compose.byo-kc.yml up -d --build
+
+# 以下、上記 3 ステップ（テナント登録 / platform_admin / KC ユーザー作成）は同様
+# ただし KC の URL とテナントの keycloak_issuer_url は外部 KC のものに置き換える
+```
+
+### ローカル開発（Next.js dev サーバ + PG だけ Docker）
+
+`pnpm dev` で hot-reload しながら開発する場合は、PG だけ Docker で起動：
+
+```bash
+pnpm install
+cp .env.example .env  # 必要な値を設定（KC は別途用意）
+docker compose -f docker-compose.dev.yml up -d
+pnpm migrate
+pnpm dev               # http://localhost:3000
+```
+
+別ターミナルで通知ワーカー：
 
 ```bash
 pnpm worker:dev
 ```
 
-## セットアップ手順
+### 既存 PostgreSQL を共有する場合
 
-### 1. PostgreSQL
-
-`docker-compose.dev.yml` がローカル開発用 PG (17-alpine) を `localhost:5432` で起動します。`DATABASE_URL_ADMIN` には superuser を、`DATABASE_URL_APP` には migration `018` で作成される `nudge_app` ロール（RLS 強制）を指定してください。`nudge_app` のパスワードは初回 migration 後に自分で設定します：
-
-```bash
-psql $DATABASE_URL_ADMIN -c "ALTER ROLE nudge_app PASSWORD 'your-secret'"
-```
-
-### 2. Keycloak
-
-別途 Keycloak 26 を立てて、OIDC クライアントを作成してください。詳細は [docs/keycloak-setup.md](docs/keycloak-setup.md)（Phase 5b で整備予定）。当面は以下の設定が必要です：
-
-- Realm: 任意（テナントごとに別 realm 推奨）
-- Client: Confidential、`http://localhost:3000/t/<tenant_code>/auth/callback` を redirect URI に追加
-- Client Scope: `email`, `profile` を ID トークンに含める
-- 同期用に `view-users`, `view-realm`, `view-groups` の admin ロールを付与した service account を別途用意
-
-### 3. テナントの登録
-
-最初のテナントは管理者が SQL で直接登録します（platform_admin UI 完成後は UI 経由で可能になります）：
-
-```bash
-psql $DATABASE_URL_ADMIN <<'EOF'
-INSERT INTO tenant (code, name, keycloak_realm, keycloak_issuer_url)
-VALUES ('dev', 'Dev Tenant', 'dev-realm', 'http://localhost:8080/realms/dev-realm');
-EOF
-```
-
-### 4. platform_admin の作成
-
-ルート管理画面 (`/root/login`) 用の管理者アカウントを作成します：
-
-```bash
-pnpm tsx src/scripts/create-platform-admin.ts <email> <displayName> <strong-password>
-```
-
-パスワードは 12 文字以上 + 英大小文字 + 数字 + 記号 が必要です。
-
-### 5. ログイン
-
-- テナントログイン: `http://localhost:3000/t/dev/login` → Keycloak へリダイレクト
-- ルート管理: `http://localhost:3000/root/login`
+Pleasanter 等と PG インスタンスを共有する場合は、共有 PG に `nudge` database を作成し、`docker-compose.byo-kc.yml` から `postgres` / `migrate` サービスを削除して `.env` の `DATABASE_URL_ADMIN` / `DATABASE_URL_APP` を外部 PG 向けに設定してください。本番セルフホスト構成は後続フェーズで正式整備します。
 
 ## 開発
 

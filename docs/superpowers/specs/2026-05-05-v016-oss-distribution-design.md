@@ -46,9 +46,8 @@ nudge/
 ├── docker/
 │   └── keycloak/
 │       └── nudge-realm.json          # 新規（同梱 KC 用 realm 定義、ユーザー含まず）
-├── tsconfig.scripts.json             # 新規（worker / migrate / scripts を JS にビルド）
 ├── next.config.mjs                   # 変更なし（standalone 化はしない）
-├── package.json                      # 修正（build:scripts / worker:prod / migrate:prod 等を追加、pg-format 依存追加）
+├── package.json                      # 修正（pg-format 依存追加、tsx を dependencies へ昇格）
 ├── src/migrate.ts                    # 修正（末尾に NUDGE_APP_PASSWORD 反映処理を追加）
 └── README.md                         # 修正（OSS デモ手順 + byo-kc 手順を追加）
 ```
@@ -67,9 +66,9 @@ nudge/
 |---|---|---|---|
 | `postgres` | `postgres:17-alpine` | DB | - |
 | `keycloak` | `quay.io/keycloak/keycloak:26` | IdP（`start-dev --import-realm` で realm.json を起動時 import） | - |
-| `migrate` | Nudge image | マイグレーション init container（`node dist/migrate.js`、`restart: "no"`） | postgres (healthy) |
+| `migrate` | Nudge image | マイグレーション init container（`tsx src/migrate.ts`、`restart: "no"`） | postgres (healthy) |
 | `web` | Nudge image | Next.js（`npm start`） | migrate (completed), keycloak (healthy) |
-| `worker` | Nudge image | 通知ワーカー（`node dist/worker/main.js`） | migrate (completed) |
+| `worker` | Nudge image | 通知ワーカー（`tsx src/worker/main.ts`） | migrate (completed) |
 | `mailhog` | `mailhog/mailhog` | SMTP テスト用 | - |
 
 ### Keycloak realm import の選定
@@ -106,62 +105,36 @@ services:
 - 名前付きボリューム: `postgres_data`, `keycloak_data`（永続化）
 - ネットワーク: `nudge` という名前の単一 bridge
 
-## Dockerfile（multi-stage 3 段）
+## Dockerfile（multi-stage 2 段）
 
 ```
-deps    → pnpm install --frozen-lockfile（依存キャッシュ層）
-builder → pnpm build (Next.js production)
-        + pnpm exec tsc -p tsconfig.scripts.json（worker/migrate/scripts を JS 化）
-runner  → production deps のみ + .next/ + dist/ + migrations/
+builder → pnpm install --frozen-lockfile + pnpm build (Next.js production)
+runner  → production deps（tsx 含む）+ .next/ + public/ + src/ + migrations/
 ```
 
-### `tsconfig.scripts.json`
+### tsx を runtime dependencies に置く方針
 
-```json
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "outDir": "dist",
-    "noEmit": false,
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "declaration": false
-  },
-  "include": [
-    "src/migrate.ts",
-    "src/worker/**/*.ts",
-    "src/scripts/**/*.ts",
-    "src/db/**/*.ts",
-    "src/domain/**/*.ts",
-    "src/notification/**/*.ts",
-    "src/sync/**/*.ts",
-    "src/auth/**/*.ts",
-    "src/config.ts"
-  ]
-}
-```
+worker / migrate / bootstrap CLI は TypeScript ソースを `tsx` で直接実行する：
 
-ts→js 変換対象は worker / migrate / bootstrap CLI が依存する範囲のみ。Next.js（`app/`, UI コンポーネント）は別経路（`next build`）でビルドされる。
+- 既存ソースの import 形式（拡張子なし `from './scheduler'` と `.js` 付きの混在）を変更不要
+- `tsx` は実績豊富なツール（Vitest 等が内部で使用）。production 利用例多数
+- worker は長時間プロセスだが、初回パース後は cache される。オーバーヘッドは無視できる
+- イメージサイズへの影響は約 +5MB のみ（OSS デモ用途では問題なし）
 
-### `package.json` scripts 追加
+代替案（tsc コンパイルで JS 化）は、既存ソースの 50+ 箇所の import に `.js` 拡張子を追加するリファクタが必要なため不採用。Phase 5e で本番最適化する際にイメージを web/worker で分離して再検討する。
 
-```json
-{
-  "scripts": {
-    "build:scripts": "tsc -p tsconfig.scripts.json",
-    "worker:prod": "node dist/worker/main.js",
-    "migrate:prod": "node dist/migrate.js",
-    "bootstrap:platform-admin:prod": "node dist/scripts/create-platform-admin.js"
-  }
-}
-```
+### `package.json` 変更
+
+`tsx` を `devDependencies` から `dependencies` へ移す（production install 時にも入れるため）。`pg-format` を `dependencies` に追加（`migrate.ts` の ALTER ROLE で使用）。
+
+新規 script は不要。既存の `pnpm worker` (`tsx src/worker/main.ts`) と `pnpm migrate` (`tsx src/migrate.ts`) をそのまま production でも使う。
 
 ### Compose の CMD（runner ベースで切り替え）
 
 - `web`: `npm start`（Next.js production server）
-- `worker`: `node dist/worker/main.js`
-- `migrate`: `node dist/migrate.js`（exit 0 で完了）
-- bootstrap CLI: `docker compose exec web node dist/scripts/create-platform-admin.js <args>`
+- `worker`: `pnpm worker`
+- `migrate`: `pnpm migrate`（exit 0 で完了）
+- bootstrap CLI: `docker compose exec web pnpm tsx src/scripts/create-platform-admin.ts <args>`
 
 ### Next.js standalone を採用しない理由
 
@@ -238,7 +211,7 @@ migrate:
   depends_on:
     postgres:
       condition: service_healthy
-  command: node dist/migrate.js
+  command: pnpm migrate
   restart: "no"
 
 web:
@@ -286,7 +259,7 @@ docker compose exec postgres psql -U postgres -d nudge -c \
    VALUES ('dev', 'Dev', 'nudge', 'http://localhost:8080/realms/nudge');"
 
 # 2. platform_admin 作成
-docker compose exec web npm run bootstrap:platform-admin:prod -- \
+docker compose exec web pnpm tsx src/scripts/create-platform-admin.ts \
   admin@example.com "Admin" 'Strong-Password-2026!'
 
 # 3. Keycloak テストユーザー作成
@@ -338,7 +311,7 @@ Nudge は PG 17 以降の独立した database を要求します。Pleasanter �
 - **動作確認 3**: `docker compose -f docker-compose.dev.yml up` で既存開発フローが壊れていないことを確認
 - **既存テスト**: `pnpm test` (unit + schema + RLS) が green であること
 - **タイプチェック**: `tsc --noEmit` が clean
-- **ビルドチェック**: `pnpm build` と `pnpm build:scripts` が両方成功
+- **ビルドチェック**: `pnpm build` (Next.js) が成功
 
 ## 完了条件
 

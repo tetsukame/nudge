@@ -29,7 +29,12 @@ export async function GET(
     return new NextResponse('OIDC state expired or missing', { status: 400 });
   }
 
-  const redirectUri = `${cfg.OIDC_REDIRECT_URI_BASE}/t/${code}/auth/callback`;
+  // login route と同じくリクエスト由来の host で算出。OIDC token exchange 時に
+  // KC は code 発行時の redirect_uri と一致することを要求するため、ここも揃える必要がある。
+  const forwardedProto = req.headers.get('x-forwarded-proto') ?? 'http';
+  const hostHeader = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? 'localhost:3000';
+  const requestOrigin = `${forwardedProto}://${hostHeader}`;
+  const redirectUri = `${requestOrigin}/t/${code}/auth/callback`;
   const client = await getOidcClient(tenant, {
     clientId: cfg.OIDC_CLIENT_ID,
     clientSecret: cfg.OIDC_CLIENT_SECRET,

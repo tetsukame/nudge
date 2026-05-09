@@ -20,7 +20,14 @@ export async function GET(
   }
 
   const cfg = loadConfig();
-  const redirectUri = `${cfg.OIDC_REDIRECT_URI_BASE}/t/${code}/auth/callback`;
+  // redirectUri はリクエスト由来の host で算出する。req.nextUrl は Next.js が
+  // 常に localhost に正規化してしまうため、x-forwarded-host → host ヘッダを直読みする。
+  // cookie はオリジン単位なので、ユーザーが host.docker.internal でアクセスしている
+  // 状態で localhost に redirect_uri を返すと、KC からの戻りで cookie が送信されない。
+  const forwardedProto = req.headers.get('x-forwarded-proto') ?? 'http';
+  const hostHeader = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? 'localhost:3000';
+  const requestOrigin = `${forwardedProto}://${hostHeader}`;
+  const redirectUri = `${requestOrigin}/t/${code}/auth/callback`;
   const client = await getOidcClient(tenant, {
     clientId: cfg.OIDC_CLIENT_ID,
     clientSecret: cfg.OIDC_CLIENT_SECRET,

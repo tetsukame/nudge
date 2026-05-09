@@ -1,0 +1,126 @@
+# OSS demo full stack: web + worker + PostgreSQL + Keycloak + MailHog
+# Use: docker compose up -d --build
+# For external Keycloak: docker compose -f docker-compose.byo-kc.yml up -d --build
+# For PG only (legacy dev): docker compose -f docker-compose.dev.yml up -d
+name: nudge
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: nudge-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: nudge
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nudge"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [nudge]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: nudge-keycloak
+    command: start-dev --import-realm --hostname-strict=false
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: host.docker.internal
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8080:8080"
+      - "9000:9000"
+    volumes:
+      - ./docker/keycloak:/opt/keycloak/data/import:ro
+      - keycloak_data:/opt/keycloak/data
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q '200 OK'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks: [nudge]
+
+  migrate:
+    image: nudge:v0.16
+    build:
+      context: .
+    container_name: nudge-migrate
+    command: pnpm migrate
+    environment:
+      DATABASE_URL_ADMIN: postgresql://postgres:postgres@postgres:5432/nudge
+      NUDGE_APP_PASSWORD: ${NUDGE_APP_PASSWORD:-nudge_app_pass}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks: [nudge]
+
+  web:
+    image: nudge:v0.16
+    build:
+      context: .
+    container_name: nudge-web
+    command: pnpm start
+    environment:
+      DATABASE_URL_ADMIN: postgresql://postgres:postgres@postgres:5432/nudge
+      DATABASE_URL_APP: postgresql://nudge_app:${NUDGE_APP_PASSWORD:-nudge_app_pass}@postgres:5432/nudge
+      IRON_SESSION_PASSWORD: ${IRON_SESSION_PASSWORD:-nudge-demo-session-key-change-me-in-production}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-nudge-web}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-nudge-demo-client-secret-change-me}
+      OIDC_REDIRECT_URI_BASE: ${OIDC_REDIRECT_URI_BASE:-http://host.docker.internal:3000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
+    networks: [nudge]
+
+  worker:
+    image: nudge:v0.16
+    build:
+      context: .
+    container_name: nudge-worker
+    command: pnpm worker
+    environment:
+      DATABASE_URL_ADMIN: postgresql://postgres:postgres@postgres:5432/nudge
+      DATABASE_URL_APP: postgresql://nudge_app:${NUDGE_APP_PASSWORD:-nudge_app_pass}@postgres:5432/nudge
+      IRON_SESSION_PASSWORD: ${IRON_SESSION_PASSWORD:-nudge-demo-session-key-change-me-in-production}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-nudge-web}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-nudge-demo-client-secret-change-me}
+      OIDC_REDIRECT_URI_BASE: ${OIDC_REDIRECT_URI_BASE:-http://host.docker.internal:3000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      NODE_ENV: production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [nudge]
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: nudge-mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks: [nudge]
+
+volumes:
+  postgres_data:
+  keycloak_data:
+
+networks:
+  nudge:

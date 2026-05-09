@@ -9,6 +9,7 @@ import {
 import { jitUpsertUser } from '@/auth/callback';
 import { sealSession } from '@/auth/session';
 import type { NudgeSession } from '@/auth/session';
+import { cookieSecure } from '@/auth/cookie-flags';
 import { loadConfig } from '@/config';
 
 export const runtime = 'nodejs';
@@ -28,7 +29,12 @@ export async function GET(
     return new NextResponse('OIDC state expired or missing', { status: 400 });
   }
 
-  const redirectUri = `${cfg.OIDC_REDIRECT_URI_BASE}/t/${code}/auth/callback`;
+  // login route と同じくリクエスト由来の host で算出。OIDC token exchange 時に
+  // KC は code 発行時の redirect_uri と一致することを要求するため、ここも揃える必要がある。
+  const forwardedProto = req.headers.get('x-forwarded-proto') ?? 'http';
+  const hostHeader = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? 'localhost:3000';
+  const requestOrigin = `${forwardedProto}://${hostHeader}`;
+  const redirectUri = `${requestOrigin}/t/${code}/auth/callback`;
   const client = await getOidcClient(tenant, {
     clientId: cfg.OIDC_CLIENT_ID,
     clientSecret: cfg.OIDC_CLIENT_SECRET,
@@ -88,7 +94,7 @@ export async function GET(
 
   const maxAge = 14 * 24 * 60 * 60;
   const expires = new Date(Date.now() + maxAge * 1000).toUTCString();
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  const secure = cookieSecure() ? '; Secure' : '';
 
   const headers = new Headers();
   headers.set('Location', returnUrl.toString());

@@ -1,0 +1,34 @@
+# VCS / CI
+.git
+.gitignore
+.github
+
+# IDE / editor
+.vscode
+.idea
+.claude
+.superpowers
+
+# Local env files (must NOT be in image)
+.env
+.env.local
+.env.*.local
+
+# Build artifacts (will be rebuilt in image)
+node_modules
+.next
+dist
+tsconfig.tsbuildinfo
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db
+
+# Tests / docs / dev compose (not needed in production image)
+tests
+docs
+docker-compose.dev.yml
+
+# Local Docker compose data
+data

@@ -1,0 +1,42 @@
+{
+  "realm": "nudge",
+  "displayName": "Nudge",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "clients": [
+    {
+      "clientId": "nudge-web",
+      "name": "Nudge Web",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "nudge-demo-client-secret-change-me",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "redirectUris": [
+        "http://host.docker.internal:3000/*",
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": [
+        "http://host.docker.internal:3000",
+        "http://localhost:3000"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://host.docker.internal:3000/*##http://localhost:3000/*"
+      },
+      "defaultClientScopes": ["email", "profile", "roles"],
+      "optionalClientScopes": []
+    }
+  ],
+  "groups": [],
+  "users": []
+}

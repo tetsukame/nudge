@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import pg from 'pg';
+import format from 'pg-format';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -50,6 +51,19 @@ export async function runMigrations(pool: pg.Pool): Promise<string[]> {
   return applied;
 }
 
+/**
+ * Postgres init script は migrate より前に走り、その時点では migration 018 が
+ * まだ存在しないため、init script で nudge_app role を操作することはできない。
+ * このため migrate 完了後に env から PASSWORD を反映する責務をここで持つ。
+ * env 未設定なら no-op（test では pg-container.ts が独自にセットしている）。
+ */
+export async function setAppRolePasswordFromEnv(pool: pg.Pool): Promise<void> {
+  const pw = process.env.NUDGE_APP_PASSWORD;
+  if (!pw) return;
+  await pool.query(format('ALTER ROLE nudge_app PASSWORD %L', pw));
+  console.log('updated nudge_app password from NUDGE_APP_PASSWORD env');
+}
+
 // CLI エントリ
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const url = process.env.DATABASE_URL_ADMIN;
@@ -59,8 +73,9 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   }
   const pool = new pg.Pool({ connectionString: url });
   runMigrations(pool)
-    .then((list) => {
+    .then(async (list) => {
       console.log(`done. ${list.length} migration(s) applied.`);
+      await setAppRolePasswordFromEnv(pool);
       return pool.end();
     })
     .catch(async (err) => {

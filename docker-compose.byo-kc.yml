@@ -1,0 +1,96 @@
+# Bring Your Own Keycloak: external KC, Nudge stack only.
+# Use: docker compose -f docker-compose.byo-kc.yml up -d --build
+# Set OIDC_* and OIDC_REDIRECT_URI_BASE in .env to point at your KC.
+name: nudge-byo-kc
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: nudge-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: nudge
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nudge"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [nudge]
+
+  migrate:
+    image: nudge:v0.16
+    build:
+      context: .
+    container_name: nudge-migrate
+    command: pnpm migrate
+    environment:
+      DATABASE_URL_ADMIN: postgresql://postgres:postgres@postgres:5432/nudge
+      NUDGE_APP_PASSWORD: ${NUDGE_APP_PASSWORD:-nudge_app_pass}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks: [nudge]
+
+  web:
+    image: nudge:v0.16
+    build:
+      context: .
+    container_name: nudge-web
+    command: pnpm start
+    environment:
+      DATABASE_URL_ADMIN: postgresql://postgres:postgres@postgres:5432/nudge
+      DATABASE_URL_APP: postgresql://nudge_app:${NUDGE_APP_PASSWORD:-nudge_app_pass}@postgres:5432/nudge
+      IRON_SESSION_PASSWORD: ${IRON_SESSION_PASSWORD:?IRON_SESSION_PASSWORD is required}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?OIDC_CLIENT_ID is required}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?OIDC_CLIENT_SECRET is required}
+      OIDC_REDIRECT_URI_BASE: ${OIDC_REDIRECT_URI_BASE:?OIDC_REDIRECT_URI_BASE is required}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [nudge]
+
+  worker:
+    image: nudge:v0.16
+    build:
+      context: .
+    container_name: nudge-worker
+    command: pnpm worker
+    environment:
+      DATABASE_URL_ADMIN: postgresql://postgres:postgres@postgres:5432/nudge
+      DATABASE_URL_APP: postgresql://nudge_app:${NUDGE_APP_PASSWORD:-nudge_app_pass}@postgres:5432/nudge
+      IRON_SESSION_PASSWORD: ${IRON_SESSION_PASSWORD:?IRON_SESSION_PASSWORD is required}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?OIDC_CLIENT_ID is required}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?OIDC_CLIENT_SECRET is required}
+      OIDC_REDIRECT_URI_BASE: ${OIDC_REDIRECT_URI_BASE:?OIDC_REDIRECT_URI_BASE is required}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      NODE_ENV: production
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [nudge]
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: nudge-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks: [nudge]
+
+volumes:
+  postgres_data:
+
+networks:
+  nudge:

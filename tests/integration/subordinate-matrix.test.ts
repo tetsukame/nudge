@@ -63,6 +63,33 @@ describe('subordinate matrix + per-assignment remind (NDG-42)', () => {
     // pendingCount and counts wired correctly
     for (const u of data.users) expect(u.pendingCount).toBe(2);
     for (const r of data.requests) expect(r.pendingCount).toBe(2);
+
+    // subtree totals are computed independent of the in_progress filter
+    for (const r of data.requests) {
+      expect(r.subtreeTotal).toBe(2);
+      expect(r.subtreeDone).toBe(0);
+    }
+
+    // After resolving one assignment, subtree_done should reflect it on the next call
+    const reqAId = data.requests[0].requestId;
+    await getPool().query(
+      `UPDATE assignment SET status='responded', action_at=now()
+        WHERE request_id=$1 AND user_id=$2`,
+      [reqAId, s.users.memberA],
+    );
+    const res2 = await matrixGet(
+      new NextRequest(
+        `http://localhost/t/${s.tenantCode}/api/subordinates/matrix?filter=in_progress`,
+        { headers: { cookie: managerCookie } },
+      ),
+      { params: Promise.resolve({ code: s.tenantCode }) },
+    );
+    const data2 = await res2.json();
+    const req2 = data2.requests.find(
+      (r: { requestId: string }) => r.requestId === reqAId,
+    );
+    expect(req2.subtreeTotal).toBe(2);
+    expect(req2.subtreeDone).toBe(1);
   });
 
   it('per-assignment remind allows manager → 200 + audit + rate limited', async () => {

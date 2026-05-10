@@ -74,7 +74,7 @@ async function loadEditable(
   }
   const g = rows[0];
   if (g.source === 'keycloak') {
-    throw new GroupActionError('keycloak-synced group is read-only in Nudge', 'kc_readonly');
+    throw new GroupActionError('keycloak-synced group is read-only in NudgeFlow', 'kc_readonly');
   }
   if (g.created_by_user_id !== actor.userId && !actor.isTenantAdmin) {
     throw new GroupActionError('not creator or tenant_admin', 'permission_denied');

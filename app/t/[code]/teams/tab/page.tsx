@@ -69,7 +69,7 @@ export default function TeamsTabPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <p className="text-sm text-gray-600">Nudge にサインイン中...</p>
+      <p className="text-sm text-gray-600">NudgeFlow にサインイン中...</p>
     </div>
   );
 }

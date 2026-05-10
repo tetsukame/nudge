@@ -28,7 +28,7 @@ export function RootSidebar({ displayName, email }: Props) {
   return (
     <aside className="hidden md:flex md:flex-col md:w-56 bg-slate-900 text-white min-h-screen shrink-0">
       <div className="px-4 py-5 border-b border-slate-700">
-        <p className="text-base font-bold">Nudge Platform</p>
+        <p className="text-base font-bold">NudgeFlow Platform</p>
         <p className="text-[10px] text-slate-400 mt-0.5">Root 管理者</p>
       </div>
 

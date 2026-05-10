@@ -163,13 +163,16 @@ export function AssigneeListFilters({ tenantCode, onChange }: Props) {
           placeholder="名前・メールで検索"
           className="flex-1 min-w-[180px] text-sm border border-gray-300 rounded px-2 py-1"
         />
-        <label className="flex items-center gap-1 text-xs text-gray-600">
+        <label
+          className="flex items-center gap-1 text-xs text-gray-600"
+          title="自分（依頼者）がまだ目を通していない、対応者からのコメントがある assignee に絞り込みます。assignee の未開封ステータスとは別の概念です。未開封者だけを見たい場合は上のステータス「未開封」を選択してください。"
+        >
           <input
             type="checkbox"
             checked={hasUnread}
             onChange={(e) => setHasUnread(e.target.checked)}
           />
-          未読のみ
+          未読コメントあり
         </label>
         {hasAnyFilter && (
           <button

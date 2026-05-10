@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 type FlatOrg = { id: string; name: string; level: number };
@@ -24,16 +25,47 @@ type Props = {
 
 const PAGE_SIZE = 50;
 
-export function AdminUsersBrowser({ tenantCode, orgUnits, currentUserId }: Props) {
-  const [orgUnitId, setOrgUnitId] = useState<string>('');
-  const [includeDescendants, setIncludeDescendants] = useState(true);
-  const [q, setQ] = useState('');
-  const [page, setPage] = useState(1);
+export function AdminUsersBrowser(props: Props) {
+  // useSearchParams() requires a Suspense boundary; inner component reads it.
+  return (
+    <Suspense fallback={null}>
+      <AdminUsersBrowserInner {...props} />
+    </Suspense>
+  );
+}
+
+function AdminUsersBrowserInner({ tenantCode, orgUnits, currentUserId }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Initialize state from the URL so browser-back restores the previous filter.
+  const [orgUnitId, setOrgUnitId] = useState<string>(
+    () => searchParams?.get('orgUnitId') ?? '',
+  );
+  const [includeDescendants, setIncludeDescendants] = useState<boolean>(
+    () => searchParams?.get('includeDescendants') !== 'false',
+  );
+  const [q, setQ] = useState<string>(() => searchParams?.get('q') ?? '');
+  const [page, setPage] = useState<number>(
+    () => Math.max(1, Number(searchParams?.get('page') ?? '1') || 1),
+  );
 
   const [items, setItems] = useState<UserRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Sync filter state back to the URL (replace, not push, to avoid history spam).
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (orgUnitId) params.set('orgUnitId', orgUnitId);
+    if (!includeDescendants) params.set('includeDescendants', 'false');
+    if (q.trim()) params.set('q', q.trim());
+    if (page > 1) params.set('page', String(page));
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [orgUnitId, includeDescendants, q, page, pathname, router]);
 
   useEffect(() => {
     if (!orgUnitId) {
@@ -68,8 +100,15 @@ export function AdminUsersBrowser({ tenantCode, orgUnits, currentUserId }: Props
     return () => { aborted = true; };
   }, [orgUnitId, includeDescendants, q, page, tenantCode]);
 
-  // Reset page when filters change
-  useEffect(() => { setPage(1); }, [orgUnitId, includeDescendants, q]);
+  // Reset page when filters change. Skip the first run so a `?page=2` URL is honored on mount.
+  const filterMountRef = useRef(false);
+  useEffect(() => {
+    if (!filterMountRef.current) {
+      filterMountRef.current = true;
+      return;
+    }
+    setPage(1);
+  }, [orgUnitId, includeDescendants, q]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 

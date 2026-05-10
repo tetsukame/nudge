@@ -17,12 +17,21 @@ type Props = {
   targets: TargetSpec[];
   onChange: (targets: TargetSpec[]) => void;
   showAllTab?: boolean;
+  /** 初期表示するタブ。NDG-37 でグループ画面から依頼作成に飛んだ時に
+   *  group タブで開きたいケースを想定。 */
+  initialTab?: TabKey;
 };
 
 type TabKey = 'org' | 'user' | 'group' | 'all';
 
-export function TargetPicker({ tenantCode, targets, onChange, showAllTab = false }: Props) {
-  const [tab, setTab] = useState<TabKey>('org');
+export function TargetPicker({
+  tenantCode,
+  targets,
+  onChange,
+  showAllTab = false,
+  initialTab,
+}: Props) {
+  const [tab, setTab] = useState<TabKey>(initialTab ?? 'org');
   // Keep metadata for display purposes (id -> name)
   const [userMeta, setUserMeta] = useState<Map<string, UserResult>>(new Map());
   const [orgMeta, setOrgMeta] = useState<Map<string, string>>(new Map());

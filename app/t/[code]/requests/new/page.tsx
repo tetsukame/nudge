@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,12 +18,19 @@ export default function NewRequestPage() {
   const params = useParams<{ code: string }>();
   const { code } = params;
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // NDG-37: グループ画面から ?group=<id> で飛んできた場合は、その group を
+  // 初期 target として preselect し、TargetPicker を group タブで開く。
+  const initialGroupId = searchParams?.get('group') ?? null;
 
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [dueAt, setDueAt] = useState('');
   const [estimatedMinutes, setEstimatedMinutes] = useState<number>(5);
-  const [targets, setTargets] = useState<TargetSpec[]>([]);
+  const [targets, setTargets] = useState<TargetSpec[]>(
+    initialGroupId ? [{ type: 'group', groupId: initialGroupId }] : [],
+  );
   const [orgUnits, setOrgUnits] = useState<OrgUnitOption[]>([]);
   const [senderOrgUnitId, setSenderOrgUnitId] = useState<string | null>(null);
   const [isPersonal, setIsPersonal] = useState(false);
@@ -209,6 +216,7 @@ export default function NewRequestPage() {
           targets={targets}
           onChange={setTargets}
           showAllTab={false}
+          initialTab={initialGroupId ? 'group' : undefined}
         />
       </div>
 

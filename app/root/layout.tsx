@@ -21,7 +21,7 @@ export default async function RootSegmentLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
+    <div className="flex h-screen bg-slate-100">
       <RootSidebar displayName={session.displayName} email={session.email} />
       <main className="flex-1 overflow-y-auto">{children}</main>
     </div>

@@ -28,9 +28,18 @@ export function RootSidebar({ displayName, email }: Props) {
 
   return (
     <aside className="hidden md:flex md:flex-col md:w-56 bg-slate-900 text-white min-h-screen shrink-0">
-      <div className="px-4 py-5 border-b border-slate-800">
-        <p className="text-base font-bold">NudgeFlow Platform</p>
-        <p className="text-[10px] text-slate-400 mt-0.5">Root 管理者</p>
+      <div className="flex items-center gap-2 px-4 h-14 border-b border-slate-800">
+        <img
+          src="/nudgeflow_icon_64.svg"
+          alt=""
+          width={28}
+          height={28}
+          className="shrink-0"
+        />
+        <div className="min-w-0 leading-tight">
+          <p className="text-sm font-bold">NudgeFlow Platform</p>
+          <p className="text-[10px] text-slate-400">Root 管理者</p>
+        </div>
       </div>
 
       <nav className="flex-1 px-2 py-4 space-y-1">

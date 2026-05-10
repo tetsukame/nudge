@@ -59,7 +59,7 @@ export default async function TenantLayout({
     : 0;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50">
       <Sidebar
         tenantCode={code}
         displayName={session.displayName}

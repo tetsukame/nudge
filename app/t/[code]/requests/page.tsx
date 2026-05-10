@@ -1,10 +1,12 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Inbox } from 'lucide-react';
 import { unsealSession } from '@/auth/session';
 import { loadConfig } from '@/config';
 import { appPool } from '@/db/pools';
 import { withTenant } from '@/db/with-tenant';
+import { PageHeader } from '@/ui/components/page-header';
 import { RequestCard } from '@/ui/components/request-card';
 import { getStatusConfig } from '@/ui/status-config';
 import { formatMinutes } from '@/lib/format-duration';
@@ -130,15 +132,20 @@ export default async function RequestListPage({
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-gray-900">自分宛の依頼</h1>
-        <Link
-          href={`/t/${code}/requests/new`}
-          className="px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-md hover:bg-primary/90 transition-colors"
-        >
-          ➕ 新規作成
-        </Link>
-      </div>
+      <PageHeader
+        icon={<Inbox />}
+        title="自分宛の依頼"
+        description="あなたが対応する依頼の一覧です。期限が近い順に並びます。"
+        action={
+          <Link
+            href={`/t/${code}/requests/new`}
+            className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-md hover:bg-primary/90 transition-colors no-underline"
+          >
+            ＋ 新規作成
+          </Link>
+        }
+        className="mb-6"
+      />
 
       {/* Status tabs */}
       <div className="flex border-b border-gray-200 mb-4">

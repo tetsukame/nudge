@@ -10,6 +10,10 @@ const ConfigSchema = z.object({
   OIDC_CLIENT_SECRET: z.string().min(1),
   OIDC_REDIRECT_URI_BASE: z.string().url(),
   SYNC_API_KEY: z.string().min(1).optional(),
+  // NDG-26: Microsoft Teams 統合用 (β)。
+  // Keycloak に登録した Entra IdP broker の alias (例: 'entra')。
+  // 未設定なら Teams 認証エンドポイントが 500 を返す。
+  KC_ENTRA_IDP_ALIAS: z.string().min(1).optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -26,6 +30,7 @@ export function loadConfig(): Config {
     OIDC_CLIENT_SECRET: process.env.OIDC_CLIENT_SECRET,
     OIDC_REDIRECT_URI_BASE: process.env.OIDC_REDIRECT_URI_BASE,
     SYNC_API_KEY: process.env.SYNC_API_KEY,
+    KC_ENTRA_IDP_ALIAS: process.env.KC_ENTRA_IDP_ALIAS,
   });
   if (!parsed.success) {
     const msg = parsed.error.issues

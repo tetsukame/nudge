@@ -20,18 +20,11 @@ import {
 type Props = {
   value: string;
   onChange: (markdown: string) => void;
+  /** Optional placeholder text. Default は空文字列 (NDG-32: ツールバーと
+   *  下部チートシートで記法は提示済みなので長文 placeholder は不要)。 */
   placeholder?: string;
   rows?: number;
 };
-
-const PLACEHOLDER = `Markdown で書けます。例:
-# 見出し
-**太字** *斜体*
-- 箇条書き
-[リンク](https://example.com) または https://example.com（裸 URL も自動リンク化）
-\`\`\`
-コードブロック
-\`\`\``;
 
 export function MarkdownEditor({ value, onChange, placeholder, rows = 8 }: Props) {
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
@@ -172,7 +165,7 @@ export function MarkdownEditor({ value, onChange, placeholder, rows = 8 }: Props
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder ?? PLACEHOLDER}
+          placeholder={placeholder}
           rows={rows}
           className="border-0 rounded-none font-mono text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
         />

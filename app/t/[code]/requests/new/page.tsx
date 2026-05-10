@@ -127,7 +127,7 @@ export default function NewRequestPage() {
             type="date"
             value={dueAt}
             onChange={(e) => setDueAt(e.target.value)}
-            className="w-48"
+            className="w-40"
           />
         </div>
 
@@ -135,7 +135,15 @@ export default function NewRequestPage() {
         {orgUnits.length > 0 && (
           <div className="space-y-2">
             <Label htmlFor="req-sender-org">依頼元</Label>
-            {orgUnits.length === 1 ? (
+            {isPersonal ? (
+              // NDG-35: 個人として依頼を選択したときは取消線で隠す
+              <p className="text-sm text-gray-400 line-through">
+                {orgUnits.find((o) => o.id === senderOrgUnitId)?.name ??
+                  orgUnits[0]?.name ??
+                  '（所属なし）'}
+                <span className="text-xs ml-1">（あなたの所属）</span>
+              </p>
+            ) : orgUnits.length === 1 ? (
               <p className="text-sm text-gray-700">
                 {orgUnits[0].name}
                 <span className="text-xs text-gray-500 ml-1">（あなたの所属）</span>
@@ -145,8 +153,7 @@ export default function NewRequestPage() {
                 id="req-sender-org"
                 value={senderOrgUnitId ?? ''}
                 onChange={(e) => setSenderOrgUnitId(e.target.value || null)}
-                disabled={isPersonal}
-                className="w-full max-w-sm px-3 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400"
+                className="w-full max-w-sm px-3 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {orgUnits.map((o) => (
                   <option key={o.id} value={o.id}>

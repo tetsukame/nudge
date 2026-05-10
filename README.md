@@ -188,9 +188,18 @@ pnpm start        # 本番サーバ起動
 | `docs/superpowers/specs/` | 設計仕様書 |
 | `docs/superpowers/plans/` | 実装プラン |
 
+## Microsoft Teams 統合（β）
+
+Nudge を Microsoft Teams の Personal Tab として組み込むことができます。Entra SSO → Keycloak Token Exchange で認証を完結させるため、Teams にログイン済みのユーザは追加認証なしで Nudge にアクセスできます。
+
+詳細な手順（Entra アプリ登録 / Keycloak Token Exchange 設定 / sideloading）は [docs/teams-integration.md](docs/teams-integration.md) 参照。
+
+> ⚠️ **β 表記**: 開発環境では Microsoft 365 Developer Program の sandbox 取得制限により実機 Teams での E2E 検証ができていません。仕様通りに実装していますが、初回導入時に動作確認を行い、必要であれば調整してください。
+
 ## ドキュメント
 
 - [DB ERD v0.1 設計書](docs/superpowers/specs/2026-04-11-db-erd-design.md)
+- [Microsoft Teams 統合（β）](docs/teams-integration.md)
 - 詳細仕様は `docs/superpowers/specs/`、各リリースの実装プランは `docs/superpowers/plans/` 配下
 
 ## コントリビューション

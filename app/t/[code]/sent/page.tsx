@@ -62,7 +62,6 @@ export default async function SentRequestsPage({
         )}
         {result.items.map((item) => {
           const pendingCount = item.total - item.done;
-          const isInProgress = pendingCount > 0;
           return (
             <RequestCard
               key={item.id}
@@ -83,15 +82,13 @@ export default async function SentRequestsPage({
                 overdue: item.overdueCount,
               }}
               actions={
-                isInProgress ? (
-                  <SentRequestCardActions
-                    tenantCode={code}
-                    requestId={item.id}
-                    fromQuery="sent"
-                    pendingCount={pendingCount}
-                    overdueCount={item.overdueCount}
-                  />
-                ) : undefined
+                <SentRequestCardActions
+                  tenantCode={code}
+                  requestId={item.id}
+                  fromQuery="sent"
+                  pendingCount={pendingCount}
+                  overdueCount={item.overdueCount}
+                />
               }
             />
           );

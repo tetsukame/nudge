@@ -24,7 +24,8 @@
     "test:watch": "vitest tests/unit",
     "typecheck": "tsc --noEmit",
     "worker": "tsx src/worker/main.ts",
-    "worker:dev": "tsx watch src/worker/main.ts"
+    "worker:dev": "tsx watch src/worker/main.ts",
+    "build:teams-manifest": "tsx scripts/build-teams-manifest.ts"
   },
   "dependencies": {
     "@microsoft/teams-js": "^2.34.0",

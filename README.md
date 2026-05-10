@@ -2,6 +2,7 @@
 
 組織内の依頼事項（アンケート・作業依頼）を軽く促して対応状況を可視化する OSS タスク管理ツール。
 
+[![CI](https://github.com/tetsukame/nudge/actions/workflows/test.yml/badge.svg)](https://github.com/tetsukame/nudge/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## 概要
@@ -28,6 +29,30 @@
 - （オプション）Node.js 20+ / pnpm 9+ — `pnpm dev` でローカル開発する場合のみ
 
 ## クイックスタート
+
+### Pre-built image を使う（最速、ビルド不要）
+
+`docker compose up --build` でローカルビルドする代わりに、ghcr.io から事前ビルド済みイメージを pull できます：
+
+```yaml
+# docker-compose.override.yml （以下の内容で作成）
+services:
+  web:
+    image: ghcr.io/tetsukame/nudge:latest
+    build: !reset
+  worker:
+    image: ghcr.io/tetsukame/nudge:latest
+    build: !reset
+  migrate:
+    image: ghcr.io/tetsukame/nudge:latest
+    build: !reset
+```
+
+```bash
+docker compose --env-file .env.demo up -d
+```
+
+特定バージョンを使いたい場合は `:latest` を `:v0.16` 等に置換してください。
 
 ### OSS デモ（Docker Compose、所要時間 5 分）
 

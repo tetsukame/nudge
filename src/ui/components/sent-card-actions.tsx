@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import {
   Bell,
+  Copy,
   Eye,
   MessageSquare,
   TriangleAlert,
@@ -110,6 +111,11 @@ export function SentRequestCardActions({
 
   return (
     <>
+      <ActionLink
+        href={`/t/${tenantCode}/requests/new?copyFrom=${requestId}`}
+        icon={<Copy className="h-3.5 w-3.5" />}
+        label="コピーして作成"
+      />
       <ActionButton
         onClick={() => setCommentOpen(true)}
         icon={<MessageSquare className="h-3.5 w-3.5" />}

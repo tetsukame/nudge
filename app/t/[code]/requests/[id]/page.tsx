@@ -209,6 +209,16 @@ export default async function RequestDetailPage({
         icon={<FileText />}
         title={req.title}
         description="依頼の本文・進捗・コメントを確認できます。"
+        action={
+          isRequesterStrict || isAdmin || isWide ? (
+            <Link
+              href={`/t/${code}/requests/new?copyFrom=${id}`}
+              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-border bg-white text-foreground hover:border-primary/40 hover:bg-emerald-50/40 transition-colors no-underline"
+            >
+              📋 コピーして作成
+            </Link>
+          ) : undefined
+        }
       />
 
       {/* Header */}

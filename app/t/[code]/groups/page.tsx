@@ -58,47 +58,55 @@ export default async function GroupListPage({
       ) : (
         <ul className="space-y-2">
           {items.map((g) => (
-            <li key={g.id}>
-              <Link
-                href={`/t/${code}/groups/${g.id}?from=groups`}
-                className="block bg-white rounded-lg border border-gray-200 px-4 py-3 hover:border-blue-300 hover:shadow-sm transition-all"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {g.name}
-                      </p>
-                      {g.isCreator && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                          👤 作成者
-                        </span>
-                      )}
-                      {g.isMember && !g.isCreator && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 border border-green-200">
-                          👥 メンバー
-                        </span>
-                      )}
-                      {g.source === 'keycloak' && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                          🔄 KC連携
-                        </span>
-                      )}
-                    </div>
-                    {g.description && (
-                      <p className="text-xs text-gray-600 truncate mt-0.5">
-                        {g.description}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-1">
-                      {g.memberCount} 名
-                      {g.createdByName && (
-                        <span className="ml-2">作成: {g.createdByName}</span>
-                      )}
+            <li
+              key={g.id}
+              className="bg-white rounded-lg border border-gray-200 px-4 py-3 hover:border-blue-300 hover:shadow-sm transition-all"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <Link
+                  href={`/t/${code}/groups/${g.id}?from=groups`}
+                  className="flex-1 min-w-0 hover:opacity-80"
+                >
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {g.name}
                     </p>
+                    {g.isCreator && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                        👤 作成者
+                      </span>
+                    )}
+                    {g.isMember && !g.isCreator && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 border border-green-200">
+                        👥 メンバー
+                      </span>
+                    )}
+                    {g.source === 'keycloak' && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                        🔄 KC連携
+                      </span>
+                    )}
                   </div>
-                </div>
-              </Link>
+                  {g.description && (
+                    <p className="text-xs text-gray-600 truncate mt-0.5">
+                      {g.description}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    {g.memberCount} 名
+                    {g.createdByName && (
+                      <span className="ml-2">作成: {g.createdByName}</span>
+                    )}
+                  </p>
+                </Link>
+                <Link
+                  href={`/t/${code}/requests/new?group=${g.id}`}
+                  className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+                  title={`${g.name} に依頼を作成`}
+                >
+                  ✉️ 依頼作成
+                </Link>
+              </div>
             </li>
           ))}
         </ul>

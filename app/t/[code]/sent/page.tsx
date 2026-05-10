@@ -6,6 +6,7 @@ import { appPool } from '@/db/pools';
 import { listSentRequests } from '@/domain/request/list-sent';
 import { PageHeader } from '@/ui/components/page-header';
 import { RequestCard } from '@/ui/components/request-card';
+import { SentRequestCardActions } from '@/ui/components/sent-card-actions';
 import Link from 'next/link';
 
 export const runtime = 'nodejs';
@@ -59,27 +60,42 @@ export default async function SentRequestsPage({
         {result.items.length === 0 && (
           <p className="text-gray-500 text-center py-8">送信した依頼はありません</p>
         )}
-        {result.items.map((item) => (
-          <RequestCard
-            key={item.id}
-            href={`/t/${code}/requests/${item.id}?from=sent`}
-            title={item.title}
-            dueLabel={
-              item.dueAt
-                ? `締切: ${new Date(item.dueAt).toLocaleDateString('ja-JP')}`
-                : undefined
-            }
-            meta={[
-              { label: '未開封', value: item.unopened },
-              { label: '対応済み', value: item.responded },
-            ]}
-            progress={{
-              done: item.done,
-              total: item.total,
-              overdue: item.overdueCount,
-            }}
-          />
-        ))}
+        {result.items.map((item) => {
+          const pendingCount = item.total - item.done;
+          const isInProgress = pendingCount > 0;
+          return (
+            <RequestCard
+              key={item.id}
+              href={`/t/${code}/requests/${item.id}?from=sent`}
+              title={item.title}
+              dueLabel={
+                item.dueAt
+                  ? `締切: ${new Date(item.dueAt).toLocaleDateString('ja-JP')}`
+                  : undefined
+              }
+              meta={[
+                { label: '未開封', value: item.unopened },
+                { label: '対応済み', value: item.responded },
+              ]}
+              progress={{
+                done: item.done,
+                total: item.total,
+                overdue: item.overdueCount,
+              }}
+              actions={
+                isInProgress ? (
+                  <SentRequestCardActions
+                    tenantCode={code}
+                    requestId={item.id}
+                    fromQuery="sent"
+                    pendingCount={pendingCount}
+                    overdueCount={item.overdueCount}
+                  />
+                ) : undefined
+              }
+            />
+          );
+        })}
       </div>
 
       {result.total > page * 20 && (

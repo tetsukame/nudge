@@ -16,6 +16,7 @@ const DEFAULTS = {
 
 type Props = {
   tenantCode: string;
+  initialStatuses?: AssignmentStatus[];
   onChange: (filters: {
     q: string;
     orgUnitId: string | null;
@@ -35,12 +36,12 @@ function flattenOrgs(nodes: OrgNode[], depth = 0): Array<{ id: string; label: st
   ]);
 }
 
-export function AssigneeListFilters({ tenantCode, onChange }: Props) {
+export function AssigneeListFilters({ tenantCode, initialStatuses, onChange }: Props) {
   const [q, setQ] = useState('');
   const [orgUnitId, setOrgUnitId] = useState<string>('');
   const [includeDescendants, setIncludeDescendants] = useState(true);
   const [groupId, setGroupId] = useState<string>('');
-  const [statuses, setStatuses] = useState<AssignmentStatus[]>([]);
+  const [statuses, setStatuses] = useState<AssignmentStatus[]>(initialStatuses ?? []);
   const [hasUnread, setHasUnread] = useState(false);
   const [orgs, setOrgs] = useState<Array<{ id: string; label: string }>>([]);
   const [groups, setGroups] = useState<GroupItem[]>([]);

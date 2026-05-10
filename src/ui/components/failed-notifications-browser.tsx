@@ -235,7 +235,7 @@ export function FailedNotificationsBrowser({ tenantCode, initialItems, initialTo
                             className={cn(
                               'text-xs px-2 py-1 rounded border transition-colors',
                               isOpen
-                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                ? 'bg-primary/10 text-primary border-primary/20'
                                 : 'text-gray-600 border-gray-200 hover:bg-gray-100',
                             )}
                           >
@@ -246,7 +246,7 @@ export function FailedNotificationsBrowser({ tenantCode, initialItems, initialTo
                           type="button"
                           onClick={() => retryOne(it.id)}
                           disabled={submitting}
-                          className="text-xs px-2 py-1 rounded border border-blue-300 text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-40"
+                          className="text-xs px-2 py-1 rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors disabled:opacity-40"
                         >
                           再送
                         </button>

@@ -93,7 +93,7 @@ export default async function RequestDetailPage({
     return (
       <div className="max-w-2xl mx-auto px-4 py-6">
         <p className="text-gray-500">依頼が見つかりません。</p>
-        <Link href={`/t/${code}/requests`} className="text-blue-600 hover:underline text-sm">
+        <Link href={`/t/${code}/requests`} className="text-primary hover:underline text-sm">
           ← 一覧に戻る
         </Link>
       </div>
@@ -146,7 +146,7 @@ export default async function RequestDetailPage({
         <p className="text-sm text-gray-600">
           この依頼の閲覧権限がありません。送信者・対応者・管理者のみが閲覧できます。
         </p>
-        <Link href={`/t/${code}/requests`} className="inline-block text-sm text-blue-600 hover:underline">
+        <Link href={`/t/${code}/requests`} className="inline-block text-sm text-primary hover:underline">
           ← トップに戻る
         </Link>
       </div>

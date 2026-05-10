@@ -62,7 +62,7 @@ function ChatBubble({
           className={cn(
             'px-3 py-2 rounded-lg text-sm',
             isMine
-              ? 'bg-blue-600 text-white rounded-br-none'
+              ? 'bg-primary text-white rounded-br-none'
               : 'bg-gray-100 text-gray-800 rounded-bl-none',
           )}
         >

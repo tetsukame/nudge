@@ -41,7 +41,7 @@ function OrgNodeRow({
       <div
         className={cn(
           'flex items-center gap-1 py-1 px-2 rounded cursor-pointer hover:bg-gray-50 select-none',
-          isSelected && 'bg-blue-50',
+          isSelected && 'bg-primary/10',
         )}
         style={{ paddingLeft: `${(depth + 1) * 12}px` }}
       >
@@ -61,7 +61,7 @@ function OrgNodeRow({
           onClick={() => onToggle(node.id, node.name)}
           className={cn(
             'flex-1 text-left text-sm',
-            isSelected ? 'text-blue-700 font-medium' : 'text-gray-700',
+            isSelected ? 'text-primary font-medium' : 'text-gray-700',
           )}
         >
           {node.name}
@@ -145,9 +145,9 @@ export function OrgTreePicker({ tenantCode, selected, onChange }: Props) {
         ) : (
           <ul className="space-y-2">
             {selected.map((s) => (
-              <li key={s.id} className="bg-blue-50 rounded-md px-3 py-2 text-sm">
+              <li key={s.id} className="bg-primary/10 rounded-md px-3 py-2 text-sm">
                 <div className="flex items-start justify-between gap-1">
-                  <span className="font-medium text-blue-800 text-xs">{s.name}</span>
+                  <span className="font-medium text-primary text-xs">{s.name}</span>
                   <button
                     type="button"
                     onClick={() => removeOrg(s.id)}
@@ -163,7 +163,7 @@ export function OrgTreePicker({ tenantCode, selected, onChange }: Props) {
                     onChange={() => toggleDescendants(s.id)}
                     className="rounded"
                   />
-                  <span className="text-xs text-blue-700">配下含む</span>
+                  <span className="text-xs text-primary">配下含む</span>
                 </label>
               </li>
             ))}

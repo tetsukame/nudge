@@ -34,7 +34,7 @@ function Card({
 }) {
   const valueColor =
     tone === 'warn' && value !== '0' ? 'text-orange-600'
-    : tone === 'info' && value !== '0' ? 'text-blue-600'
+    : tone === 'info' && value !== '0' ? 'text-primary'
     : 'text-gray-900';
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-5">

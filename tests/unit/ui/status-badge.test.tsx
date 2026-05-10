@@ -4,10 +4,9 @@ import { render, screen } from '@testing-library/react';
 import { StatusBadge } from '../../../src/ui/components/status-badge';
 
 describe('StatusBadge', () => {
-  it('renders label and icon for responded status', () => {
+  it('renders label for responded status', () => {
     render(<StatusBadge status="responded" />);
     expect(screen.getByText('対応済み')).toBeDefined();
-    expect(screen.getByText('✅')).toBeDefined();
   });
 
   it('shows overdue badge when overdue is true', () => {

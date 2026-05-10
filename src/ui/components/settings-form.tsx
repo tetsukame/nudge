@@ -407,7 +407,7 @@ export function SettingsForm({ tenantCode, initial }: Props) {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="px-5 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
         >
           {saving ? '保存中...' : '保存'}
         </button>

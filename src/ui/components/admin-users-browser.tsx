@@ -85,7 +85,7 @@ export function AdminUsersBrowser({ tenantCode, orgUnits, currentUserId }: Props
               id="org-select"
               value={orgUnitId}
               onChange={(e) => setOrgUnitId(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">（組織を選択してください）</option>
               {orgUnits.map((o) => (
@@ -116,14 +116,14 @@ export function AdminUsersBrowser({ tenantCode, orgUnits, currentUserId }: Props
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="検索..."
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
         )}
       </div>
 
       {!orgUnitId && (
-        <div className="bg-blue-50 border border-blue-200 rounded-md p-4 text-sm text-blue-800">
+        <div className="bg-primary/10 border border-primary/20 rounded-md p-4 text-sm text-primary">
           📌 ユーザー一覧を表示するには、まず上で組織を選択してください。
         </div>
       )}
@@ -184,7 +184,7 @@ export function AdminUsersBrowser({ tenantCode, orgUnits, currentUserId }: Props
                                 'text-[10px] px-1.5 py-0.5 rounded border',
                                 r === 'tenant_admin'
                                   ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                  : 'bg-blue-50 text-blue-700 border-blue-200',
+                                  : 'bg-primary/10 text-primary border-primary/20',
                               )}
                             >
                               {r === 'tenant_admin' ? '管理者' : '組織横断'}
@@ -207,7 +207,7 @@ export function AdminUsersBrowser({ tenantCode, orgUnits, currentUserId }: Props
                       <td className="px-4 py-2">
                         <Link
                           href={`/t/${tenantCode}/admin/users/${u.id}`}
-                          className="text-blue-600 hover:underline text-xs"
+                          className="text-primary hover:underline text-xs"
                         >
                           詳細 →
                         </Link>

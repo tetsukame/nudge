@@ -1,7 +1,6 @@
 'use client';
 
 import { AccessBanner } from './access-banner';
-import { ProgressBar } from './progress-bar';
 import { AssigneeList } from './assignee-list';
 
 type Props = {
@@ -22,7 +21,6 @@ export function RequesterSection({
 }: Props) {
   const done = summary.responded + summary.notNeeded + summary.forwarded
     + summary.substituted + summary.exempted + summary.expired;
-  const other = summary.forwarded + summary.substituted + summary.exempted + summary.expired;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   return (
@@ -34,16 +32,19 @@ export function RequesterSection({
           <h2 className="text-sm font-semibold">全体進捗</h2>
           <span className="text-sm text-gray-600">{done}/{total}（{pct}%）</span>
         </div>
-        <ProgressBar
-          counts={{
-            unopened: summary.unopened,
-            opened: summary.opened,
-            responded: summary.responded,
-            notNeeded: summary.notNeeded,
-            other,
-          }}
-          total={total}
-        />
+        {/* 一覧の RequestCard と同じシングルカラー進捗バー */}
+        <div
+          className="h-2 rounded-full bg-muted overflow-hidden"
+          role="progressbar"
+          aria-valuenow={done}
+          aria-valuemin={0}
+          aria-valuemax={total}
+        >
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg p-4">

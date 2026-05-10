@@ -45,7 +45,7 @@ export default async function GroupListPage({
         <h1 className="text-xl font-bold text-gray-900">グループ</h1>
         <Link
           href={`/t/${code}/groups/new`}
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+          className="px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-md hover:bg-primary/90 transition-colors"
         >
           ➕ 新規作成
         </Link>
@@ -60,7 +60,7 @@ export default async function GroupListPage({
           {items.map((g) => (
             <li
               key={g.id}
-              className="bg-white rounded-lg border border-gray-200 px-4 py-3 hover:border-blue-300 hover:shadow-sm transition-all"
+              className="bg-white rounded-lg border border-gray-200 px-4 py-3 hover:border-primary/30 hover:shadow-sm transition-all"
             >
               <div className="flex items-start justify-between gap-3">
                 <Link
@@ -72,7 +72,7 @@ export default async function GroupListPage({
                       {g.name}
                     </p>
                     {g.isCreator && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
                         👤 作成者
                       </span>
                     )}
@@ -101,7 +101,7 @@ export default async function GroupListPage({
                 </Link>
                 <Link
                   href={`/t/${code}/requests/new?group=${g.id}`}
-                  className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+                  className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-primary bg-primary/10 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors"
                   title={`${g.name} に依頼を作成`}
                 >
                   ✉️ 依頼作成

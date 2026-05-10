@@ -114,7 +114,7 @@ export function AssigneeList({ tenantCode, requestId, currentUserId, canSubstitu
                 {item.commentCount > 0 && (
                   <span className="text-xs text-gray-500">💬 {item.commentCount}</span>
                 )}
-                {item.hasUnread && <span className="text-blue-500 text-xs">🔵</span>}
+                {item.hasUnread && <span className="text-primary text-xs">🔵</span>}
                 <StatusBadge status={item.status} overdue={item.isOverdue} />
                 {item.forwardedToName && (
                   <span className="text-xs text-purple-600">→ {item.forwardedToName}</span>
@@ -221,7 +221,7 @@ function AssigneeDetail({
           return (
             <div key={c.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${
-                isMe ? 'bg-blue-100 text-blue-900' : 'bg-white text-gray-800 border border-gray-200'
+                isMe ? 'bg-primary/20 text-primary' : 'bg-white text-gray-800 border border-gray-200'
               }`}>
                 <div className="text-xs font-medium mb-0.5">{c.authorName}</div>
                 <div className="whitespace-pre-wrap">{c.body}</div>
@@ -251,7 +251,7 @@ function AssigneeDetail({
         <button
           onClick={() => void postReply()}
           disabled={sending || !newBody.trim()}
-          className="px-4 py-1.5 bg-blue-600 text-white rounded-md text-sm disabled:opacity-50"
+          className="px-4 py-1.5 bg-primary text-white rounded-md text-sm disabled:opacity-50"
         >
           送信
         </button>

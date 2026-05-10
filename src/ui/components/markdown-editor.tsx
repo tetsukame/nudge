@@ -120,7 +120,7 @@ export function MarkdownEditor({ value, onChange, placeholder, rows = 8 }: Props
           className={cn(
             'px-4 py-2 text-sm font-medium transition-colors',
             tab === 'edit'
-              ? 'bg-white text-gray-900 border-b-2 border-blue-600 -mb-px'
+              ? 'bg-white text-gray-900 border-b-2 border-primary -mb-px'
               : 'text-gray-500 hover:text-gray-700',
           )}
         >
@@ -132,7 +132,7 @@ export function MarkdownEditor({ value, onChange, placeholder, rows = 8 }: Props
           className={cn(
             'px-4 py-2 text-sm font-medium transition-colors',
             tab === 'preview'
-              ? 'bg-white text-gray-900 border-b-2 border-blue-600 -mb-px'
+              ? 'bg-white text-gray-900 border-b-2 border-primary -mb-px'
               : 'text-gray-500 hover:text-gray-700',
           )}
         >

@@ -233,7 +233,7 @@ export function AdminUserDetailEditor({
                     {o.name}
                   </span>
                   {o.isPrimary && (
-                    <span className="text-[10px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200">
+                    <span className="text-[10px] px-1 py-0.5 rounded bg-primary/20 text-primary border border-primary/20">
                       主所属
                     </span>
                   )}
@@ -260,7 +260,7 @@ export function AdminUserDetailEditor({
                 value={addOrgId}
                 onChange={(e) => setAddOrgId(e.target.value)}
                 disabled={orgBusy}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">（組織を選択）</option>
                 {addable.map((o) => (

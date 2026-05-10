@@ -5,8 +5,29 @@ import { unsealSession } from '@/auth/session';
 import { loadConfig } from '@/config';
 import { appPool } from '@/db/pools';
 import { withTenant } from '@/db/with-tenant';
-import { StatusBadge } from '@/ui/components/status-badge';
+import { RequestCard } from '@/ui/components/request-card';
+import { getStatusConfig } from '@/ui/status-config';
 import { formatMinutes } from '@/lib/format-duration';
+
+type AssigneeStatus =
+  | 'unopened'
+  | 'opened'
+  | 'responded'
+  | 'not_needed'
+  | 'forwarded'
+  | 'substituted'
+  | 'exempted'
+  | 'expired';
+
+function statusVariantFor(
+  status: string,
+  isOverdue: boolean,
+): 'pending' | 'done' | 'overdue' | 'opened' | 'unopened' {
+  if (isOverdue && (status === 'unopened' || status === 'opened')) return 'overdue';
+  if (status === 'unopened') return 'unopened';
+  if (status === 'opened') return 'opened';
+  return 'done';
+}
 
 export const runtime = 'nodejs';
 
@@ -16,6 +37,7 @@ type AssignmentRow = {
   request_id: string;
   title: string;
   due_at: Date | null;
+  estimated_minutes: number | null;
   is_overdue: boolean;
   has_unread: boolean;
   sender_name: string | null;
@@ -77,6 +99,7 @@ export default async function RequestListPage({
            r.id AS request_id,
            r.title,
            r.due_at,
+           r.estimated_minutes,
            (r.due_at IS NOT NULL AND r.due_at < now()
             AND a.status IN ('unopened','opened')) AS is_overdue,
            (
@@ -111,7 +134,7 @@ export default async function RequestListPage({
         <h1 className="text-xl font-bold text-gray-900">自分宛の依頼</h1>
         <Link
           href={`/t/${code}/requests/new`}
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+          className="px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-md hover:bg-primary/90 transition-colors"
         >
           ➕ 新規作成
         </Link>
@@ -123,7 +146,7 @@ export default async function RequestListPage({
           href={pendingHref}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
             statusFilter === 'pending'
-              ? 'border-blue-600 text-blue-600'
+              ? 'border-primary text-primary'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -133,7 +156,7 @@ export default async function RequestListPage({
           href={doneHref}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
             statusFilter === 'done'
-              ? 'border-blue-600 text-blue-600'
+              ? 'border-primary text-primary'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -154,55 +177,47 @@ export default async function RequestListPage({
 
       {/* Assignment cards */}
       {items.length === 0 ? (
-        <p className="text-center text-gray-500 py-12">
-          {statusFilter === 'pending' ? '未対応の依頼はありません。' : '完了済みの依頼はありません。'}
-        </p>
+        <div className="text-center py-12 px-4">
+          <p className="text-base font-medium text-gray-700">
+            {statusFilter === 'pending' ? '未対応の依頼はありません' : '完了済みの依頼はありません'}
+          </p>
+          <p className="mt-2 text-sm text-gray-500">
+            {statusFilter === 'pending'
+              ? 'いま対応が必要な依頼はありません。新しい依頼が届くとここに表示されます。'
+              : '完了した依頼はまだありません。対応が完了するとここに表示されます。'}
+          </p>
+        </div>
       ) : (
         <ul className="space-y-2">
-          {items.map((item) => (
-            <li key={item.id}>
-              <Link
-                href={`/t/${code}/requests/${item.request_id}`}
-                className="block bg-white rounded-lg border border-gray-200 px-4 py-3 hover:border-blue-300 hover:shadow-sm transition-all"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      {item.has_unread && (
-                        <span className="text-blue-500 text-sm leading-none" title="未読コメントあり">
-                          🔵
-                        </span>
-                      )}
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {item.title}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                      {item.sender_name && (
-                        <span>
-                          依頼者: {item.sender_name}
-                          {item.sender_org_unit_name && (
-                            <span className="text-gray-400">（{item.sender_org_unit_name}）</span>
-                          )}
-                        </span>
-                      )}
-                      {item.due_at && (
-                        <span className={item.is_overdue ? 'text-red-600 font-medium' : ''}>
-                          期限: {formatDate(item.due_at)}
-                          {item.is_overdue && ' ⚠️'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <StatusBadge
-                    status={item.status}
-                    overdue={item.is_overdue}
-                    className="shrink-0 mt-0.5"
-                  />
-                </div>
-              </Link>
-            </li>
-          ))}
+          {items.map((item) => {
+            const cfg = getStatusConfig(item.status);
+            const senderText = item.sender_name
+              ? item.sender_org_unit_name
+                ? `依頼者：${item.sender_name}（${item.sender_org_unit_name}）`
+                : `依頼者：${item.sender_name}`
+              : undefined;
+            const meta: { label: string; value: string }[] = [];
+            if (item.estimated_minutes && item.estimated_minutes > 0) {
+              meta.push({ label: '想定時間', value: formatMinutes(item.estimated_minutes) });
+            }
+            const isPending = item.status === 'unopened' || item.status === 'opened';
+            return (
+              <li key={item.id}>
+                <RequestCard
+                  href={`/t/${code}/requests/${item.request_id}`}
+                  title={item.title}
+                  subtitle={senderText}
+                  dueLabel={item.due_at ? `期限：${formatDate(item.due_at)}` : undefined}
+                  dueOverdue={item.is_overdue}
+                  statusLabel={cfg.label}
+                  statusVariant={statusVariantFor(item.status, item.is_overdue)}
+                  meta={meta.length > 0 ? meta : undefined}
+                  unread={item.has_unread}
+                  actionLabel={isPending ? '対応する' : undefined}
+                />
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -210,7 +225,7 @@ export default async function RequestListPage({
         <div className="mt-4 text-center">
           <Link
             href={`/t/${code}/requests?status=${statusFilter}&page=${page + 1}`}
-            className="inline-block px-4 py-2 text-sm text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
+            className="inline-block px-4 py-2 text-sm text-primary border border-primary/30 rounded-md hover:bg-primary/5 transition-colors"
           >
             もっと見る
           </Link>

@@ -42,7 +42,7 @@ export default async function AdminGroupsPage({
         <h1 className="text-xl font-bold text-gray-900">👨‍👩‍👧‍👦 グループ管理（テナント全体）</h1>
         <Link
           href={`/t/${code}/groups/new`}
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+          className="px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-md hover:bg-primary/90 transition-colors"
         >
           ➕ 新規作成
         </Link>
@@ -81,7 +81,7 @@ export default async function AdminGroupsPage({
                         🔄 KC連携 (read-only)
                       </span>
                     ) : (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
                         NudgeFlow
                       </span>
                     )}
@@ -93,7 +93,7 @@ export default async function AdminGroupsPage({
                   <td className="px-3 py-2 text-right">
                     <Link
                       href={`/t/${code}/groups/${g.id}?from=admin/groups`}
-                      className="text-blue-600 hover:underline text-xs"
+                      className="text-primary hover:underline text-xs"
                     >
                       詳細 →
                     </Link>

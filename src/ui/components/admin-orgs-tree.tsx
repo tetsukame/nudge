@@ -350,7 +350,7 @@ function TreeRow(props: RowProps) {
               {!isKc && isArchived && (
                 <button
                   type="button" onClick={() => props.onRestore(node.id)} disabled={busy}
-                  className="text-xs px-2 py-1 rounded border border-blue-300 text-blue-600 hover:bg-blue-50 disabled:opacity-40"
+                  className="text-xs px-2 py-1 rounded border border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-40"
                 >
                   ↩️ 復活
                 </button>

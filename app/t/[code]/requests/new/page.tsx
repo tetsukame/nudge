@@ -1,9 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import {
+  Building2,
+  CalendarClock,
+  CheckCircle2,
+  FileText,
+  Send,
+  Users,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TargetPicker } from '@/ui/components/target-picker';
@@ -13,6 +22,13 @@ import { cn } from '@/lib/utils';
 import { DURATION_PRESETS, formatMinutes } from '@/lib/format-duration';
 
 type OrgUnitOption = { id: string; name: string; isPrimary: boolean };
+
+function formatDateLabel(value: string): string {
+  if (!value) return '未設定';
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return value;
+  return `${dt.getFullYear()}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}`;
+}
 
 export default function NewRequestPage() {
   const params = useParams<{ code: string }>();
@@ -49,9 +65,14 @@ export default function NewRequestPage() {
       });
   }, [code]);
 
-  function countTargets(): number {
-    return targets.length;
-  }
+  const senderLabel = useMemo(() => {
+    if (isPersonal) return '個人として（所属を表示しない）';
+    if (orgUnits.length === 0) return '主所属を使用';
+    const match = orgUnits.find((o) => o.id === senderOrgUnitId);
+    return match?.name ?? orgUnits[0]?.name ?? '主所属を使用';
+  }, [isPersonal, orgUnits, senderOrgUnitId]);
+
+  const canSubmit = title.trim().length > 0 && targets.length > 0 && !loading;
 
   async function handleSubmit() {
     if (!title.trim()) {
@@ -91,7 +112,7 @@ export default function NewRequestPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 pb-28 space-y-6">
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <Link
         href={`/t/${code}/requests`}
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
@@ -101,149 +122,249 @@ export default function NewRequestPage() {
 
       <h1 className="text-xl font-bold text-gray-900">新規依頼作成</h1>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-5 space-y-5">
-        {/* Title */}
-        <div className="space-y-2">
-          <Label htmlFor="req-title">タイトル <span className="text-red-500">*</span></Label>
-          <Input
-            id="req-title"
-            placeholder="依頼のタイトルを入力..."
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </div>
+      <div className="grid lg:grid-cols-3 lg:gap-6 gap-4">
+        {/* Form column */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Section: 依頼内容 */}
+          <Card>
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                依頼内容
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="req-title">
+                  タイトル <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="req-title"
+                  placeholder="依頼のタイトルを入力..."
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>本文</Label>
+                <MarkdownEditor value={body} onChange={setBody} />
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Body */}
-        <div className="space-y-2">
-          <Label>本文</Label>
-          <MarkdownEditor value={body} onChange={setBody} />
-        </div>
+          {/* Section: 期限・想定時間 */}
+          <Card>
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <CalendarClock className="h-4 w-4 text-primary" />
+                期限・想定時間
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="req-due">期限日</Label>
+                <Input
+                  id="req-due"
+                  type="date"
+                  value={dueAt}
+                  onChange={(e) => setDueAt(e.target.value)}
+                  className="w-40"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="req-estimated">
+                  想定所要時間 <span className="text-red-500">*</span>
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {DURATION_PRESETS.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setEstimatedMinutes(m)}
+                      className={cn(
+                        'px-3 py-1.5 text-sm rounded-md border transition-colors',
+                        estimatedMinutes === m
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                      )}
+                    >
+                      {formatMinutes(m)}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <Input
+                    id="req-estimated"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={estimatedMinutes}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      if (Number.isFinite(n) && n > 0) setEstimatedMinutes(Math.floor(n));
+                    }}
+                    className="w-24"
+                  />
+                  <span className="text-sm text-gray-600">
+                    分（{formatMinutes(estimatedMinutes)}）
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Due date */}
-        <div className="space-y-2">
-          <Label htmlFor="req-due">期限日</Label>
-          <Input
-            id="req-due"
-            type="date"
-            value={dueAt}
-            onChange={(e) => setDueAt(e.target.value)}
-            className="w-40"
-          />
-        </div>
-
-        {/* Sender org */}
-        {orgUnits.length > 0 && (
-          <div className="space-y-2">
-            <Label htmlFor="req-sender-org">依頼元</Label>
-            {isPersonal ? (
-              // NDG-35: 個人として依頼を選択したときは取消線で隠す
-              <p className="text-sm text-gray-400 line-through">
-                {orgUnits.find((o) => o.id === senderOrgUnitId)?.name ??
-                  orgUnits[0]?.name ??
-                  '（所属なし）'}
-                <span className="text-xs ml-1">（あなたの所属）</span>
-              </p>
-            ) : orgUnits.length === 1 ? (
-              <p className="text-sm text-gray-700">
-                {orgUnits[0].name}
-                <span className="text-xs text-gray-500 ml-1">（あなたの所属）</span>
-              </p>
-            ) : (
-              <select
-                id="req-sender-org"
-                value={senderOrgUnitId ?? ''}
-                onChange={(e) => setSenderOrgUnitId(e.target.value || null)}
-                className="w-full max-w-sm px-3 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {orgUnits.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                    {o.isPrimary ? '（主所属）' : ''}
-                  </option>
-                ))}
-              </select>
-            )}
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={isPersonal}
-                onChange={(e) => setIsPersonal(e.target.checked)}
-                className="rounded border-gray-300"
-              />
-              個人として依頼（所属を表示しない）
-            </label>
-          </div>
-        )}
-
-        {/* Estimated minutes */}
-        <div className="space-y-2">
-          <Label htmlFor="req-estimated">想定所要時間 <span className="text-red-500">*</span></Label>
-          <div className="flex flex-wrap gap-2">
-            {DURATION_PRESETS.map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setEstimatedMinutes(m)}
-                className={cn(
-                  'px-3 py-1.5 text-sm rounded-md border transition-colors',
-                  estimatedMinutes === m
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+          {/* Section: 依頼元 */}
+          {orgUnits.length > 0 && (
+            <Card>
+              <CardHeader className="p-5 pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  依頼元
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-5 pt-0 space-y-3">
+                {isPersonal ? (
+                  // NDG-35: 個人として依頼を選択したときは取消線で隠す
+                  <p className="text-sm text-gray-400 line-through">
+                    {orgUnits.find((o) => o.id === senderOrgUnitId)?.name ??
+                      orgUnits[0]?.name ??
+                      '（所属なし）'}
+                    <span className="text-xs ml-1">（あなたの所属）</span>
+                  </p>
+                ) : orgUnits.length === 1 ? (
+                  <p className="text-sm text-gray-700">
+                    {orgUnits[0].name}
+                    <span className="text-xs text-gray-500 ml-1">（あなたの所属）</span>
+                  </p>
+                ) : (
+                  <select
+                    id="req-sender-org"
+                    value={senderOrgUnitId ?? ''}
+                    onChange={(e) => setSenderOrgUnitId(e.target.value || null)}
+                    className="w-full max-w-sm px-3 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    {orgUnits.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                        {o.isPrimary ? '（主所属）' : ''}
+                      </option>
+                    ))}
+                  </select>
                 )}
-              >
-                {formatMinutes(m)}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2 pt-1">
-            <Input
-              id="req-estimated"
-              type="number"
-              min={1}
-              step={1}
-              value={estimatedMinutes}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (Number.isFinite(n) && n > 0) setEstimatedMinutes(Math.floor(n));
-              }}
-              className="w-24"
-            />
-            <span className="text-sm text-gray-600">
-              分（{formatMinutes(estimatedMinutes)}）
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Target picker */}
-      <div className="bg-white rounded-lg border border-gray-200 p-5 space-y-3">
-        <h2 className="text-sm font-medium text-gray-700">送信先 <span className="text-red-500">*</span></h2>
-        <TargetPicker
-          tenantCode={code}
-          targets={targets}
-          onChange={setTargets}
-          showAllTab={false}
-          initialTab={initialGroupId ? 'group' : undefined}
-        />
-      </div>
-
-      {/* Sticky submit bar */}
-      <div className="fixed bottom-0 left-0 right-0 md:left-52 bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-between gap-4 z-40">
-        <p className="text-sm text-gray-600">
-          送信先: <span className="font-semibold text-gray-900">{countTargets()} 件</span>
-        </p>
-        <div className="flex items-center gap-3">
-          {error && (
-            <p className="text-sm text-red-600 max-w-xs truncate">{error}</p>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={isPersonal}
+                    onChange={(e) => setIsPersonal(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  個人として依頼（所属を表示しない）
+                </label>
+              </CardContent>
+            </Card>
           )}
-          <Button
-            onClick={handleSubmit}
-            disabled={loading || !title.trim() || targets.length === 0}
-          >
-            {loading ? '送信中...' : '依頼を送信'}
-          </Button>
+
+          {/* Section: 送信先 */}
+          <Card>
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                送信先 <span className="text-red-500">*</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0">
+              <TargetPicker
+                tenantCode={code}
+                targets={targets}
+                onChange={setTargets}
+                showAllTab={false}
+                initialTab={initialGroupId ? 'group' : undefined}
+              />
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Summary column */}
+        <aside className="lg:col-span-1">
+          <div className="lg:sticky lg:top-6 space-y-3">
+            <Card className="border-primary/20">
+              <CardHeader className="p-5 pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  送信前の確認
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-5 pt-0 space-y-3">
+                <SummaryRow label="タイトル">
+                  {title.trim() ? (
+                    <span className="text-foreground">{title.trim()}</span>
+                  ) : (
+                    <span className="text-red-500">未入力</span>
+                  )}
+                </SummaryRow>
+
+                <SummaryRow label="送信先">
+                  {targets.length > 0 ? (
+                    <span className="text-foreground">{targets.length} 件</span>
+                  ) : (
+                    <span className="text-red-500">未選択</span>
+                  )}
+                </SummaryRow>
+
+                <SummaryRow label="期限">
+                  <span className={dueAt ? 'text-foreground' : 'text-muted-foreground'}>
+                    {formatDateLabel(dueAt)}
+                  </span>
+                </SummaryRow>
+
+                <SummaryRow label="想定時間">
+                  <span className="text-foreground">{formatMinutes(estimatedMinutes)}</span>
+                </SummaryRow>
+
+                <SummaryRow label="依頼元">
+                  <span className="text-foreground">{senderLabel}</span>
+                </SummaryRow>
+
+                <SummaryRow label="通知">
+                  <span className="text-muted-foreground text-xs">
+                    対象者にテナント設定の経路（メール / Teams 等）で送信されます
+                  </span>
+                </SummaryRow>
+
+                {error && (
+                  <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                    {error}
+                  </p>
+                )}
+
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!canSubmit}
+                  className="w-full mt-2"
+                >
+                  <Send className="h-4 w-4 mr-1.5" />
+                  {loading ? '送信中...' : '依頼を送信'}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </aside>
       </div>
+    </div>
+  );
+}
+
+function SummaryRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 text-sm">
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <div className="text-right break-words min-w-0">{children}</div>
     </div>
   );
 }

@@ -94,7 +94,7 @@ export function AuditLogBrowser({ tenantCode, initialItems, initialTotal, action
             id="filter-action"
             value={action}
             onChange={(e) => setAction(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">（すべて）</option>
             {actions.map((a) => <option key={a} value={a}>{a}</option>)}
@@ -107,7 +107,7 @@ export function AuditLogBrowser({ tenantCode, initialItems, initialTotal, action
             type="datetime-local"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
         <div className="space-y-1">
@@ -117,7 +117,7 @@ export function AuditLogBrowser({ tenantCode, initialItems, initialTotal, action
             type="datetime-local"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
       </div>
@@ -178,7 +178,7 @@ export function AuditLogBrowser({ tenantCode, initialItems, initialTotal, action
                           className={cn(
                             'text-xs px-2 py-1 rounded border transition-colors',
                             isOpen
-                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              ? 'bg-primary/10 text-primary border-primary/20'
                               : 'text-gray-600 border-gray-200 hover:bg-gray-100',
                           )}
                         >

@@ -98,7 +98,7 @@ export default async function GroupDetailPage({
           {canEdit && (
             <Link
               href={`/t/${code}/groups/${id}/members${from ? `?from=${encodeURIComponent(from)}` : ''}`}
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-primary hover:underline"
             >
               ➕ メンバーを追加
             </Link>

@@ -145,7 +145,7 @@ export function AssigneeListFilters({ tenantCode, onChange }: Props) {
               }}
               className={`text-xs px-2 py-1 rounded-full border ${
                 active
-                  ? 'bg-blue-100 border-blue-400 text-blue-800'
+                  ? 'bg-primary/20 border-primary text-primary'
                   : 'bg-white border-gray-300 text-gray-600'
               }`}
             >
@@ -175,7 +175,7 @@ export function AssigneeListFilters({ tenantCode, onChange }: Props) {
           <button
             type="button"
             onClick={handleClear}
-            className="ml-auto text-xs text-blue-600 hover:text-blue-800 underline"
+            className="ml-auto text-xs text-primary hover:text-primary underline"
           >
             クリア
           </button>

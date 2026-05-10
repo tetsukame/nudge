@@ -25,7 +25,7 @@ export function BottomTabs({ tenantCode }: Props) {
           className={cn(
             'flex-1 flex flex-col items-center justify-center py-2 text-xs gap-1 transition-colors',
             isRequests
-              ? 'text-blue-600 font-medium'
+              ? 'text-primary font-medium'
               : 'text-gray-500 hover:text-gray-700',
           )}
         >
@@ -38,7 +38,7 @@ export function BottomTabs({ tenantCode }: Props) {
           className={cn(
             'flex-1 flex flex-col items-center justify-center py-2 text-xs gap-1 transition-colors',
             isMyPage
-              ? 'text-blue-600 font-medium'
+              ? 'text-primary font-medium'
               : 'text-gray-500 hover:text-gray-700',
           )}
         >

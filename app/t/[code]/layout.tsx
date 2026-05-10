@@ -27,7 +27,7 @@ export default async function TenantLayout({
           <p className="text-gray-600">セッションが無効です。</p>
           <Link
             href={`/t/${code}/login`}
-            className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="inline-block px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
           >
             ログイン
           </Link>

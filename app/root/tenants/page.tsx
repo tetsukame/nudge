@@ -22,7 +22,7 @@ export default async function TenantListPage() {
         <h1 className="text-xl font-bold text-gray-900">🏢 テナント一覧</h1>
         <Link
           href="/root/tenants/new"
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+          className="px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-md hover:bg-primary/90 transition-colors"
         >
           ➕ テナント追加
         </Link>
@@ -76,7 +76,7 @@ export default async function TenantListPage() {
                   <td className="px-3 py-2 text-right">
                     <Link
                       href={`/root/tenants/${t.id}`}
-                      className="text-blue-600 hover:underline text-xs"
+                      className="text-primary hover:underline text-xs"
                     >
                       編集 →
                     </Link>

@@ -31,7 +31,7 @@ export default async function AdminLayout({
         </p>
         <Link
           href={`/t/${code}/requests`}
-          className="inline-block text-sm text-blue-600 hover:underline"
+          className="inline-block text-sm text-primary hover:underline"
         >
           ← トップに戻る
         </Link>

@@ -99,7 +99,7 @@ function StatCard({
 }) {
   const className =
     'block bg-white rounded-lg border border-gray-200 p-5 transition-all'
-    + (href ? ' hover:border-blue-300 hover:shadow-sm' : '');
+    + (href ? ' hover:border-primary/30 hover:shadow-sm' : '');
   const inner = (
     <>
       <p className="text-xs text-gray-500 mb-1">{title}</p>
@@ -117,7 +117,7 @@ function StatCard({
 function AdminLink({ href, label }: { href: string; label: string }) {
   return (
     <li>
-      <Link href={href} className="text-blue-600 hover:underline">{label}</Link>
+      <Link href={href} className="text-primary hover:underline">{label}</Link>
     </li>
   );
 }

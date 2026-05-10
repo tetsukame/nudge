@@ -14,12 +14,12 @@ describe('status-config', () => {
     expect(keys).toContain('exempted');
   });
 
-  it('each config has label, icon, color, bgColor', () => {
+  it('each config has label and a Badge variant', () => {
+    const allowed = new Set(['success', 'warning', 'info', 'muted', 'destructive']);
     for (const cfg of Object.values(STATUS_CONFIG)) {
       expect(cfg).toHaveProperty('label');
-      expect(cfg).toHaveProperty('icon');
-      expect(cfg).toHaveProperty('color');
-      expect(cfg).toHaveProperty('bgColor');
+      expect(cfg).toHaveProperty('variant');
+      expect(allowed.has(cfg.variant)).toBe(true);
     }
   });
 

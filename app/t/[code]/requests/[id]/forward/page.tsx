@@ -107,9 +107,9 @@ export default function ForwardPage() {
             selectedId={selectedUser?.id}
           />
           {selectedUser && (
-            <div className="mt-2 px-3 py-2 bg-blue-50 rounded-md text-sm">
-              <p className="font-medium text-blue-900">{selectedUser.displayName}</p>
-              <p className="text-blue-700 text-xs">{selectedUser.email}</p>
+            <div className="mt-2 px-3 py-2 bg-primary/10 rounded-md text-sm">
+              <p className="font-medium text-primary">{selectedUser.displayName}</p>
+              <p className="text-primary text-xs">{selectedUser.email}</p>
             </div>
           )}
         </div>

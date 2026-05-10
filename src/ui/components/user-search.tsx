@@ -84,7 +84,7 @@ export function UserSearch({ tenantCode, onSelect, selectedId, placeholder }: Pr
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder={placeholder ?? '名前・メールで絞り込み'}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
       />
 
       {loading && (
@@ -99,8 +99,8 @@ export function UserSearch({ tenantCode, onSelect, selectedId, placeholder }: Pr
                 type="button"
                 onClick={() => onSelect(user)}
                 className={cn(
-                  'w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors',
-                  selectedId === user.id && 'bg-blue-50 border-l-2 border-blue-500',
+                  'w-full text-left px-3 py-2 hover:bg-primary/5 transition-colors',
+                  selectedId === user.id && 'bg-primary/10 border-l-2 border-primary',
                 )}
               >
                 <p className="text-sm font-medium text-gray-900">{user.displayName}</p>

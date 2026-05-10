@@ -27,7 +27,7 @@ function fmt(d: string | null): string {
 
 function statusBadge(s: string) {
   if (s === 'success') return 'bg-green-50 text-green-700 border-green-200';
-  if (s === 'running') return 'bg-blue-50 text-blue-700 border-blue-200';
+  if (s === 'running') return 'bg-primary/10 text-primary border-primary/20';
   if (s === 'failed') return 'bg-red-50 text-red-700 border-red-200';
   return 'bg-gray-100 text-gray-600 border-gray-300';
 }

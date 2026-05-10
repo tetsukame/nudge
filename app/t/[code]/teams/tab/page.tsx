@@ -54,7 +54,7 @@ export default function TeamsTabPage() {
             設定手順は{' '}
             <a
               href="https://github.com/tetsukame/nudge/blob/main/docs/teams-integration.md"
-              className="text-blue-600 hover:underline"
+              className="text-primary hover:underline"
               target="_blank"
               rel="noopener noreferrer"
             >

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.19/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.19",
+  "version": "0.19.0",
+  "id": "{{TEAMS_APP_ID}}",
+  "developer": {
+    "name": "{{ORG_NAME}}",
+    "websiteUrl": "https://{{NUDGE_DOMAIN}}",
+    "privacyUrl": "https://{{NUDGE_DOMAIN}}/privacy",
+    "termsOfUseUrl": "https://{{NUDGE_DOMAIN}}/terms"
+  },
+  "name": {
+    "short": "Nudge",
+    "full": "Nudge - 業務依頼管理"
+  },
+  "description": {
+    "short": "組織内の業務依頼を可視化・促進する OSS タスク管理ツール",
+    "full": "Nudge は組織内の依頼事項（アンケート・作業依頼）を可視化し、未対応の催促を軽量化する OSS タスク管理ツールです。"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#3b82f6",
+  "staticTabs": [
+    {
+      "entityId": "nudge-home",
+      "name": "依頼",
+      "contentUrl": "https://{{NUDGE_DOMAIN}}/t/{{NUDGE_TENANT_CODE}}/teams/tab",
+      "websiteUrl": "https://{{NUDGE_DOMAIN}}/t/{{NUDGE_TENANT_CODE}}/",
+      "scopes": ["personal"]
+    }
+  ],
+  "permissions": ["identity"],
+  "validDomains": ["{{NUDGE_DOMAIN}}"],
+  "webApplicationInfo": {
+    "id": "{{ENTRA_APP_ID}}",
+    "resource": "api://{{NUDGE_DOMAIN}}/{{ENTRA_APP_ID}}"
+  }
+}

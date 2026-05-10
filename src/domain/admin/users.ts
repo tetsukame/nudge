@@ -1,6 +1,7 @@
 import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
+import { applyTransferToManagerRoles } from './managers';
 
 export class AdminUserError extends Error {
   constructor(
@@ -256,6 +257,15 @@ export async function setUserOrgUnits(
       throw new AdminUserError('user not found', 'not_found');
     }
 
+    // Snapshot current primary so we can detect 異動 (transfer) below.
+    const { rows: prevPrimaryRows } = await client.query<{ org_unit_id: string }>(
+      `SELECT org_unit_id FROM user_org_unit
+        WHERE user_id = $1 AND is_primary = true LIMIT 1`,
+      [userId],
+    );
+    const prevPrimary = prevPrimaryRows[0]?.org_unit_id ?? null;
+    const primaryChanged = prevPrimary !== input.primaryOrgUnitId;
+
     await client.query('BEGIN');
     try {
       // Validate all org_unit ids are in the same tenant (RLS already restricts to tenant)
@@ -287,6 +297,12 @@ export async function setUserOrgUnits(
           JSON.stringify({ orgUnitIds: ids, primaryOrgUnitId: input.primaryOrgUnitId }),
         ],
       );
+      // 異動が発生したら org_unit_manager をリセットして「管理職」フラグに応じて再付与する。
+      if (primaryChanged) {
+        await applyTransferToManagerRoles(
+          client, actor.tenantId, actor.userId, userId,
+        );
+      }
       await client.query('COMMIT');
     } catch (err) {
       await client.query('ROLLBACK');

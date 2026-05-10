@@ -5,6 +5,7 @@ import { unsealSession } from '@/auth/session';
 import { loadConfig } from '@/config';
 import { appPool } from '@/db/pools';
 import { getAdminUser } from '@/domain/admin/users';
+import { listManagedOrgs } from '@/domain/admin/managers';
 import { getOrgTree, type OrgTreeNode } from '@/domain/org/tree';
 import { AdminUserDetailEditor } from '@/ui/components/admin-user-detail-editor';
 
@@ -40,9 +41,10 @@ export default async function AdminUserDetailPage({
     isTenantWideRequester: false,
   };
 
-  const [user, tree] = await Promise.all([
+  const [user, tree, managedOrgs] = await Promise.all([
     getAdminUser(appPool(), actor, id),
     getOrgTree(appPool(), actor),
+    listManagedOrgs(appPool(), actor, id),
   ]);
   if (!user) notFound();
 
@@ -74,6 +76,7 @@ export default async function AdminUserDetailPage({
         initialStatus={user.status}
         initialOrgUnits={user.orgUnits}
         initialRoles={user.roles}
+        initialManagedOrgs={managedOrgs}
         allOrgUnits={flatOrgs}
       />
     </div>

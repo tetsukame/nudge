@@ -53,6 +53,7 @@ docker compose --env-file .env.demo up -d
 ```
 
 特定バージョンを使いたい場合は `:latest` を `:v0.16` 等に置換してください。
+Multi-arch 対応（`linux/amd64` + `linux/arm64`）なので Apple Silicon や ARM ベースのクラウド VM（Azure、AWS Graviton 等）でもそのまま使えます。
 
 ### OSS デモ（Docker Compose、所要時間 5 分）
 

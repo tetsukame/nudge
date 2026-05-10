@@ -1,6 +1,7 @@
 import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
+import { applyTransferToManagerRoles } from './managers';
 
 export class AdminRoleError extends Error {
   constructor(
@@ -12,8 +13,10 @@ export class AdminRoleError extends Error {
   }
 }
 
-export type AssignableRole = 'tenant_admin' | 'tenant_wide_requester';
-const ASSIGNABLE: ReadonlySet<string> = new Set(['tenant_admin', 'tenant_wide_requester']);
+export type AssignableRole = 'tenant_admin' | 'tenant_wide_requester' | 'manager';
+const ASSIGNABLE: ReadonlySet<string> = new Set([
+  'tenant_admin', 'tenant_wide_requester', 'manager',
+]);
 
 export async function setUserRoles(
   pool: pg.Pool,
@@ -57,6 +60,15 @@ export async function setUserRoles(
       }
     }
 
+    // Detect a change in the manager role so we can update org_unit_manager accordingly.
+    const { rows: priorRoleRows } = await client.query<{ role: string }>(
+      `SELECT role FROM user_role WHERE user_id = $1 AND role = ANY($2::text[])`,
+      [userId, [...ASSIGNABLE]],
+    );
+    const wasManager = priorRoleRows.some((r) => r.role === 'manager');
+    const willBeManager = requested.includes('manager');
+    const managerToggled = wasManager !== willBeManager;
+
     await client.query('BEGIN');
     try {
       await client.query(
@@ -75,6 +87,12 @@ export async function setUserRoles(
          VALUES ($1, $2, 'admin.user.roles_changed', 'user', $3, $4::jsonb)`,
         [actor.tenantId, actor.userId, userId, JSON.stringify({ roles: requested })],
       );
+      if (managerToggled) {
+        // Wipe + re-apply (will INSERT primary if role is now manager; will leave empty otherwise).
+        await applyTransferToManagerRoles(
+          client, actor.tenantId, actor.userId, userId,
+        );
+      }
       await client.query('COMMIT');
     } catch (err) {
       await client.query('ROLLBACK');

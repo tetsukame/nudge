@@ -4,7 +4,7 @@
 # Stage 1: builder
 # Install all deps + run Next.js production build
 # ----------------------------------------------------------------------------
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 
 # Enable pnpm via corepack
 RUN corepack enable
@@ -24,7 +24,7 @@ RUN pnpm build
 # Production deps only (includes tsx, pg-format) + Next.js build artifacts +
 # source for tsx (worker / migrate / scripts run TypeScript directly)
 # ----------------------------------------------------------------------------
-FROM node:20-alpine AS runner
+FROM node:26-alpine AS runner
 
 RUN corepack enable
 

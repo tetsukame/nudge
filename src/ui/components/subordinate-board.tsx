@@ -42,6 +42,8 @@ type RequestRow = {
   dueAt: string | null;
   pendingCount: number;
   overdueCount: number;
+  subtreeTotal: number;
+  subtreeDone: number;
 };
 type MatrixData = {
   users: UserRow[];
@@ -310,6 +312,10 @@ function TaskGroup({
 }) {
   const [open, setOpen] = useState(true);
   const due = request.dueAt ? new Date(request.dueAt) : null;
+  const completionPct =
+    request.subtreeTotal > 0
+      ? Math.round((request.subtreeDone / request.subtreeTotal) * 100)
+      : 0;
 
   return (
     <section className="rounded-lg border border-gray-200 bg-white">
@@ -326,6 +332,11 @@ function TaskGroup({
               <span className="inline-flex items-center gap-1">
                 <CalendarClock className="h-3 w-3" />
                 期限 {due.toLocaleDateString('ja-JP')}
+              </span>
+            )}
+            {request.subtreeTotal > 0 && (
+              <span title="自組織内の完了率">
+                完了 {completionPct}%（{request.subtreeDone}/{request.subtreeTotal}）
               </span>
             )}
             <span>未処理 {request.pendingCount}</span>
@@ -397,23 +408,33 @@ function UserGroup({
       </button>
       {open && (
         <ul className="divide-y divide-gray-100 border-t border-gray-100">
-          {cells.map((c) => {
-            const r = requestsById.get(c.requestId);
-            const due = r?.dueAt ? new Date(r.dueAt) : null;
-            const dueText = due
-              ? `[期限 ${due.toLocaleDateString('ja-JP')}]`
-              : '[期限なし]';
-            return (
-              <CellRow
-                key={c.assignmentId}
-                tenantCode={tenantCode}
-                cell={c}
-                primaryLabel={`${dueText} ${r?.title ?? '—'}`}
-                secondaryLabel=""
-                requestId={c.requestId}
-              />
-            );
-          })}
+          {[...cells]
+            .sort((a, b) => {
+              const ra = requestsById.get(a.requestId)?.dueAt ?? null;
+              const rb = requestsById.get(b.requestId)?.dueAt ?? null;
+              // due_at ASC, NULLS LAST
+              if (ra && rb) return ra < rb ? -1 : ra > rb ? 1 : 0;
+              if (ra && !rb) return -1;
+              if (!ra && rb) return 1;
+              return 0;
+            })
+            .map((c) => {
+              const r = requestsById.get(c.requestId);
+              const due = r?.dueAt ? new Date(r.dueAt) : null;
+              const dueText = due
+                ? `[期限 ${due.toLocaleDateString('ja-JP')}]`
+                : '[期限なし]';
+              return (
+                <CellRow
+                  key={c.assignmentId}
+                  tenantCode={tenantCode}
+                  cell={c}
+                  primaryLabel={`${dueText} ${r?.title ?? '—'}`}
+                  secondaryLabel=""
+                  requestId={c.requestId}
+                />
+              );
+            })}
         </ul>
       )}
     </section>

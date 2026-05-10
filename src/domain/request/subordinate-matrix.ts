@@ -26,6 +26,10 @@ export type SubordinateMatrixRequest = {
   dueAt: string | null;
   pendingCount: number;
   overdueCount: number;
+  /** マネージャの subtree 内での合計 assignment 数（status / date フィルタは無視）。 */
+  subtreeTotal: number;
+  /** subtree 内で完了状態 (responded 等) になっている数。完了パーセントの分子。 */
+  subtreeDone: number;
 };
 
 export type SubordinateMatrixCell = {
@@ -166,6 +170,45 @@ export async function listSubordinateMatrix(
     const userIds = Array.from(new Set(cells.map((c) => c.userId)));
     const requestIds = Array.from(new Set(cells.map((c) => c.requestId)));
 
+    // Per-request subtree totals (ignores status / date filters but respects q / orgUnit filters).
+    // Used for the 完了パーセント shown on the task-mode group header.
+    const subtreeTotalParams: unknown[] = [actor.userId, requestIds];
+    let subtreeOrgClause = '';
+    if (input.orgUnitId) {
+      subtreeTotalParams.push(input.orgUnitId);
+      subtreeOrgClause = `AND uou.org_unit_id = $${subtreeTotalParams.length}::uuid`;
+    }
+    const { rows: totalsRows } = await client.query<{
+      request_id: string;
+      subtree_total: number;
+      subtree_done: number;
+    }>(
+      `WITH my_subtree_users AS (
+         SELECT DISTINCT uou.user_id
+           FROM org_unit_manager m
+           JOIN org_unit_closure c ON c.ancestor_id = m.org_unit_id
+           JOIN user_org_unit uou ON uou.org_unit_id = c.descendant_id
+                                 AND uou.user_id != $1
+          WHERE m.user_id = $1
+       )
+       SELECT a.request_id,
+              COUNT(*)::int AS subtree_total,
+              COUNT(*) FILTER (WHERE a.status = ANY(ARRAY[${DONE_STATUSES.map((s) => `'${s}'`).join(',')}]))::int AS subtree_done
+         FROM assignment a
+         JOIN my_subtree_users mu ON mu.user_id = a.user_id
+         JOIN user_org_unit uou ON uou.user_id = a.user_id AND uou.is_primary = true
+        WHERE a.request_id = ANY($2::uuid[])
+          ${subtreeOrgClause}
+        GROUP BY a.request_id`,
+      subtreeTotalParams,
+    );
+    const totalsMap = new Map(
+      totalsRows.map((r) => [
+        r.request_id,
+        { total: r.subtree_total, done: r.subtree_done },
+      ]),
+    );
+
     const { rows: userRows } = await client.query<{
       user_id: string;
       display_name: string;
@@ -231,12 +274,15 @@ export async function listSubordinateMatrix(
     const requests: SubordinateMatrixRequest[] = requestIds
       .map((id) => {
         const r = reqMap.get(id);
+        const totals = totalsMap.get(id);
         return {
           requestId: id,
           title: r?.title ?? '—',
           dueAt: r?.due_at ? new Date(r.due_at).toISOString() : null,
           pendingCount: reqPending.get(id) ?? 0,
           overdueCount: reqOverdue.get(id) ?? 0,
+          subtreeTotal: totals?.total ?? 0,
+          subtreeDone: totals?.done ?? 0,
         };
       })
       .sort((a, b) => {

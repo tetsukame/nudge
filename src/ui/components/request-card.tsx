@@ -46,14 +46,19 @@ export type RequestCardProps = {
   unread?: boolean;
   /** 右上に表示するアクションラベル (例: "対応する"、"開く") */
   actionLabel?: string;
+  /** カード右下に表示する追加アクション群 (ボタン等)。
+   *  これを渡すとカード全体クリック→遷移は維持しつつ、ボタンは独立してクリック可能 */
+  actions?: React.ReactNode;
 };
 
 /**
  * 業務カード共通コンポーネント。自分宛 / 送信済み / 部下 / admin sent の
  * 一覧で繰り返し書かれていたカード DOM を一本化する。
  *
- * カード全体がクリッカブル (`href` に遷移)。actionLabel はカード内の
- * 視覚的 CTA であり、独立したクリックハンドラは持たない。
+ * カード全体がクリッカブル (`href` に遷移)。タイトルの ::after オーバーレイで
+ * カード領域全体を覆い、`actions` で渡した子要素は z-10 で前面に出す。
+ * これによりリンクとボタンを HTML としてネストせずに「カード全体クリック」と
+ * 「ボタン個別クリック」を両立する。
  */
 export function RequestCard({
   href,
@@ -67,6 +72,7 @@ export function RequestCard({
   progress,
   unread = false,
   actionLabel,
+  actions,
 }: RequestCardProps) {
   const badgeVariant =
     statusVariant && STATUS_VARIANT_TO_BADGE[statusVariant];
@@ -76,10 +82,7 @@ export function RequestCard({
       : 0;
 
   return (
-    <Link
-      href={href}
-      className="block rounded-lg border border-border bg-card text-card-foreground p-4 hover:border-primary/30 hover:shadow-sm transition-all no-underline"
-    >
+    <article className="relative rounded-lg border border-border bg-card text-card-foreground p-4 hover:border-primary/30 hover:shadow-sm transition-all">
       {/* Top row: status badge + title + (overdue indicator + done/total) + action */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -96,9 +99,12 @@ export function RequestCard({
                 aria-label="未読あり"
               />
             )}
-            <p className="text-sm font-medium text-foreground truncate">
+            <Link
+              href={href}
+              className="text-sm font-medium text-foreground truncate no-underline hover:underline after:absolute after:inset-0 after:content-['']"
+            >
               {title}
-            </p>
+            </Link>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -163,6 +169,13 @@ export function RequestCard({
           </div>
         </div>
       )}
-    </Link>
+
+      {/* Bottom-right action buttons (z-10 to sit above the title link overlay) */}
+      {actions && (
+        <div className="relative z-10 flex flex-wrap justify-end gap-2 mt-3">
+          {actions}
+        </div>
+      )}
+    </article>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import type { AssignmentStatus } from '@/domain/types';
 import { AccessBanner } from './access-banner';
 import { AssigneeList } from './assignee-list';
 
@@ -14,10 +15,12 @@ type Props = {
     exempted: number; expired: number;
   };
   total: number;
+  initialStatuses?: AssignmentStatus[];
 };
 
 export function RequesterSection({
   tenantCode, requestId, currentUserId, canSubstitute, summary, total,
+  initialStatuses,
 }: Props) {
   const done = summary.responded + summary.notNeeded + summary.forwarded
     + summary.substituted + summary.exempted + summary.expired;
@@ -47,13 +50,14 @@ export function RequesterSection({
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <div id="assignees" className="bg-white border border-gray-200 rounded-lg p-4 scroll-mt-6">
         <h2 className="text-sm font-semibold mb-3">👥 assignee 一覧</h2>
         <AssigneeList
           tenantCode={tenantCode}
           requestId={requestId}
           currentUserId={currentUserId}
           canSubstitute={canSubstitute}
+          initialStatuses={initialStatuses}
         />
       </div>
     </section>

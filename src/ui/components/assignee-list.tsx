@@ -40,9 +40,12 @@ type Props = {
   requestId: string;
   currentUserId: string;
   canSubstitute: boolean;
+  initialStatuses?: AssignmentStatus[];
 };
 
-export function AssigneeList({ tenantCode, requestId, currentUserId, canSubstitute }: Props) {
+export function AssigneeList({
+  tenantCode, requestId, currentUserId, canSubstitute, initialStatuses,
+}: Props) {
   const [items, setItems] = useState<AssigneeItem[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [filters, setFilters] = useState<{
@@ -50,7 +53,7 @@ export function AssigneeList({ tenantCode, requestId, currentUserId, canSubstitu
     groupId: string | null; statuses: AssignmentStatus[]; hasUnread: boolean;
   }>({
     q: '', orgUnitId: null, includeDescendants: true,
-    groupId: null, statuses: [], hasUnread: false,
+    groupId: null, statuses: initialStatuses ?? [], hasUnread: false,
   });
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -82,7 +85,11 @@ export function AssigneeList({ tenantCode, requestId, currentUserId, canSubstitu
 
   return (
     <div className="space-y-3 min-h-[200px]">
-      <AssigneeListFilters tenantCode={tenantCode} onChange={setFilters} />
+      <AssigneeListFilters
+        tenantCode={tenantCode}
+        onChange={setFilters}
+        initialStatuses={initialStatuses}
+      />
 
       {summary && (
         <div className="text-xs text-gray-600 flex gap-3 flex-wrap">

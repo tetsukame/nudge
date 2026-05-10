@@ -10,6 +10,7 @@ import { openAssignment } from '@/domain/assignment/actions';
 import { markViewed } from '@/domain/assignment/view';
 import { listAssignees } from '@/domain/request/assignees';
 import { markViewedByRequester } from '@/domain/request/mark-viewed-requester';
+import type { AssignmentStatus } from '@/domain/types';
 import { PageHeader } from '@/ui/components/page-header';
 import { StatusBadge } from '@/ui/components/status-badge';
 import { ActionButtons } from '@/ui/components/action-buttons';
@@ -37,10 +38,23 @@ export default async function RequestDetailPage({
   searchParams,
 }: {
   params: Promise<{ code: string; id: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; status?: string; overdue?: string }>;
 }) {
   const { code, id } = await params;
-  const { from } = await searchParams;
+  const { from, status: statusParam, overdue: overdueParam } = await searchParams;
+  const VALID_STATUSES: AssignmentStatus[] = [
+    'unopened', 'opened', 'responded', 'not_needed',
+    'forwarded', 'substituted', 'exempted', 'expired',
+  ];
+  const initialAssigneeStatuses: AssignmentStatus[] | undefined = statusParam
+    ? statusParam
+        .split(',')
+        .filter((s): s is AssignmentStatus =>
+          VALID_STATUSES.includes(s as AssignmentStatus),
+        )
+    : overdueParam === '1'
+      ? ['unopened', 'opened']
+      : undefined;
   const backHref =
     from === 'sent' ? `/t/${code}/sent`
     : from === 'admin/sent' ? `/t/${code}/admin/sent`
@@ -288,6 +302,7 @@ export default async function RequestDetailPage({
             expired: requesterSummary.summary.expired,
           }}
           total={requesterSummary.total}
+          initialStatuses={initialAssigneeStatuses}
         />
       )}
     </div>

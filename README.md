@@ -1,6 +1,8 @@
-# Nudge
+# NudgeFlow
 
 組織内の依頼事項（アンケート・作業依頼）を軽く促して対応状況を可視化する OSS タスク管理ツール。
+
+> **Note**: 技術名（リポジトリ名、Docker image 名、URL path、コードベース内の識別子）は引き続き `nudge` を使用しています。表示名（ブランド名）が `NudgeFlow` です。
 
 [![CI](https://github.com/tetsukame/nudge/actions/workflows/test.yml/badge.svg)](https://github.com/tetsukame/nudge/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -102,7 +104,7 @@ docker compose exec keycloak /opt/keycloak/bin/kcadm.sh set-password -r nudge \
 
 各サービスの URL（Docker Desktop が `host.docker.internal` を hosts ファイルに自動追加します。Linux native の場合は `--add-host=host.docker.internal:host-gateway` 相当の設定が必要）：
 
-- Nudge: http://host.docker.internal:3000
+- NudgeFlow: http://host.docker.internal:3000
 - Keycloak admin console: http://host.docker.internal:8080/admin/master/console (admin/admin)
 - MailHog UI（送信メール確認）: http://host.docker.internal:8025
 
@@ -190,7 +192,7 @@ pnpm start        # 本番サーバ起動
 
 ## Microsoft Teams 統合（β）
 
-Nudge を Microsoft Teams の Personal Tab として組み込むことができます。Entra SSO → Keycloak Token Exchange で認証を完結させるため、Teams にログイン済みのユーザは追加認証なしで Nudge にアクセスできます。
+NudgeFlow を Microsoft Teams の Personal Tab として組み込むことができます。Entra SSO → Keycloak Token Exchange で認証を完結させるため、Teams にログイン済みのユーザは追加認証なしで NudgeFlow にアクセスできます。
 
 詳細な手順（Entra アプリ登録 / Keycloak Token Exchange 設定 / sideloading）は [docs/teams-integration.md](docs/teams-integration.md) 参照。
 

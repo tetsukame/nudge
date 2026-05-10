@@ -47,7 +47,7 @@ export default async function AdminDashboardPage({
           href={`/t/${code}/admin/groups`}
           title="グループ"
           primary={`${stats.groups.total} 件`}
-          sub={`Nudge ${stats.groups.nudge} / KC ${stats.groups.keycloak}`}
+          sub={`NudgeFlow ${stats.groups.nudge} / KC ${stats.groups.keycloak}`}
         />
         <StatCard
           href={`/t/${code}/admin/sent?filter=in_progress`}

@@ -48,7 +48,7 @@ export default async function AdminGroupsPage({
         </Link>
       </div>
       <p className="text-sm text-gray-600">
-        テナント内のすべてのグループを表示します。Nudge 独自グループは tenant_admin が編集・削除できます。
+        テナント内のすべてのグループを表示します。NudgeFlow 独自グループは tenant_admin が編集・削除できます。
         Keycloak 連携グループは KC 側で管理してください。
       </p>
 
@@ -82,7 +82,7 @@ export default async function AdminGroupsPage({
                       </span>
                     ) : (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                        Nudge
+                        NudgeFlow
                       </span>
                     )}
                   </td>

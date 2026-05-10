@@ -10,12 +10,12 @@
     "termsOfUseUrl": "https://{{NUDGE_DOMAIN}}/terms"
   },
   "name": {
-    "short": "Nudge",
-    "full": "Nudge - 業務依頼管理"
+    "short": "NudgeFlow",
+    "full": "NudgeFlow - 業務依頼管理"
   },
   "description": {
     "short": "組織内の業務依頼を可視化・促進する OSS タスク管理ツール",
-    "full": "Nudge は組織内の依頼事項（アンケート・作業依頼）を可視化し、未対応の催促を軽量化する OSS タスク管理ツールです。"
+    "full": "NudgeFlow は組織内の依頼事項（アンケート・作業依頼）を可視化し、未対応の催促を軽量化する OSS タスク管理ツールです。"
   },
   "icons": {
     "color": "color.png",

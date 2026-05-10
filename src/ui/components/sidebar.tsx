@@ -112,7 +112,7 @@ export function Sidebar({
   return (
     <aside className="hidden md:flex md:flex-col md:w-52 bg-slate-900 text-white min-h-screen shrink-0">
       <div className="px-4 py-5 text-lg font-bold border-b border-slate-700">
-        Nudge
+        NudgeFlow
       </div>
 
       <nav className="flex-1 px-2 py-4 space-y-1">

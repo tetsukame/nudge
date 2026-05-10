@@ -39,7 +39,7 @@ export default function RootLoginPage() {
         className="bg-white shadow rounded-lg p-8 w-full max-w-md space-y-5"
       >
         <div className="space-y-1">
-          <h1 className="text-xl font-bold text-gray-900">Nudge プラットフォーム管理</h1>
+          <h1 className="text-xl font-bold text-gray-900">NudgeFlow プラットフォーム管理</h1>
           <p className="text-xs text-gray-500">Root 管理者ログイン</p>
         </div>
 
@@ -84,7 +84,7 @@ export default function RootLoginPage() {
         </button>
 
         <p className="text-xs text-gray-500 border-t border-gray-100 pt-3">
-          このページは Nudge の SaaS 提供事業者向けの管理コンソールです。
+          このページは NudgeFlow の SaaS 提供事業者向けの管理コンソールです。
           テナント利用者の方は、各テナント URL からログインしてください。
         </p>
       </form>

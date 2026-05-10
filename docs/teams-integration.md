@@ -1,6 +1,6 @@
 # Microsoft Teams 統合（β）
 
-Nudge を Microsoft Teams の Personal Tab として組み込み、Entra SSO 経由でログインなしに利用できるようにするための導入手順。
+NudgeFlow を Microsoft Teams の Personal Tab として組み込み、Entra SSO 経由でログインなしに利用できるようにするための導入手順。
 
 > ⚠️ **β リリース**: 開発環境では Microsoft 365 Developer Program の sandbox 取得制限により、実機 Teams での E2E 検証が完了していません。仕様通りに実装していますが、初回導入時に Teams 環境で動作確認を行い、必要であれば調整してください。問題があれば [GitHub Issues](https://github.com/tetsukame/nudge/issues) へ報告ください。
 
@@ -10,7 +10,7 @@ Nudge を Microsoft Teams の Personal Tab として組み込み、Entra SSO 経
 
 ```
 ┌────────────────┐       ┌────────────────┐       ┌────────────────┐
-│ Microsoft      │       │ Nudge web      │       │ Keycloak       │
+│ Microsoft      │       │ NudgeFlow      │       │ Keycloak       │
 │ Teams (iframe) │       │ (Next.js)      │       │ (IdP broker:   │
 │                │       │                │       │  Entra)        │
 └───────┬────────┘       └───────┬────────┘       └───────┬────────┘
@@ -48,7 +48,7 @@ Nudge を Microsoft Teams の Personal Tab として組み込み、Entra SSO 経
         │                        │                        │
         │ 9. /t/<code>/ へ遷移   │                        │
         ├───────────────────────>│                        │
-        │   通常の Nudge 画面    │                        │
+        │   通常の NudgeFlow 画面    │                        │
         │<───────────────────────┤                        │
 ```
 
@@ -58,7 +58,7 @@ Nudge を Microsoft Teams の Personal Tab として組み込み、Entra SSO 経
 - **Microsoft Entra ID（Azure AD）テナント**（管理者権限）
 - **Microsoft 365 Business** 以上または **Teams admin center にアクセス可能な業務 Teams 環境**
   - M365 Family（個人版 Teams）では sideloading 不可
-- **Nudge を HTTPS で公開**（Teams は `https://` 必須）
+- **NudgeFlow を HTTPS で公開**（Teams は `https://` 必須）
 
 ## ステップ 1: Keycloak 側の設定
 
@@ -122,7 +122,7 @@ Entra admin center（https://entra.microsoft.com/）で：
 ### 2.1 Application registration
 
 1. **Identity** → **Applications** → **App registrations** → **New registration**
-2. Name: `Nudge`
+2. Name: `NudgeFlow`
 3. Supported account types: **Accounts in this organizational directory only (single tenant)**
 4. Redirect URI: 設定不要（Tab はトークンフロー使用なし）
 5. **Register**
@@ -145,10 +145,10 @@ Entra admin center（https://entra.microsoft.com/）で：
 2. 以下を入力：
    - Scope name: `access_as_user`
    - Who can consent: **Admins and users**
-   - Admin consent display name: `Access Nudge`
-   - Admin consent description: `Allows the app to access Nudge as the signed-in user.`
-   - User consent display name: `Access Nudge`
-   - User consent description: `Allows Nudge to act on your behalf.`
+   - Admin consent display name: `Access NudgeFlow`
+   - Admin consent description: `Allows the app to access NudgeFlow as the signed-in user.`
+   - User consent display name: `Access NudgeFlow`
+   - User consent description: `Allows NudgeFlow to act on your behalf.`
 3. **Add scope**
 
 ### 2.4 Pre-authorized client applications
@@ -186,7 +186,7 @@ Keycloak の IdP broker で使うため：
 4. **Add**
 5. 表示された **Value** を控える（一度しか表示されない）→ Keycloak の IdP broker 設定の Client Secret に貼り付け
 
-## ステップ 3: Nudge 側の設定
+## ステップ 3: NudgeFlow 側の設定
 
 ### 3.1 環境変数
 
@@ -212,7 +212,7 @@ ENTRA_APP_ID=12345678-1234-1234-1234-123456789abc
 # 公開ドメイン (https:// 抜き)
 NUDGE_DOMAIN=nudge.example.com
 
-# Nudge のテナントコード
+# NudgeFlow のテナントコード
 NUDGE_TENANT_CODE=dev
 
 # manifest の "developer.name" に出る組織名
@@ -242,7 +242,7 @@ icon は β リリースでは 1x1 px placeholder。本番運用では適切な 
 
 すでに有効なら何もしなくて OK。
 
-## ステップ 6: Nudge アプリを Teams に sideload
+## ステップ 6: NudgeFlow アプリを Teams に sideload
 
 ### ユーザー個人での sideload
 
@@ -254,9 +254,9 @@ icon は β リリースでは 1x1 px placeholder。本番運用では適切な 
 
 ### 動作確認
 
-- Teams 左サイドバーに **Nudge** アイコンが追加される
-- クリックすると「依頼」タブが開き、自動的に「Nudge にサインイン中...」と表示
-- 数秒後に Nudge の通常画面（依頼一覧等）に遷移すれば成功
+- Teams 左サイドバーに **NudgeFlow** アイコンが追加される
+- クリックすると「依頼」タブが開き、自動的に「NudgeFlow にサインイン中...」と表示
+- 数秒後に NudgeFlow の通常画面（依頼一覧等）に遷移すれば成功
 
 ## トラブルシューティング
 
@@ -272,8 +272,8 @@ icon は β リリースでは 1x1 px placeholder。本番運用では適切な 
 
 ### "KC_ENTRA_IDP_ALIAS is not configured"
 
-- **原因**: Nudge の `.env` に `KC_ENTRA_IDP_ALIAS` が設定されていない
-- **対処**: ステップ 3.1 を実施 → Nudge web 再起動
+- **原因**: NudgeFlow の `.env` に `KC_ENTRA_IDP_ALIAS` が設定されていない
+- **対処**: ステップ 3.1 を実施 → NudgeFlow web 再起動
 
 ### Teams で「This app could not be installed」
 
@@ -282,7 +282,7 @@ icon は β リリースでは 1x1 px placeholder。本番運用では適切な 
 
 ### iframe が真っ白 / CSP エラー
 
-- **原因**: Nudge 側の CSP が Teams を許可していない（ローカル開発で middleware を bypass している場合等）
+- **原因**: NudgeFlow 側の CSP が Teams を許可していない（ローカル開発で middleware を bypass している場合等）
 - **対処**: middleware が動いているか確認、ブラウザ DevTools の console で CSP エラーメッセージ確認
 
 ## 制限事項（β）

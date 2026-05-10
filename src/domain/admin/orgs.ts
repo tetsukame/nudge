@@ -149,7 +149,7 @@ async function loadEditable(
     throw new AdminOrgError('org not found', 'not_found');
   }
   if (rows[0].external_id !== null) {
-    throw new AdminOrgError('keycloak-synced org is read-only in Nudge', 'kc_readonly');
+    throw new AdminOrgError('keycloak-synced org is read-only in NudgeFlow', 'kc_readonly');
   }
   return rows[0];
 }

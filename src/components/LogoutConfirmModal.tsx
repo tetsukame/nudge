@@ -37,7 +37,7 @@ export function LogoutConfirmModal({ tenantCode, open, onCancel }: Props) {
           他のアプリからもログアウトされます。続行しますか？
         </p>
         <p style={{ color: '#666', fontSize: '0.9em' }}>
-          Nudge だけ非表示にしたい場合は、ブラウザのタブを閉じてください。
+          NudgeFlow だけ非表示にしたい場合は、ブラウザのタブを閉じてください。
           セッションは 14 日間保持されるので、通知から再アクセスすると
           自動で復帰します。
         </p>

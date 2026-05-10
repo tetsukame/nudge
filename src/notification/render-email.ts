@@ -20,13 +20,13 @@ export function renderEmail(ctx: NotificationContext): { subject: string; text: 
     case 'completed': {
       const completedBy = (typeof ctx.payload.completedBy === 'string' && ctx.payload.completedBy) || '担当者';
       return {
-        subject: `【Nudge】依頼が完了されました: ${title}`,
+        subject: `【NudgeFlow】依頼が完了されました: ${title}`,
         text: `${greeting}依頼が完了されました。\n\n依頼: ${title}\n対応者: ${completedBy}`,
       };
     }
     default: {
       const marker = KIND_MARKERS[ctx.kind];
-      const subject = `【Nudge】${marker}: ${title}`;
+      const subject = `【NudgeFlow】${marker}: ${title}`;
       const text = `${greeting}${marker}: ${title}`;
       return { subject, text };
     }

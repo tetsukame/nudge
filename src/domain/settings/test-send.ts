@@ -130,7 +130,7 @@ export async function testSend(
           recipientName,
           kind: 'created',
           payload: {
-            title: '[テスト送信] Nudge 通知設定の動作確認',
+            title: '[テスト送信] NudgeFlow 通知設定の動作確認',
             isTestSend: true,
           },
         },

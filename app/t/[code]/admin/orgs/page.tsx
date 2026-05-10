@@ -37,7 +37,7 @@ export default async function AdminOrgsPage({
       </Link>
       <h1 className="text-xl font-bold text-gray-900">🏢 組織管理</h1>
       <p className="text-sm text-gray-600">
-        テナント内の組織ツリーを表示します。Nudge 上で手動作成された組織は編集・アーカイブが可能、
+        テナント内の組織ツリーを表示します。NudgeFlow 上で手動作成された組織は編集・アーカイブが可能、
         Keycloak 同期由来の組織は read-only です（KC 側で追加・削除してください）。
       </p>
 

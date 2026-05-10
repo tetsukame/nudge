@@ -137,6 +137,10 @@ export function CommentSection({
   const [sendingReply, setSendingReply] = useState<string | null>(null);
   const [error, setError] = useState('');
   const threadEndRef = useRef<HTMLDivElement>(null);
+  // 初回ロード時は null。fetch 完了後にスレッド件数を記録し、
+  // 以降は「件数が増えた時」だけスレッド末尾までスクロールする。
+  // 初回でいきなりスクロールするとページ全体が下に飛ぶため (NDG-31)。
+  const previousThreadLength = useRef<number | null>(null);
 
   const fetchComments = useCallback(async () => {
     setLoading(true);
@@ -158,7 +162,15 @@ export function CommentSection({
   }, [fetchComments]);
 
   useEffect(() => {
-    threadEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const currentLength = data?.myThread?.length ?? 0;
+    if (
+      previousThreadLength.current !== null &&
+      currentLength > previousThreadLength.current
+    ) {
+      // block: 'nearest' で内側のスクロールコンテナに限定 (page 全体は動かさない)
+      threadEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    previousThreadLength.current = currentLength;
   }, [data?.myThread]);
 
   async function postComment(body: string, asgId: string | null) {

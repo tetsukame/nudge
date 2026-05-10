@@ -112,6 +112,18 @@ function AdminUsersBrowserInner({ tenantCode, orgUnits, currentUserId }: Props) 
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
+  // Encode current filters so the detail page can reconstruct the list URL on its back link.
+  function buildDetailHref(userId: string): string {
+    const back = new URLSearchParams();
+    if (orgUnitId) back.set('orgUnitId', orgUnitId);
+    if (!includeDescendants) back.set('includeDescendants', 'false');
+    if (q.trim()) back.set('q', q.trim());
+    if (page > 1) back.set('page', String(page));
+    const qs = back.toString();
+    const base = `/t/${tenantCode}/admin/users/${userId}`;
+    return qs ? `${base}?back=${encodeURIComponent(qs)}` : base;
+  }
+
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
@@ -245,7 +257,7 @@ function AdminUsersBrowserInner({ tenantCode, orgUnits, currentUserId }: Props) 
                       </td>
                       <td className="px-4 py-2">
                         <Link
-                          href={`/t/${tenantCode}/admin/users/${u.id}`}
+                          href={buildDetailHref(u.id)}
                           className="text-primary hover:underline text-xs"
                         >
                           詳細 →

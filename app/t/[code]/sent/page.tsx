@@ -1,8 +1,10 @@
 import { cookies } from 'next/headers';
+import { Send } from 'lucide-react';
 import { unsealSession } from '@/auth/session';
 import { loadConfig } from '@/config';
 import { appPool } from '@/db/pools';
 import { listSentRequests } from '@/domain/request/list-sent';
+import { PageHeader } from '@/ui/components/page-header';
 import { RequestCard } from '@/ui/components/request-card';
 import Link from 'next/link';
 
@@ -32,7 +34,11 @@ export default async function SentRequestsPage({
 
   return (
     <div className="p-4 md:p-6 max-w-4xl">
-      <h1 className="text-xl font-bold mb-4">📤 送信した依頼</h1>
+      <PageHeader
+        icon={<Send />}
+        title="送信した依頼"
+        description="あなたが送信した依頼の進捗を確認できます。"
+      />
 
       <div className="flex gap-0 border-b-2 border-gray-200 mb-4">
         <Link href={`/t/${code}/sent?filter=all`}

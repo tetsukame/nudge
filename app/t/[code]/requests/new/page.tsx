@@ -8,6 +8,7 @@ import {
   CalendarClock,
   CheckCircle2,
   FileText,
+  PlusCircle,
   Send,
   Users,
 } from 'lucide-react';
@@ -15,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageHeader } from '@/ui/components/page-header';
 import { TargetPicker } from '@/ui/components/target-picker';
 import { MarkdownEditor } from '@/ui/components/markdown-editor';
 import type { TargetSpec } from '@/domain/request/expand-targets';
@@ -72,7 +74,10 @@ export default function NewRequestPage() {
     return match?.name ?? orgUnits[0]?.name ?? '主所属を使用';
   }, [isPersonal, orgUnits, senderOrgUnitId]);
 
-  const canSubmit = title.trim().length > 0 && targets.length > 0 && !loading;
+  const missingReasons: string[] = [];
+  if (!title.trim()) missingReasons.push('タイトルを入力してください');
+  if (targets.length === 0) missingReasons.push('送信先を 1 つ以上選択してください');
+  const canSubmit = missingReasons.length === 0 && !loading;
 
   async function handleSubmit() {
     if (!title.trim()) {
@@ -120,7 +125,11 @@ export default function NewRequestPage() {
         ← 一覧に戻る
       </Link>
 
-      <h1 className="text-xl font-bold text-gray-900">新規依頼作成</h1>
+      <PageHeader
+        icon={<PlusCircle />}
+        title="新規依頼作成"
+        description="送信先・期限・想定時間を指定して新しい依頼を作成します。"
+      />
 
       <div className="grid lg:grid-cols-3 lg:gap-6 gap-4">
         {/* Form column */}
@@ -285,8 +294,8 @@ export default function NewRequestPage() {
         </div>
 
         {/* Summary column */}
-        <aside className="lg:col-span-1">
-          <div className="lg:sticky lg:top-6 space-y-3">
+        <aside className="lg:col-span-1 lg:self-start lg:sticky lg:top-6">
+          <div className="space-y-3">
             <Card className="border-primary/20">
               <CardHeader className="p-5 pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -312,9 +321,11 @@ export default function NewRequestPage() {
                 </SummaryRow>
 
                 <SummaryRow label="期限">
-                  <span className={dueAt ? 'text-foreground' : 'text-muted-foreground'}>
-                    {formatDateLabel(dueAt)}
-                  </span>
+                  {dueAt ? (
+                    <span className="text-foreground">{formatDateLabel(dueAt)}</span>
+                  ) : (
+                    <span className="text-red-500">未設定</span>
+                  )}
                 </SummaryRow>
 
                 <SummaryRow label="想定時間">
@@ -330,6 +341,17 @@ export default function NewRequestPage() {
                     対象者にテナント設定の経路（メール / Teams 等）で送信されます
                   </span>
                 </SummaryRow>
+
+                {!canSubmit && !loading && missingReasons.length > 0 && (
+                  <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 space-y-0.5">
+                    <p className="font-medium">送信するには次の項目が必要です</p>
+                    <ul className="list-disc pl-4">
+                      {missingReasons.map((r) => (
+                        <li key={r}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {error && (
                   <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">

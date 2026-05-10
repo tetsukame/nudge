@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { FileText } from 'lucide-react';
 import { unsealSession } from '@/auth/session';
 import { loadConfig } from '@/config';
 import { appPool } from '@/db/pools';
@@ -9,6 +10,7 @@ import { openAssignment } from '@/domain/assignment/actions';
 import { markViewed } from '@/domain/assignment/view';
 import { listAssignees } from '@/domain/request/assignees';
 import { markViewedByRequester } from '@/domain/request/mark-viewed-requester';
+import { PageHeader } from '@/ui/components/page-header';
 import { StatusBadge } from '@/ui/components/status-badge';
 import { ActionButtons } from '@/ui/components/action-buttons';
 import { CommentSection } from '@/ui/components/comment-thread';
@@ -189,10 +191,14 @@ export default async function RequestDetailPage({
         {backLabel}
       </Link>
 
+      <PageHeader
+        icon={<FileText />}
+        title={req.title}
+        description="依頼の本文・進捗・コメントを確認できます。"
+      />
+
       {/* Header */}
       <div className="bg-white rounded-lg border border-gray-200 p-5 space-y-4">
-        <h1 className="text-lg font-bold text-gray-900">{req.title}</h1>
-
         <div className="flex flex-wrap gap-4 text-sm text-gray-600">
           {req.sender_name && (
             <div>

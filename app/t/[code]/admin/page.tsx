@@ -1,10 +1,21 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import {
+  Bell,
+  Building2,
+  ScrollText,
+  Settings,
+  TriangleAlert,
+  UserRound,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { unsealSession } from '@/auth/session';
 import { loadConfig } from '@/config';
 import { appPool } from '@/db/pools';
 import { getDashboardStats } from '@/domain/admin/dashboard';
+import { PageHeader } from '@/ui/components/page-header';
 
 export const runtime = 'nodejs';
 
@@ -28,7 +39,11 @@ export default async function AdminDashboardPage({
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-      <h1 className="text-xl font-bold text-gray-900">⚙️ 管理</h1>
+      <PageHeader
+        icon={<Settings />}
+        title="管理"
+        description="テナント全体のユーザー・組織・依頼・通知をまとめて管理します。"
+      />
 
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
@@ -75,17 +90,46 @@ export default async function AdminDashboardPage({
         />
       </section>
 
-      <section className="bg-white rounded-lg border border-gray-200 p-5 space-y-2">
+      <section className="space-y-3">
         <h2 className="text-sm font-medium text-gray-700">管理メニュー</h2>
-        <ul className="text-sm space-y-1">
-          <AdminLink href={`/t/${code}/admin/sent`} label="📤 テナント全体の依頼（進行中 / 完了）" />
-          <AdminLink href={`/t/${code}/admin/users`} label="👥 ユーザー管理（一覧 / 主所属 / ロール）" />
-          <AdminLink href={`/t/${code}/admin/groups`} label="👨‍👩‍👧‍👦 グループ管理（テナント全体）" />
-          <AdminLink href={`/t/${code}/admin/orgs`} label="🏢 組織管理（作成 / アーカイブ）" />
-          <AdminLink href={`/t/${code}/admin/audit`} label="📋 監査ログ" />
-          <AdminLink href={`/t/${code}/admin/failed-notifications`} label="⚠️ 失敗通知の手動再送" />
-          <AdminLink href={`/t/${code}/settings/notification`} label="📨 通知設定 (SMTP / Teams / Slack)" />
-        </ul>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <AdminMenuCard
+            href={`/t/${code}/admin/users`}
+            icon={Users}
+            title="ユーザー管理"
+            description="一覧・主所属・ロールの編集"
+          />
+          <AdminMenuCard
+            href={`/t/${code}/admin/groups`}
+            icon={UserRound}
+            title="グループ管理"
+            description="テナント全体のグループ作成・編集"
+          />
+          <AdminMenuCard
+            href={`/t/${code}/admin/orgs`}
+            icon={Building2}
+            title="組織管理"
+            description="組織の作成・アーカイブ"
+          />
+          <AdminMenuCard
+            href={`/t/${code}/admin/audit`}
+            icon={ScrollText}
+            title="監査ログ"
+            description="操作履歴の確認"
+          />
+          <AdminMenuCard
+            href={`/t/${code}/settings/notification`}
+            icon={Bell}
+            title="通知設定"
+            description="SMTP / Teams / Slack の設定"
+          />
+          <AdminMenuCard
+            href={`/t/${code}/admin/failed-notifications`}
+            icon={TriangleAlert}
+            title="失敗通知"
+            description="配信失敗した通知の手動再送"
+          />
+        </div>
       </section>
     </div>
   );
@@ -114,10 +158,26 @@ function StatCard({
     : <div className={className}>{inner}</div>;
 }
 
-function AdminLink({ href, label }: { href: string; label: string }) {
+function AdminMenuCard({
+  href, icon: Icon, title, description,
+}: {
+  href: string;
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}) {
   return (
-    <li>
-      <Link href={href} className="text-primary hover:underline">{label}</Link>
-    </li>
+    <Link
+      href={href}
+      className="group flex items-start gap-3 p-4 rounded-lg border border-gray-200 bg-white transition-all hover:border-primary/40 hover:bg-emerald-50/40 hover:shadow-sm no-underline"
+    >
+      <span className="shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-md bg-primary/10 text-primary group-hover:bg-primary/15">
+        <Icon className="h-5 w-5" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+      </div>
+    </Link>
   );
 }

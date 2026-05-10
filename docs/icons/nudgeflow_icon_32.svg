@@ -1,0 +1,26 @@
+<svg width="32" height="32" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="20" y1="20" x2="172" y2="172" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2FBF71"/>
+      <stop offset="1" stop-color="#6EDB77"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="192" height="192" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000000" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <rect x="12" y="12" width="168" height="168" rx="30" fill="url(#bg)"/>
+
+  <!-- flowing gentle ripples -->
+  <path d="M33 122C33 101 41 90 57 88C73 86 79 96 90 104C101 112 115 114 129 101C143 88 153 70 168 55C176 47 183 43 188 42" stroke="white" stroke-opacity="0.16" stroke-width="5" stroke-linecap="round"/>
+  <path d="M40 132C40 112 48 101 63 99C77 97 84 106 95 114C106 122 119 124 132 112C145 100 155 83 169 69C176 62 183 58 188 57" stroke="white" stroke-opacity="0.15" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M48 141C48 123 56 112 69 110C81 108 88 116 99 124C110 132 122 134 135 123C148 112 158 96 170 83C176 76 183 72 188 71" stroke="white" stroke-opacity="0.13" stroke-width="4" stroke-linecap="round"/>
+  <path d="M57 149C57 133 64 123 76 121C87 119 94 126 104 134C114 142 126 144 138 134C150 124 159 110 170 98C176 91 182 87 188 86" stroke="white" stroke-opacity="0.11" stroke-width="3.6" stroke-linecap="round"/>
+
+  <!-- subtle circular origin ripples -->
+  <path d="M21 123C21 105 27 95 40 92C52 89 63 94 70 104" stroke="white" stroke-opacity="0.12" stroke-width="4" stroke-linecap="round"/>
+  <path d="M27 137C27 119 33 108 46 105C58 102 68 106 77 117" stroke="white" stroke-opacity="0.10" stroke-width="3.8" stroke-linecap="round"/>
+  <path d="M34 150C34 133 40 122 52 119C64 116 74 121 83 131" stroke="white" stroke-opacity="0.09" stroke-width="3.5" stroke-linecap="round"/>
+
+  <path filter="url(#shadow)" d="M61 104L87 130L134 83" stroke="white" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

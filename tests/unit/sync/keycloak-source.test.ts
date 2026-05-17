@@ -46,8 +46,26 @@ describe('KeycloakSyncSource', () => {
     expect(allUsers).toHaveLength(2);
     expect(allUsers[0]).toEqual({
       externalId: 'id-1', email: 'a@x', displayName: 'Alice A', active: true,
+      position: null,
     });
     expect(allUsers[1].active).toBe(false);
+  });
+
+  it('parses position attribute into position', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => TOKEN_RESPONSE });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [
+        { ...kcUser('id-p', 'p@x', 'Po', 'Sition'), attributes: { position: ['課長'] } },
+        { ...kcUser('id-q', 'q@x', 'No', 'Attr') },
+      ],
+    });
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
+
+    const out = [];
+    for await (const chunk of source.fetchAllUsers()) out.push(...chunk);
+    expect(out[0].position).toBe('課長');
+    expect(out[1].position).toBeNull();
   });
 
   it('fetchDeltaUsers parses admin events', async () => {
@@ -69,7 +87,7 @@ describe('KeycloakSyncSource', () => {
     const since = new Date(Date.now() - 3600_000);
     const users = await source.fetchDeltaUsers(since);
     expect(users).toHaveLength(2);
-    expect(users[0]).toEqual({ externalId: 'id-new', email: 'new@x', displayName: 'New User', active: true });
+    expect(users[0]).toEqual({ externalId: 'id-new', email: 'new@x', displayName: 'New User', active: true, position: null });
     expect(users[1]).toEqual({ externalId: 'id-del', email: '', displayName: '', active: false });
   });
 

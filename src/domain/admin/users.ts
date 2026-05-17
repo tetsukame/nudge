@@ -152,6 +152,10 @@ export type AdminUserDetail = {
   createdAt: string;
   orgUnits: Array<{ id: string; name: string; isPrimary: boolean }>;
   roles: string[];
+  /** NDG-48: 'kc' = 同期由来, 'manual' = 手動ロック, null = 未判定 */
+  managerSource: 'kc' | 'manual' | null;
+  /** NDG-48: 直近の KC position 値 */
+  syncedPosition: string | null;
 };
 
 export async function getAdminUser(
@@ -167,8 +171,11 @@ export async function getAdminUser(
       email: string;
       status: 'active' | 'inactive';
       created_at: Date;
+      manager_source: 'kc' | 'manual' | null;
+      synced_position: string | null;
     }>(
-      `SELECT id, display_name, email, status, created_at
+      `SELECT id, display_name, email, status, created_at,
+              manager_source, synced_position
          FROM users WHERE id = $1`,
       [userId],
     );
@@ -197,6 +204,8 @@ export async function getAdminUser(
       createdAt: new Date(u.created_at).toISOString(),
       orgUnits: orgRows.map((r) => ({ id: r.id, name: r.name, isPrimary: r.is_primary })),
       roles: roleRows.map((r) => r.role),
+      managerSource: u.manager_source ?? null,
+      syncedPosition: u.synced_position ?? null,
     };
   });
 }

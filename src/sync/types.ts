@@ -3,6 +3,11 @@ export type SyncUserRecord = {
   email: string;
   displayName: string;
   active: boolean;
+  /**
+   * NDG-48: KC user attribute `position` の値（例: "課長"）。
+   * 取得できないソース / 未設定ユーザーは undefined。
+   */
+  position?: string | null;
 };
 
 export type SyncResult = {

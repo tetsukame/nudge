@@ -203,6 +203,7 @@ type KcUser = {
   firstName?: string;
   lastName?: string;
   enabled?: boolean;
+  attributes?: Record<string, string[]>;
 };
 
 type KcAdminEvent = {
@@ -216,10 +217,13 @@ function toSyncRecord(user: KcUser): SyncUserRecord {
   const first = user.firstName ?? '';
   const last = user.lastName ?? '';
   const displayName = `${first} ${last}`.trim() || user.email || user.id;
+  const rawPosition = user.attributes?.position?.[0];
+  const position = rawPosition && rawPosition.trim() ? rawPosition.trim() : null;
   return {
     externalId: user.id,
     email: user.email ?? '',
     displayName,
     active: user.enabled !== false,
+    position,
   };
 }

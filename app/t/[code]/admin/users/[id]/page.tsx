@@ -77,6 +77,8 @@ export default async function AdminUserDetailPage({
         initialOrgUnits={user.orgUnits}
         initialRoles={user.roles}
         initialManagedOrgs={managedOrgs}
+        managerSource={user.managerSource}
+        syncedPosition={user.syncedPosition}
         allOrgUnits={flatOrgs}
       />
     </div>

@@ -43,7 +43,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
  * - In admin context (URL contains /admin/ OR ?from=admin/...), the "管理" item is active.
  * - Otherwise the first item whose href matches the pathname prefix.
  */
-function isItemActive(
+export function isItemActive(
   item: NavItem,
   pathname: string,
   href: string,
@@ -56,6 +56,11 @@ function isItemActive(
   if (inAdminContext) {
     // In admin context, only the "admin" / "admin/failed-notifications" items can be active
     if (!item.href.startsWith('admin')) return false;
+  } else if (fromParam === 'sent' || fromParam === 'subordinates') {
+    // Opened a request detail from the 送信した依頼 / 部下の依頼 list
+    // (?from=sent|subordinates). Keep that list item active instead of
+    // letting the /requests/<id> path light up 自分宛の依頼.
+    return item.href === fromParam;
   }
 
   if (pathname === href) return true;
@@ -137,7 +142,11 @@ export function Sidebar({
 
   return (
     <aside className="hidden md:flex md:flex-col md:w-52 bg-slate-900 text-white min-h-screen shrink-0">
-      <div className="flex items-center gap-2 px-4 h-14 border-b border-slate-800">
+      <Link
+        href={`/t/${tenantCode}`}
+        className="flex items-center gap-2 px-4 h-14 border-b border-slate-800 no-underline text-white hover:bg-white/5 transition-colors"
+        title="ダッシュボード"
+      >
         <img
           src="/nudgeflow_icon_64.svg"
           alt=""
@@ -146,7 +155,7 @@ export function Sidebar({
           className="shrink-0"
         />
         <span className="text-lg font-bold">NudgeFlow</span>
-      </div>
+      </Link>
 
       <nav className="flex-1 px-2 py-4 space-y-1">
         <Suspense fallback={null}>

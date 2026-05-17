@@ -36,6 +36,8 @@ type Props = {
   };
   /** コピー由来のときに UI 上で出すバナー文言。 */
   copySourceTitle?: string | null;
+  /** NDG-50: 引き継げなかった送信先（削除済み参照）の人間可読ラベル。 */
+  droppedTargets?: string[];
   /** NDG-50: コピー時に送信先チップを名前表示するための id→名前 メタ。 */
   initialOrgMeta?: Record<string, string>;
   initialUserMeta?: Record<string, UserResult>;
@@ -50,7 +52,7 @@ function formatDateLabel(value: string): string {
 
 export function NewRequestForm({
   tenantCode, initialGroupId, initialValues, copySourceTitle,
-  initialOrgMeta, initialUserMeta,
+  droppedTargets, initialOrgMeta, initialUserMeta,
 }: Props) {
   const code = tenantCode;
   const router = useRouter();
@@ -148,6 +150,12 @@ export function NewRequestForm({
             <span>
               「{copySourceTitle}」をコピーして作成しています。期限は新しく指定してください。
             </span>
+          </div>
+        )}
+        {droppedTargets && droppedTargets.length > 0 && (
+          <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            一部の送信先は参照先が存在しないため引き継げませんでした（
+            {droppedTargets.join(' / ')}）。必要に応じて送信先を選び直してください。
           </div>
         )}
 

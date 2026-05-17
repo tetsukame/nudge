@@ -72,6 +72,62 @@ describe('NDG-43 getRequestForCopy', () => {
       id: s.users.memberA,
       displayName: 'a@test',
     });
+    expect(result.droppedTargets).toEqual([]);
+  });
+
+  it('drops targets whose referenced org/user no longer exists and reports them', async () => {
+    const s = await createDomainScenario(getPool());
+    const adminCookie = await makeSessionCookie({
+      userId: s.users.admin, tenantId: s.tenantId, tenantCode: s.tenantCode,
+    });
+
+    const create = await createReq(
+      new NextRequest(`http://localhost/t/${s.tenantCode}/api/requests`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: adminCookie },
+        body: JSON.stringify({
+          title: 'stale targets',
+          dueAt: new Date(Date.now() + 86400000).toISOString(),
+          targets: [
+            { type: 'user', userId: s.users.memberA },
+            { type: 'org_unit', orgUnitId: s.orgTeam, includeDescendants: false },
+          ],
+        }),
+      }),
+      { params: Promise.resolve({ code: s.tenantCode }) },
+    );
+    const { id: requestId } = await create.json();
+
+    // Orphan the org_unit target by repointing it to a non-existent id,
+    // and deactivate the user target.
+    await getPool().query(
+      `UPDATE request_target SET target_id = '00000000-0000-0000-0000-0000000000ff'
+        WHERE request_id = $1 AND target_type = 'org_unit'`,
+      [requestId],
+    );
+    await getPool().query(
+      `UPDATE users SET status = 'inactive' WHERE id = $1`,
+      [s.users.memberA],
+    );
+
+    const result = await getRequestForCopy(
+      getPool(),
+      {
+        userId: s.users.admin,
+        tenantId: s.tenantId,
+        isTenantAdmin: true,
+        isTenantWideRequester: false,
+      },
+      requestId,
+    );
+
+    // Both targets unresolvable → none carried over, both reported.
+    expect(result.targets).toEqual([]);
+    expect([...result.droppedTargets].sort()).toEqual(
+      ['個人（退会済み）', '組織（削除済み）'],
+    );
+    expect(result.orgMeta).toEqual({});
+    expect(result.userMeta).toEqual({});
   });
 
   it('rejects copy attempt by an unrelated assignee with permission_denied', async () => {

@@ -11,19 +11,23 @@
 
 行政・大企業のように「メールでお願い → 誰が出したかわからない → 督促が大変」になりがちな業務依頼を、テナント単位でまとめて見える化することを目的とした Web アプリです。Keycloak と連携してユーザー / 組織 / グループを取得し、依頼の送信・対応・督促・通知（メール / Teams / Slack）までを一元化します。
 
-## 機能（v0.14 時点）
+## 機能（v0.21 時点）
 
-- **依頼管理**: 依頼作成、配信先指定（個人 / 組織 / グループ）、期限管理、Markdown 本文（裸 URL も自動リンク化）
-- **対応フロー**: 未開封 / 既読 / 対応中 / 完了 / 差戻し のステータス、コメント、回答収集
+- **ダッシュボード**: ログイン後、自分宛の未対応 / 送信した依頼の進捗 / 部下の未処理をサマリ表示
+- **依頼管理**: 依頼作成、配信先指定（個人 / 組織 / グループ）、期限・想定所要時間、Markdown 本文（ツールバー＋裸 URL 自動リンク）、過去依頼のコピー再利用
+- **対応フロー**: 未開封 / 開封 / 対応中 / 完了 / 差戻し のステータス、コメント、対象者一覧
+- **督促**: 手動リマインド（1h レート制限）、全員への一斉コメント、未対応者・期限切れへのディープリンク
+- **マネージャ機能**: 部下の未処理ボード（タスク／人トグル・完了率・期限フィルタ・個別リマインド）、退職依頼者の差し替え
 - **マルチテナント**: PostgreSQL 17 の Row-Level Security でテナント分離。`/t/<tenant_code>/...` URL 体系
-- **OIDC 認証**: Keycloak 26 を IdP として利用（外部 IdP ブローカー経由の SSO にも対応可）
-- **同期**: Keycloak からユーザー / 組織 / グループを定期同期（API キーで保護されたエンドポイント）
-- **通知**: メール（SMTP）→ Teams Webhook → Slack Webhook の優先順位でフォールバック、永続失敗時はバッジ表示
-- **管理 UI**: tenant_admin 用ダッシュボード（ユーザー / 組織 / グループ / 通知設定 / 同期実行）
-- **ルート管理**: platform_admin によるテナント追加・削除、ローカル認証
+- **OIDC 認証**: Keycloak 26 を IdP として利用（外部 IdP ブローカー経由 SSO・Microsoft Teams タブ統合 β）
+- **同期**: Keycloak からユーザー / 組織 / グループ / 職位（`position` → 管理職ロール）を定期同期
+- **通知**: メール（SMTP）→ Teams Webhook → Slack Webhook の優先順位でフォールバック、永続失敗時はバッジ表示・手動再送
+- **管理 UI**: tenant_admin 用（ユーザー / 組織 / グループ / ロール / マネージャ割当 / 職位設定 / 監査ログ / 通知設定 / 同期実行）
+- **ルート管理**: platform_admin によるテナント追加・削除
 - **組織のソフトデリート**: `org_unit.status = archived` で履歴保持。Keycloak で消えた組織は自動 archived 化、復活時に自動 active 化
 
-リポジトリは活発に開発中で、`v1.0` 安定版に向けて API 互換性は変更され得ます。
+製品名は **NudgeFlow**（技術名・リポジトリは `nudge`）。バージョンごとの変更は [CHANGELOG.md](CHANGELOG.md)、
+機能の概要は [docs/overview.md](docs/overview.md) を参照。リポジトリは活発に開発中で、`v1.0` 安定版に向けて API 互換性は変更され得ます。
 
 ## 必要環境
 
@@ -200,6 +204,8 @@ NudgeFlow を Microsoft Teams の Personal Tab として組み込むことがで
 
 ## ドキュメント
 
+- [製品概要 / パンフレット](docs/overview.md)
+- [変更履歴 (CHANGELOG)](CHANGELOG.md)
 - [DB ERD v0.1 設計書](docs/superpowers/specs/2026-04-11-db-erd-design.md)
 - [Microsoft Teams 統合（β）](docs/teams-integration.md)
 - 詳細仕様は `docs/superpowers/specs/`、各リリースの実装プランは `docs/superpowers/plans/` 配下

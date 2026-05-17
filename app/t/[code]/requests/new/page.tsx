@@ -118,6 +118,8 @@ export default async function NewRequestPage({
             : undefined
         }
         copySourceTitle={copySourceTitle}
+        initialOrgMeta={copySource?.orgMeta}
+        initialUserMeta={copySource?.userMeta}
       />
     </div>
   );

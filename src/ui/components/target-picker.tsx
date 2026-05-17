@@ -20,6 +20,10 @@ type Props = {
   /** 初期表示するタブ。NDG-37 でグループ画面から依頼作成に飛んだ時に
    *  group タブで開きたいケースを想定。 */
   initialTab?: TabKey;
+  /** NDG-50: コピーでプリフィルされた org/user ターゲットの id→名前 初期メタ。
+   *  これが無いと選択済みチップが UUID 表示になる。 */
+  initialOrgMeta?: Record<string, string>;
+  initialUserMeta?: Record<string, UserResult>;
 };
 
 type TabKey = 'org' | 'user' | 'group' | 'all';
@@ -30,11 +34,18 @@ export function TargetPicker({
   onChange,
   showAllTab = false,
   initialTab,
+  initialOrgMeta,
+  initialUserMeta,
 }: Props) {
   const [tab, setTab] = useState<TabKey>(initialTab ?? 'org');
-  // Keep metadata for display purposes (id -> name)
-  const [userMeta, setUserMeta] = useState<Map<string, UserResult>>(new Map());
-  const [orgMeta, setOrgMeta] = useState<Map<string, string>>(new Map());
+  // Keep metadata for display purposes (id -> name). Seeded from copy
+  // prefill (NDG-50) so chips show names instead of raw UUIDs.
+  const [userMeta, setUserMeta] = useState<Map<string, UserResult>>(
+    () => new Map(Object.entries(initialUserMeta ?? {})),
+  );
+  const [orgMeta, setOrgMeta] = useState<Map<string, string>>(
+    () => new Map(Object.entries(initialOrgMeta ?? {})),
+  );
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
 

@@ -319,36 +319,38 @@ function TaskGroup({
 
   return (
     <section className="rounded-lg border border-gray-200 bg-white">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left"
-      >
-        <Inbox className="h-4 w-4 text-primary shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate">{request.title}</p>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-            {due && (
-              <span className="inline-flex items-center gap-1">
-                <CalendarClock className="h-3 w-3" />
-                期限 {due.toLocaleDateString('ja-JP')}
-              </span>
-            )}
-            {request.subtreeTotal > 0 && (
-              <span title="自組織内の完了率">
-                完了 {completionPct}%（{request.subtreeDone}/{request.subtreeTotal}）
-              </span>
-            )}
-            <span>未処理 {request.pendingCount}</span>
-            {request.overdueCount > 0 && (
-              <span className="text-destructive">
-                期限切れ {request.overdueCount}
-              </span>
-            )}
+      <div className="w-full flex items-center gap-3 px-4 py-3">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-3 flex-1 min-w-0 text-left"
+        >
+          <Inbox className="h-4 w-4 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold truncate">{request.title}</p>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+              {due && (
+                <span className="inline-flex items-center gap-1">
+                  <CalendarClock className="h-3 w-3" />
+                  期限 {due.toLocaleDateString('ja-JP')}
+                </span>
+              )}
+              {request.subtreeTotal > 0 && (
+                <span title="自組織内の完了率">
+                  完了 {completionPct}%（{request.subtreeDone}/{request.subtreeTotal}）
+                </span>
+              )}
+              <span>未処理 {request.pendingCount}</span>
+              {request.overdueCount > 0 && (
+                <span className="text-destructive">
+                  期限切れ {request.overdueCount}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+        </button>
         <RemindRequestButton tenantCode={tenantCode} requestId={request.requestId} />
-      </button>
+      </div>
       {open && (
         <ul className="divide-y divide-gray-100 border-t border-gray-100">
           {cells.map((c) => {

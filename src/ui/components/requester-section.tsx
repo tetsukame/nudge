@@ -51,7 +51,7 @@ export function RequesterSection({
       </div>
 
       <div id="assignees" className="bg-white border border-gray-200 rounded-lg p-4 scroll-mt-6">
-        <h2 className="text-sm font-semibold mb-3">👥 assignee 一覧</h2>
+        <h2 className="text-sm font-semibold mb-3">👥 対象者一覧</h2>
         <AssigneeList
           tenantCode={tenantCode}
           requestId={requestId}

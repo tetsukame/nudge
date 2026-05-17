@@ -166,7 +166,7 @@ export function AssigneeListFilters({ tenantCode, initialStatuses, onChange }: P
         />
         <label
           className="flex items-center gap-1 text-xs text-gray-600"
-          title="自分（依頼者）がまだ目を通していない、対応者からのコメントがある assignee に絞り込みます。assignee の未開封ステータスとは別の概念です。未開封者だけを見たい場合は上のステータス「未開封」を選択してください。"
+          title="自分（依頼者）がまだ目を通していない、対応者からのコメントがある対象者に絞り込みます。対象者の未開封ステータスとは別の概念です。未開封者だけを見たい場合は上のステータス「未開封」を選択してください。"
         >
           <input
             type="checkbox"

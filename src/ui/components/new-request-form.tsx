@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TargetPicker } from '@/ui/components/target-picker';
+import type { UserResult } from '@/ui/components/user-search';
 import { MarkdownEditor } from '@/ui/components/markdown-editor';
 import type { TargetSpec } from '@/domain/request/expand-targets';
 import { cn } from '@/lib/utils';
@@ -35,6 +36,9 @@ type Props = {
   };
   /** コピー由来のときに UI 上で出すバナー文言。 */
   copySourceTitle?: string | null;
+  /** NDG-50: コピー時に送信先チップを名前表示するための id→名前 メタ。 */
+  initialOrgMeta?: Record<string, string>;
+  initialUserMeta?: Record<string, UserResult>;
 };
 
 function formatDateLabel(value: string): string {
@@ -46,6 +50,7 @@ function formatDateLabel(value: string): string {
 
 export function NewRequestForm({
   tenantCode, initialGroupId, initialValues, copySourceTitle,
+  initialOrgMeta, initialUserMeta,
 }: Props) {
   const code = tenantCode;
   const router = useRouter();
@@ -299,6 +304,8 @@ export function NewRequestForm({
               onChange={setTargets}
               showAllTab={false}
               initialTab={initialGroupId ? 'group' : undefined}
+              initialOrgMeta={initialOrgMeta}
+              initialUserMeta={initialUserMeta}
             />
           </CardContent>
         </Card>

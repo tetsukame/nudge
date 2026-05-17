@@ -13,12 +13,22 @@ export class CopySourceError extends Error {
   }
 }
 
+export type CopyUserMeta = {
+  id: string;
+  displayName: string;
+  email: string;
+  orgUnitName: string | null;
+};
+
 export type CopySource = {
   title: string;
   body: string;
   estimatedMinutes: number;
   senderOrgUnitId: string | null;
   targets: TargetSpec[];
+  /** NDG-50: コピー先フォームでチップを名前表示するための id→名前 解決メタ。 */
+  orgMeta: Record<string, string>;
+  userMeta: Record<string, CopyUserMeta>;
 };
 
 /**
@@ -84,12 +94,56 @@ export async function getRequestForCopy(
       }
     }
 
+    const orgIds = targets
+      .filter((t): t is Extract<TargetSpec, { type: 'org_unit' }> => t.type === 'org_unit')
+      .map((t) => t.orgUnitId);
+    const userIds = targets
+      .filter((t): t is Extract<TargetSpec, { type: 'user' }> => t.type === 'user')
+      .map((t) => t.userId);
+
+    const orgMeta: Record<string, string> = {};
+    if (orgIds.length > 0) {
+      const { rows: orgRows } = await client.query<{ id: string; name: string }>(
+        `SELECT id, name FROM org_unit WHERE id = ANY($1::uuid[])`,
+        [orgIds],
+      );
+      for (const o of orgRows) orgMeta[o.id] = o.name;
+    }
+
+    const userMeta: Record<string, CopyUserMeta> = {};
+    if (userIds.length > 0) {
+      const { rows: userRows } = await client.query<{
+        id: string;
+        display_name: string;
+        email: string;
+        org_unit_name: string | null;
+      }>(
+        `SELECT u.id, u.display_name, u.email,
+                (SELECT ou.name FROM user_org_unit uou
+                   JOIN org_unit ou ON ou.id = uou.org_unit_id
+                  WHERE uou.user_id = u.id AND uou.is_primary = true
+                  LIMIT 1) AS org_unit_name
+           FROM users u WHERE u.id = ANY($1::uuid[])`,
+        [userIds],
+      );
+      for (const u of userRows) {
+        userMeta[u.id] = {
+          id: u.id,
+          displayName: u.display_name,
+          email: u.email,
+          orgUnitName: u.org_unit_name,
+        };
+      }
+    }
+
     return {
       title: r.title,
       body: r.body,
       estimatedMinutes: r.estimated_minutes ?? 5,
       senderOrgUnitId: r.sender_org_unit_id,
       targets,
+      orgMeta,
+      userMeta,
     };
   });
 }

@@ -31,6 +31,7 @@ describe('NDG-43 getRequestForCopy', () => {
           targets: [
             { type: 'user', userId: s.users.memberA },
             { type: 'group', groupId: s.groupId },
+            { type: 'org_unit', orgUnitId: s.orgTeam, includeDescendants: false },
           ],
         }),
       }),
@@ -55,7 +56,7 @@ describe('NDG-43 getRequestForCopy', () => {
 
     // targets should be reconstructed; no due_at carried over
     const types = result.targets.map((t) => t.type).sort();
-    expect(types).toEqual(['group', 'user']);
+    expect(types).toEqual(['group', 'org_unit', 'user']);
     const userTarget = result.targets.find((t) => t.type === 'user');
     expect(userTarget && (userTarget as { userId: string }).userId).toBe(
       s.users.memberA,
@@ -64,6 +65,13 @@ describe('NDG-43 getRequestForCopy', () => {
     expect(groupTarget && (groupTarget as { groupId: string }).groupId).toBe(
       s.groupId,
     );
+
+    // NDG-50: org/user display names must be resolvable for copy prefill
+    expect(result.orgMeta[s.orgTeam]).toBe('Team');
+    expect(result.userMeta[s.users.memberA]).toMatchObject({
+      id: s.users.memberA,
+      displayName: 'a@test',
+    });
   });
 
   it('rejects copy attempt by an unrelated assignee with permission_denied', async () => {

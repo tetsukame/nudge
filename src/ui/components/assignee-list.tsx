@@ -143,7 +143,7 @@ export function AssigneeList({
           </li>
         ))}
         {items.length === 0 && !loading && (
-          <li className="text-sm text-gray-500 text-center py-4">該当する assignee がいません</li>
+          <li className="text-sm text-gray-500 text-center py-4">該当する対象者がいません</li>
         )}
       </ul>
     </div>

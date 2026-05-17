@@ -4,7 +4,7 @@ export type SyncUserRecord = {
   displayName: string;
   active: boolean;
   /**
-   * NDG-48: KC user attribute `nudge_position` の値（例: "課長"）。
+   * NDG-48: KC user attribute `position` の値（例: "課長"）。
    * 取得できないソース / 未設定ユーザーは undefined。
    */
   position?: string | null;

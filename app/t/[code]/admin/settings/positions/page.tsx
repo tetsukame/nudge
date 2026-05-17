@@ -51,7 +51,7 @@ export default async function PositionSettingsPage({
       <PageHeader
         icon={<Bell />}
         title="職位と管理職の設定"
-        description="Keycloak の nudge_position 属性のうち、どの職位を「管理職」とみなすかを設定します。"
+        description="Keycloak の position 属性のうち、どの職位を「管理職」とみなすかを設定します。"
       />
 
       <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-3">

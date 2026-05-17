@@ -2,7 +2,7 @@ import type pg from 'pg';
 import { applyTransferToManagerRoles } from './managers';
 
 /**
- * KC 同期で取得した職位 (`nudge_position`) を NudgeFlow の「管理職」状態に反映する。
+ * KC 同期で取得した職位 (`position`) を NudgeFlow の「管理職」状態に反映する。
  *
  * ルール (NDG-48):
  * - `users.synced_position` には常に最新の position を記録する（admin UI 表示用）。

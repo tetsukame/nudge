@@ -154,7 +154,7 @@ export type AdminUserDetail = {
   roles: string[];
   /** NDG-48: 'kc' = 同期由来, 'manual' = 手動ロック, null = 未判定 */
   managerSource: 'kc' | 'manual' | null;
-  /** NDG-48: 直近の KC nudge_position 値 */
+  /** NDG-48: 直近の KC position 値 */
   syncedPosition: string | null;
 };
 

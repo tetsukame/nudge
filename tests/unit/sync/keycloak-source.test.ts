@@ -51,12 +51,12 @@ describe('KeycloakSyncSource', () => {
     expect(allUsers[1].active).toBe(false);
   });
 
-  it('parses nudge_position attribute into position', async () => {
+  it('parses position attribute into position', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => TOKEN_RESPONSE });
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [
-        { ...kcUser('id-p', 'p@x', 'Po', 'Sition'), attributes: { nudge_position: ['課長'] } },
+        { ...kcUser('id-p', 'p@x', 'Po', 'Sition'), attributes: { position: ['課長'] } },
         { ...kcUser('id-q', 'q@x', 'No', 'Attr') },
       ],
     });

@@ -387,7 +387,7 @@ export function AdminUserDetailEditor({
         <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 space-y-0.5">
           <p>
             <span className="font-medium">KC 連携:</span>{' '}
-            職位（nudge_position）={' '}
+            職位（position）={' '}
             <span className="text-foreground">
               {syncedPosition ?? '（未取得）'}
             </span>

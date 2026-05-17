@@ -132,7 +132,7 @@ export async function removeManagedOrg(
 export async function applyTransferToManagerRoles(
   client: pg.PoolClient,
   tenantId: string,
-  actorUserId: string,
+  actorUserId: string | null,
   userId: string,
 ): Promise<{ wiped: number; reattached: string | null }> {
   const { rows: prev } = await client.query<{ org_unit_id: string }>(

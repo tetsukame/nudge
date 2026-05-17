@@ -25,6 +25,8 @@ type Props = {
   initialOrgUnits: OrgUnit[];
   initialRoles: string[];
   initialManagedOrgs: ManagedOrg[];
+  managerSource: 'kc' | 'manual' | null;
+  syncedPosition: string | null;
   allOrgUnits: FlatOrg[];
 };
 
@@ -36,7 +38,8 @@ const ROLE_LABEL: Record<Role, string> = {
 
 export function AdminUserDetailEditor({
   tenantCode, userId, currentUserId,
-  initialStatus, initialOrgUnits, initialRoles, initialManagedOrgs, allOrgUnits,
+  initialStatus, initialOrgUnits, initialRoles, initialManagedOrgs,
+  managerSource, syncedPosition, allOrgUnits,
 }: Props) {
   const router = useRouter();
   const isSelf = userId === currentUserId;
@@ -381,6 +384,30 @@ export function AdminUserDetailEditor({
           ))}
         </div>
         {rolesError && <p className="text-sm text-red-600">{rolesError}</p>}
+        <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 space-y-0.5">
+          <p>
+            <span className="font-medium">KC 連携:</span>{' '}
+            職位（nudge_position）={' '}
+            <span className="text-foreground">
+              {syncedPosition ?? '（未取得）'}
+            </span>
+            {' / '}
+            {managerSource === 'manual' ? (
+              <span className="text-amber-700">手動ロック中（同期で上書きされません）</span>
+            ) : managerSource === 'kc' ? (
+              <span className="text-emerald-700">KC 同期で自動判定</span>
+            ) : (
+              <span className="text-gray-500">未判定</span>
+            )}
+          </p>
+          {managerSource === 'manual' && (
+            <p>
+              手動トグルしたため KC 同期の対象外です。同期判定に戻すには
+              「管理職」を一度トグルし直すのではなく、運用ルール上は
+              職位設定（管理 → 職位と管理職）側で調整してください。
+            </p>
+          )}
+        </div>
         <p className="text-xs text-gray-500">
           ※ テナント内の最後の管理者からロールを外すことはできません（運用継続のため）。<br />
           ※「管理職」を ON にすると、この職員の主所属がマネージャ対象として自動登録されます。

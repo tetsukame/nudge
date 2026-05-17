@@ -124,6 +124,12 @@ export default async function AdminDashboardPage({
             description="SMTP / Teams / Slack の設定"
           />
           <AdminMenuCard
+            href={`/t/${code}/admin/settings/positions`}
+            icon={UserRound}
+            title="職位と管理職"
+            description="管理職とみなす職位 (KC 同期)"
+          />
+          <AdminMenuCard
             href={`/t/${code}/admin/failed-notifications`}
             icon={TriangleAlert}
             title="失敗通知"

@@ -88,6 +88,12 @@ export async function setUserRoles(
         [actor.tenantId, actor.userId, userId, JSON.stringify({ roles: requested })],
       );
       if (managerToggled) {
+        // NDG-48: a manual toggle locks the user out of KC position sync so
+        // an admin override is not silently reverted on the next sync.
+        await client.query(
+          `UPDATE users SET manager_source = 'manual' WHERE id = $1`,
+          [userId],
+        );
         // Wipe + re-apply (will INSERT primary if role is now manager; will leave empty otherwise).
         await applyTransferToManagerRoles(
           client, actor.tenantId, actor.userId, userId,

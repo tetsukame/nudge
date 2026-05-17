@@ -1,6 +1,10 @@
 import pg from 'pg';
 import { withTenant } from '../db/with-tenant';
 import type { SyncSource, SyncResult } from './types';
+import {
+  applySyncedPosition,
+  getManagerPositions,
+} from '../domain/admin/position-sync';
 
 export async function reconcileUsers(
   appPool: pg.Pool,
@@ -16,6 +20,7 @@ export async function reconcileUsers(
 
     for await (const chunk of source.fetchAllUsers()) {
       await withTenant(appPool, tenantId, async (client) => {
+        const managerPositions = await getManagerPositions(client, tenantId);
         for (const user of chunk) {
           seenIds.add(user.externalId);
           const status = user.active ? 'active' : 'inactive';
@@ -35,9 +40,22 @@ export async function reconcileUsers(
                CASE WHEN xmax = 0 THEN 'created' ELSE 'updated' END AS action`,
             [tenantId, user.externalId, user.email, user.displayName, status],
           );
-          if (rows.length === 0) continue;
-          if (rows[0].action === 'created') result.created++;
-          else result.updated++;
+          if (rows.length > 0) {
+            if (rows[0].action === 'created') result.created++;
+            else result.updated++;
+          }
+          // NDG-48: only the KC source carries `position` (undefined elsewhere).
+          if (user.position !== undefined) {
+            const { rows: idRows } = await client.query<{ id: string }>(
+              `SELECT id FROM users WHERE tenant_id = $1 AND keycloak_sub = $2`,
+              [tenantId, user.externalId],
+            );
+            if (idRows.length > 0) {
+              await applySyncedPosition(
+                client, tenantId, idRows[0].id, user.position, managerPositions,
+              );
+            }
+          }
         }
       });
     }
@@ -53,6 +71,7 @@ export async function reconcileUsers(
     const users = await source.fetchDeltaUsers(since);
 
     await withTenant(appPool, tenantId, async (client) => {
+      const managerPositions = await getManagerPositions(client, tenantId);
       for (const user of users) {
         const status = user.active ? 'active' : 'inactive';
         const { rows } = await client.query<{ action: string }>(
@@ -71,9 +90,21 @@ export async function reconcileUsers(
              CASE WHEN xmax = 0 THEN 'created' ELSE 'updated' END AS action`,
           [tenantId, user.externalId, user.email, user.displayName, status],
         );
-        if (rows.length === 0) continue;
-        if (rows[0].action === 'created') result.created++;
-        else result.updated++;
+        if (rows.length > 0) {
+          if (rows[0].action === 'created') result.created++;
+          else result.updated++;
+        }
+        if (user.position !== undefined) {
+          const { rows: idRows } = await client.query<{ id: string }>(
+            `SELECT id FROM users WHERE tenant_id = $1 AND keycloak_sub = $2`,
+            [tenantId, user.externalId],
+          );
+          if (idRows.length > 0) {
+            await applySyncedPosition(
+              client, tenantId, idRows[0].id, user.position, managerPositions,
+            );
+          }
+        }
       }
     });
   }

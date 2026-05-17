@@ -14,6 +14,11 @@ export type ListSentRequestsInput = {
    * default = false: actor が作成した依頼のみ。
    */
   tenantWide?: boolean;
+  /**
+   * NDG-41: 依頼者 (created_by) が退職 (users.status='inactive') の依頼のみに絞る。
+   * tenantWide のときだけ意味を持つ。
+   */
+  retiredRequesterOnly?: boolean;
 };
 
 export type SentRequestItem = {
@@ -22,7 +27,9 @@ export type SentRequestItem = {
   status: string;
   dueAt: string | null;
   createdAt: string;
+  createdByUserId: string | null;
   createdByName: string | null;
+  createdByStatus: 'active' | 'inactive' | null;
   total: number;
   unopened: number;
   opened: number;
@@ -78,6 +85,12 @@ export async function listSentRequests(
       qClause = `${creatorClause === '' ? 'WHERE' : 'AND'} r.title ILIKE $${params.length}`;
     }
 
+    let retiredClause = '';
+    if (tenantWide && input.retiredRequesterOnly) {
+      const kw = creatorClause === '' && qClause === '' ? 'WHERE' : 'AND';
+      retiredClause = `${kw} cu.status = 'inactive'`;
+    }
+
     let havingClause = '';
     if (filter === 'in_progress') {
       havingClause = `HAVING COUNT(*) FILTER (WHERE a.status IN ('unopened','opened')) > 0`;
@@ -92,7 +105,9 @@ export async function listSentRequests(
       LEFT JOIN users cu ON cu.id = r.created_by_user_id
       ${creatorClause}
       ${qClause}
-      GROUP BY r.id, r.title, r.status, r.due_at, r.created_at, cu.display_name
+      ${retiredClause}
+      GROUP BY r.id, r.title, r.status, r.due_at, r.created_at,
+               r.created_by_user_id, cu.display_name, cu.status
       ${havingClause}
     `;
 
@@ -114,7 +129,9 @@ export async function listSentRequests(
         r.status,
         r.due_at,
         r.created_at,
+        r.created_by_user_id,
         cu.display_name AS created_by_name,
+        cu.status AS created_by_status,
         COUNT(a.id)::int AS total,
         COUNT(*) FILTER (WHERE a.status = 'unopened')::int AS unopened,
         COUNT(*) FILTER (WHERE a.status = 'opened')::int AS opened,
@@ -141,7 +158,9 @@ export async function listSentRequests(
         status: r.status,
         dueAt: r.due_at ? new Date(r.due_at).toISOString() : null,
         createdAt: new Date(r.created_at).toISOString(),
+        createdByUserId: r.created_by_user_id ?? null,
         createdByName: r.created_by_name ?? null,
+        createdByStatus: r.created_by_status ?? null,
         total: r.total,
         unopened: r.unopened,
         opened: r.opened,

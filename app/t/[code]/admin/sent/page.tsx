@@ -6,6 +6,7 @@ import { loadConfig } from '@/config';
 import { appPool } from '@/db/pools';
 import { listSentRequests } from '@/domain/request/list-sent';
 import { RequestCard } from '@/ui/components/request-card';
+import { RequesterReassignAction } from '@/ui/components/requester-reassign-action';
 
 export const runtime = 'nodejs';
 
@@ -14,12 +15,13 @@ export default async function AdminSentPage({
   searchParams,
 }: {
   params: Promise<{ code: string }>;
-  searchParams: Promise<{ filter?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ filter?: string; q?: string; page?: string; retired?: string }>;
 }) {
   const { code } = await params;
   const sp = await searchParams;
   const filter = sp.filter ?? 'in_progress';
   const q = sp.q;
+  const retiredOnly = sp.retired === '1';
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const cfg = loadConfig();
@@ -35,7 +37,11 @@ export default async function AdminSentPage({
       isTenantAdmin: true,
       isTenantWideRequester: false,
     },
-    { filter: filter as 'all' | 'in_progress' | 'done', q, page, pageSize: 20, tenantWide: true },
+    {
+      filter: filter as 'all' | 'in_progress' | 'done',
+      q, page, pageSize: 20, tenantWide: true,
+      retiredRequesterOnly: retiredOnly,
+    },
   );
 
   return (
@@ -78,32 +84,66 @@ export default async function AdminSentPage({
         </Link>
       </div>
 
+      <div>
+        <Link
+          href={
+            retiredOnly
+              ? `/t/${code}/admin/sent?filter=${filter}`
+              : `/t/${code}/admin/sent?filter=${filter}&retired=1`
+          }
+          className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border transition-colors no-underline ${
+            retiredOnly
+              ? 'border-amber-400 bg-amber-50 text-amber-800'
+              : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          ⚠️ 退職者の依頼のみ
+        </Link>
+      </div>
+
       <div className="space-y-2">
         {result.items.length === 0 && (
           <p className="text-gray-500 text-center py-8">該当する依頼はありません</p>
         )}
-        {result.items.map((item) => (
-          <RequestCard
-            key={item.id}
-            href={`/t/${code}/requests/${item.id}?from=admin/sent`}
-            title={item.title}
-            subtitle={item.createdByName ? `送信者: ${item.createdByName}` : undefined}
-            dueLabel={
-              item.dueAt
-                ? `締切: ${new Date(item.dueAt).toLocaleDateString('ja-JP')}`
-                : undefined
-            }
-            meta={[
-              { label: '未開封', value: item.unopened },
-              { label: '対応済み', value: item.responded },
-            ]}
-            progress={{
-              done: item.done,
-              total: item.total,
-              overdue: item.overdueCount,
-            }}
-          />
-        ))}
+        {result.items.map((item) => {
+          const requesterRetired = item.createdByStatus === 'inactive';
+          const subtitle = item.createdByName
+            ? requesterRetired
+              ? `送信者: ${item.createdByName}（退職済み）`
+              : `送信者: ${item.createdByName}`
+            : undefined;
+          return (
+            <RequestCard
+              key={item.id}
+              href={`/t/${code}/requests/${item.id}?from=admin/sent`}
+              title={item.title}
+              subtitle={subtitle}
+              dueLabel={
+                item.dueAt
+                  ? `締切: ${new Date(item.dueAt).toLocaleDateString('ja-JP')}`
+                  : undefined
+              }
+              meta={[
+                { label: '未開封', value: item.unopened },
+                { label: '対応済み', value: item.responded },
+              ]}
+              progress={{
+                done: item.done,
+                total: item.total,
+                overdue: item.overdueCount,
+              }}
+              actions={
+                requesterRetired ? (
+                  <RequesterReassignAction
+                    tenantCode={code}
+                    requestId={item.id}
+                    currentRequesterName={item.createdByName}
+                  />
+                ) : undefined
+              }
+            />
+          );
+        })}
       </div>
 
       {result.total > page * 20 && (

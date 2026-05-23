@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { StatusBadge } from './status-badge';
 import { AssigneeListFilters } from './assignee-list-filters';
 import type { AssignmentStatus } from '@/domain/types';
@@ -162,6 +163,10 @@ function AssigneeDetail({
   const [sending, setSending] = useState(false);
   const [showSubstituteDialog, setShowSubstituteDialog] = useState(false);
   const [substituteReason, setSubstituteReason] = useState('');
+  const [substituteReasonCode, setSubstituteReasonCode] = useState<
+    'absent' | 'urgent' | 'overdue_rescue' | 'other'
+  >('absent');
+  const router = useRouter();
 
   const loadComments = useCallback(async () => {
     const res = await fetch(`/t/${tenantCode}/api/requests/${requestId}/comments`);
@@ -192,19 +197,30 @@ function AssigneeDetail({
     }
   }
 
+  const substituteReasonValid =
+    substituteReasonCode !== 'other' || substituteReason.trim().length > 0;
+
   async function substitute() {
     setSending(true);
     try {
       const res = await fetch(`/t/${tenantCode}/api/assignments/${assignmentId}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'substitute', reason: substituteReason }),
+        body: JSON.stringify({
+          action: 'substitute',
+          reasonCode: substituteReasonCode,
+          reason: substituteReason,
+        }),
       });
       if (res.ok) {
         setShowSubstituteDialog(false);
         setSubstituteReason('');
+        setSubstituteReasonCode('absent');
         await loadComments();
         onRefresh();
+        // NDG-75: parent (RequesterSection) の summary はサーバー由来なので
+        // router.refresh() で再算出させて全体進捗バーを更新する
+        router.refresh();
       } else {
         const data = await res.json();
         alert(data.error ?? '代理完了に失敗しました');
@@ -275,13 +291,45 @@ function AssigneeDetail({
           {showSubstituteDialog && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
               <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-                <h3 className="font-bold mb-3">代理完了の理由（必須）</h3>
-                <textarea
-                  value={substituteReason}
-                  onChange={(e) => setSubstituteReason(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md p-2 text-sm mb-4 min-h-[60px]"
-                  placeholder="代理完了する理由を入力..."
-                />
+                <h3 className="font-bold mb-3">代理完了</h3>
+                <div className="mb-4">
+                  <div className="text-sm font-medium mb-2">理由カテゴリ（必須）</div>
+                  <div className="space-y-1.5">
+                    {([
+                      // NDG-76: 'urgent' は内部コード。表示は「依頼者判断で完了」（NDG-48 と同じパターン）
+                      ['absent', '本人不在'],
+                      ['urgent', '依頼者判断で完了'],
+                      ['overdue_rescue', '期限超過救済'],
+                      ['other', 'その他'],
+                    ] as const).map(([code, label]) => (
+                      <label key={code} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="radio"
+                          name="substituteReasonCode"
+                          value={code}
+                          checked={substituteReasonCode === code}
+                          onChange={() => setSubstituteReasonCode(code)}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <div className="text-sm font-medium mb-1">
+                    {substituteReasonCode === 'other' ? '理由（必須）' : '補足（任意）'}
+                  </div>
+                  <textarea
+                    value={substituteReason}
+                    onChange={(e) => setSubstituteReason(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md p-2 text-sm min-h-[60px]"
+                    placeholder={
+                      substituteReasonCode === 'other'
+                        ? '代理完了する理由を入力してください'
+                        : '補足があれば入力（任意）'
+                    }
+                  />
+                </div>
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={() => setShowSubstituteDialog(false)}
@@ -291,7 +339,7 @@ function AssigneeDetail({
                   </button>
                   <button
                     onClick={() => void substitute()}
-                    disabled={sending || !substituteReason.trim()}
+                    disabled={sending || !substituteReasonValid}
                     className="px-4 py-2 bg-orange-600 text-white rounded-md text-sm disabled:opacity-50"
                   >
                     代理完了する

@@ -264,37 +264,60 @@ export async function forwardAssignment(
   });
 }
 
+export type SubstituteReasonCode = 'absent' | 'urgent' | 'overdue_rescue' | 'other';
+const SUBSTITUTE_REASON_CODES: ReadonlySet<string> = new Set([
+  'absent', 'urgent', 'overdue_rescue', 'other',
+]);
+
 export async function substituteAssignment(
   pool: pg.Pool,
   actor: ActorContext,
   assignmentId: string,
-  input: { reason: string },
+  input: { reason: string; reasonCode?: SubstituteReasonCode },
 ): Promise<void> {
-  if (!input.reason?.trim()) {
-    throw new AssignmentActionError('reason required', 'validation');
+  if (input.reasonCode && !SUBSTITUTE_REASON_CODES.has(input.reasonCode)) {
+    throw new AssignmentActionError('invalid reasonCode', 'validation');
+  }
+  // 'other' のときは自由記述が必須。他カテゴリ選択時の自由記述は任意。
+  // カテゴリ未指定の場合も理由は必須（互換性のため）。
+  if (input.reasonCode === 'other' || !input.reasonCode) {
+    if (!input.reason?.trim()) {
+      throw new AssignmentActionError('reason required', 'validation');
+    }
   }
   await withTenant(pool, actor.tenantId, async (client) => {
     const asg = await loadLocked(client, assignmentId);
-    const allowed = await canSubstitute(
-      client,
-      { requesterId: asg.created_by_user_id, assigneeId: asg.user_id },
-      actor.userId,
-    );
+    const allowed = actor.isTenantAdmin
+      || await canSubstitute(
+        client,
+        { requesterId: asg.created_by_user_id, assigneeId: asg.user_id },
+        actor.userId,
+      );
     if (!allowed) {
       throw new AssignmentActionError('not permitted to substitute', 'permission_denied');
     }
     const canAsRequester = actor.userId === asg.created_by_user_id
       && canTransition({ from: asg.status, to: 'substituted', actorRole: 'requester' });
     const canAsManager = canTransition({ from: asg.status, to: 'substituted', actorRole: 'manager' });
-    if (!canAsRequester && !canAsManager) {
+    const canAsAdmin = actor.isTenantAdmin
+      && canTransition({ from: asg.status, to: 'substituted', actorRole: 'tenant_admin' });
+    if (!canAsRequester && !canAsManager && !canAsAdmin) {
       throw new AssignmentActionError('cannot substitute', 'invalid_transition');
     }
+    // admin がマネージャ/依頼者でもある場合は manager 由来として扱う（より具体的なロールを優先）
+    const transitionKind = (canAsRequester || canAsManager)
+      ? 'manager_substitute'
+      : 'admin_substitute';
     await client.query(
-      `UPDATE assignment SET status='substituted', action_at=now() WHERE id=$1`,
-      [assignmentId],
+      `UPDATE assignment
+          SET status='substituted',
+              substitute_reason_code=$2,
+              action_at=now()
+        WHERE id=$1`,
+      [assignmentId, input.reasonCode ?? null],
     );
     await recordHistory(
-      client, actor.tenantId, asg, 'substituted', 'manager_substitute',
+      client, actor.tenantId, asg, 'substituted', transitionKind,
       actor.userId, input.reason, null,
     );
     if (actor.userId !== asg.user_id) {
@@ -304,7 +327,10 @@ export async function substituteAssignment(
         [actor.userId],
       );
       const actorName = actorRows[0]?.display_name ?? actor.userId;
-      const msg = `${actorName} さんが代理完了にしました。\n理由: ${input.reason}`;
+      const reasonLine = input.reason?.trim()
+        ? `\n理由: ${input.reason}`
+        : '';
+      const msg = `${actorName} さんが代理完了にしました。${reasonLine}`;
       await client.query(
         `INSERT INTO request_comment
            (tenant_id, request_id, assignment_id, author_user_id, body)
@@ -317,7 +343,11 @@ export async function substituteAssignment(
         requestId: asg.request_id,
         assignmentId: asg.id,
         kind: 'completed',
-        payload: { substitutedBy: actor.userId, reason: input.reason },
+        payload: {
+          substitutedBy: actor.userId,
+          reasonCode: input.reasonCode ?? null,
+          reason: input.reason ?? null,
+        },
       });
     }
     await emitCompletedToRequester(client, actor, asg, 'substituted');
@@ -330,7 +360,9 @@ export async function substituteAssignment(
         JSON.stringify({
           requestId: asg.request_id,
           assigneeUserId: asg.user_id,
-          reason: input.reason,
+          actorRole: transitionKind === 'admin_substitute' ? 'tenant_admin' : 'manager_or_requester',
+          reasonCode: input.reasonCode ?? null,
+          reason: input.reason ?? null,
         }),
       ],
     );

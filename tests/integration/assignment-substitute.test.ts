@@ -86,6 +86,95 @@ describe('substitute via REST', () => {
     expect(res.status).toBe(403);
   });
 
+  it('tenant_admin (not requester, not manager) can substitute and is recorded as admin_substitute', async () => {
+    const s = await createDomainScenario(getPool());
+    // wideReq creates request to outsider (admin is not requester, not manager of outsider)
+    const wideReqCookie = await makeSessionCookie({
+      userId: s.users.wideReq, tenantId: s.tenantId, tenantCode: s.tenantCode,
+    });
+    const createRes = await createReq(
+      new NextRequest(`http://localhost/t/${s.tenantCode}/api/requests`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: wideReqCookie },
+        body: JSON.stringify({
+          title: 'Sub-admin',
+          dueAt: new Date(Date.now() + 86400000).toISOString(),
+          targets: [{ type: 'user', userId: s.users.outsider }],
+        }),
+      }),
+      { params: Promise.resolve({ code: s.tenantCode }) },
+    );
+    const requestId = (await createRes.json()).id as string;
+    const { rows } = await getPool().query(
+      `SELECT id FROM assignment WHERE request_id=$1`,
+      [requestId],
+    );
+    const assignmentId = rows[0].id;
+
+    const adminCookie = await makeSessionCookie({
+      userId: s.users.admin, tenantId: s.tenantId, tenantCode: s.tenantCode,
+    });
+    const res = await PATCH(
+      new NextRequest(
+        `http://localhost/t/${s.tenantCode}/api/assignments/${assignmentId}`,
+        {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json', cookie: adminCookie },
+          body: JSON.stringify({
+            action: 'substitute',
+            reasonCode: 'urgent',
+            reason: 'tenant admin acting',
+          }),
+        },
+      ),
+      { params: Promise.resolve({ code: s.tenantCode, id: assignmentId }) },
+    );
+    expect(res.status).toBe(200);
+
+    const { rows: r } = await getPool().query(
+      `SELECT status, substitute_reason_code FROM assignment WHERE id=$1`,
+      [assignmentId],
+    );
+    expect(r[0].status).toBe('substituted');
+    expect(r[0].substitute_reason_code).toBe('urgent');
+
+    const { rows: hist } = await getPool().query(
+      `SELECT transition_kind FROM assignment_status_history WHERE assignment_id=$1 AND to_status='substituted'`,
+      [assignmentId],
+    );
+    expect(hist[0].transition_kind).toBe('admin_substitute');
+  });
+
+  it('rejects substitute with reasonCode=other when reason text is empty', async () => {
+    const s = await createDomainScenario(getPool());
+    const requestId = await seedOne(s.tenantCode, s.users.admin, s.users.memberA, s.tenantId);
+    const { rows } = await getPool().query(
+      `SELECT id FROM assignment WHERE request_id=$1`,
+      [requestId],
+    );
+    const assignmentId = rows[0].id;
+
+    const adminCookie = await makeSessionCookie({
+      userId: s.users.admin, tenantId: s.tenantId, tenantCode: s.tenantCode,
+    });
+    const res = await PATCH(
+      new NextRequest(
+        `http://localhost/t/${s.tenantCode}/api/assignments/${assignmentId}`,
+        {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json', cookie: adminCookie },
+          body: JSON.stringify({
+            action: 'substitute',
+            reasonCode: 'other',
+            reason: '   ',
+          }),
+        },
+      ),
+      { params: Promise.resolve({ code: s.tenantCode, id: assignmentId }) },
+    );
+    expect(res.status).toBe(400);
+  });
+
   it('manager (not requester) can substitute assignee in managed subtree', async () => {
     const s = await createDomainScenario(getPool());
     // admin creates a request to memberA; manager is org_unit_manager of orgDiv

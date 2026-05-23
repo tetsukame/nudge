@@ -31,6 +31,7 @@ export async function PATCH(
     action?: string;
     toUserId?: string;
     reason?: string;
+    reasonCode?: 'absent' | 'urgent' | 'overdue_rescue' | 'other';
     note?: string;
   };
   if (!b.action) {
@@ -56,7 +57,10 @@ export async function PATCH(
         );
         break;
       case 'substitute':
-        await substituteAssignment(appPool(), guard.actor, id, { reason: b.reason ?? '' }); break;
+        await substituteAssignment(
+          appPool(), guard.actor, id,
+          { reason: b.reason ?? '', reasonCode: b.reasonCode },
+        ); break;
       case 'exempt':
         await exemptAssignment(appPool(), guard.actor, id, { reason: b.reason ?? '' }); break;
       default:

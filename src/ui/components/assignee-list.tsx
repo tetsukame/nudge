@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { StatusBadge } from './status-badge';
 import { AssigneeListFilters } from './assignee-list-filters';
 import type { AssignmentStatus } from '@/domain/types';
@@ -165,6 +166,7 @@ function AssigneeDetail({
   const [substituteReasonCode, setSubstituteReasonCode] = useState<
     'absent' | 'urgent' | 'overdue_rescue' | 'other'
   >('absent');
+  const router = useRouter();
 
   const loadComments = useCallback(async () => {
     const res = await fetch(`/t/${tenantCode}/api/requests/${requestId}/comments`);
@@ -216,6 +218,9 @@ function AssigneeDetail({
         setSubstituteReasonCode('absent');
         await loadComments();
         onRefresh();
+        // NDG-75: parent (RequesterSection) の summary はサーバー由来なので
+        // router.refresh() で再算出させて全体進捗バーを更新する
+        router.refresh();
       } else {
         const data = await res.json();
         alert(data.error ?? '代理完了に失敗しました');
@@ -291,8 +296,9 @@ function AssigneeDetail({
                   <div className="text-sm font-medium mb-2">理由カテゴリ（必須）</div>
                   <div className="space-y-1.5">
                     {([
+                      // NDG-76: 'urgent' は内部コード。表示は「依頼者判断で完了」（NDG-48 と同じパターン）
                       ['absent', '本人不在'],
-                      ['urgent', '緊急'],
+                      ['urgent', '依頼者判断で完了'],
                       ['overdue_rescue', '期限超過救済'],
                       ['other', 'その他'],
                     ] as const).map(([code, label]) => (

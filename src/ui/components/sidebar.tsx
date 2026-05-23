@@ -10,6 +10,7 @@ import {
   Users,
   UserCheck,
   Settings,
+  ScrollText,
   TriangleAlert,
   type LucideIcon,
 } from 'lucide-react';
@@ -28,6 +29,8 @@ type Props = {
   displayName: string;
   isManager: boolean;
   isTenantAdmin: boolean;
+  /** NDG-67: 監査ログ閲覧専用ロール。tenant_admin がいないときだけサイドバーに表示。 */
+  isAuditor?: boolean;
   failedNotifications?: number;
 };
 
@@ -124,7 +127,7 @@ function NavList({
 }
 
 export function Sidebar({
-  tenantCode, displayName, isManager, isTenantAdmin,
+  tenantCode, displayName, isManager, isTenantAdmin, isAuditor = false,
   failedNotifications = 0,
 }: Props) {
   const navItems: NavItem[] = [
@@ -137,7 +140,10 @@ export function Sidebar({
             ? [{ href: 'admin/failed-notifications', label: '失敗通知', icon: TriangleAlert, badge: failedNotifications }]
             : []),
         ]
-      : []),
+      : isAuditor
+        // NDG-67: auditor が tenant_admin 兼任でないときは「監査ログ」を直接表示
+        ? [{ href: 'admin/audit', label: '監査ログ', icon: ScrollText }]
+        : []),
   ];
 
   return (

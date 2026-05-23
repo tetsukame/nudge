@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { unsealSession } from '@/auth/session';
 import { loadConfig } from '@/config';
 import { appPool } from '@/db/pools';
+import { canViewAuditLog } from '@/domain/admin/guard';
 import { listAuditLog } from '@/domain/audit-log/list';
 import { AuditLogBrowser } from '@/ui/components/audit-log-browser';
 
@@ -20,13 +21,17 @@ export default async function AdminAuditPage({
   const session = await unsealSession(sealed, cfg.IRON_SESSION_PASSWORD);
   if (!session) redirect(`/t/${code}/login`);
 
+  // NDG-67: tenant_admin or auditor only
+  const allowed = await canViewAuditLog(appPool(), session.tenantId, session.userId);
+  if (!allowed) redirect(`/t/${code}`);
+
   // Initial load (no filters) so the page renders without a flash
   const initial = await listAuditLog(
     appPool(),
     {
       userId: session.userId,
       tenantId: session.tenantId,
-      isTenantAdmin: true,
+      isTenantAdmin: false, // listAuditLog re-checks via user_role; this flag is ignored
       isTenantWideRequester: false,
     },
     { page: 1, pageSize: 50 },
@@ -47,6 +52,7 @@ export default async function AdminAuditPage({
         initialItems={initial.items}
         initialTotal={initial.total}
         actions={initial.actions}
+        targetTypes={initial.targetTypes}
       />
     </div>
   );

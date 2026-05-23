@@ -36,7 +36,7 @@ export default async function TenantLayout({
     );
   }
 
-  const { isManager, isTenantAdmin } = await withTenant(appPool(), session.tenantId, async (client) => {
+  const { isManager, isTenantAdmin, isAuditor } = await withTenant(appPool(), session.tenantId, async (client) => {
     const [managerResult, roleResult] = await Promise.all([
       client.query(
         `SELECT 1 FROM org_unit_manager WHERE user_id = $1 LIMIT 1`,
@@ -51,6 +51,7 @@ export default async function TenantLayout({
     return {
       isManager: managerResult.rows.length > 0,
       isTenantAdmin: roles.has('tenant_admin'),
+      isAuditor: roles.has('auditor'),
     };
   });
 
@@ -65,6 +66,7 @@ export default async function TenantLayout({
         displayName={session.displayName}
         isManager={isManager}
         isTenantAdmin={isTenantAdmin}
+        isAuditor={isAuditor}
         failedNotifications={failedNotifications}
       />
       <main className="flex-1 overflow-y-auto pb-16 md:pb-0">

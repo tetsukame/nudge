@@ -19,6 +19,7 @@ type Props = {
   initialItems: AuditItem[];
   initialTotal: number;
   actions: string[];
+  targetTypes: string[];
 };
 
 const PAGE_SIZE = 50;
@@ -34,27 +35,37 @@ function fmt(d: string): string {
   return `${y}/${m}/${day} ${hh}:${mm}:${ss}`;
 }
 
-export function AuditLogBrowser({ tenantCode, initialItems, initialTotal, actions }: Props) {
+export function AuditLogBrowser({
+  tenantCode, initialItems, initialTotal, actions, targetTypes,
+}: Props) {
   const [action, setAction] = useState('');
+  const [targetType, setTargetType] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<AuditItem[]>(initialItems);
   const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  useEffect(() => { setPage(1); }, [action, from, to]);
+  useEffect(() => { setPage(1); }, [action, targetType, from, to]);
+
+  function buildFilterParams(): URLSearchParams {
+    const params = new URLSearchParams();
+    if (action) params.set('action', action);
+    if (targetType) params.set('targetType', targetType);
+    if (from) params.set('from', new Date(from).toISOString());
+    if (to) params.set('to', new Date(to).toISOString());
+    return params;
+  }
 
   useEffect(() => {
     let aborted = false;
     setLoading(true);
     setError('');
-    const params = new URLSearchParams();
-    if (action) params.set('action', action);
-    if (from) params.set('from', new Date(from).toISOString());
-    if (to) params.set('to', new Date(to).toISOString());
+    const params = buildFilterParams();
     params.set('page', String(page));
     params.set('pageSize', String(PAGE_SIZE));
     fetch(`/t/${tenantCode}/api/admin/audit?${params.toString()}`)
@@ -73,7 +84,42 @@ export function AuditLogBrowser({ tenantCode, initialItems, initialTotal, action
       })
       .finally(() => { if (!aborted) setLoading(false); });
     return () => { aborted = true; };
-  }, [action, from, to, page, tenantCode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [action, targetType, from, to, page, tenantCode]);
+
+  async function downloadCsv() {
+    setExporting(true);
+    setError('');
+    try {
+      const params = buildFilterParams();
+      params.set('format', 'csv');
+      const res = await fetch(`/t/${tenantCode}/api/admin/audit?${params.toString()}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error ?? 'エクスポートに失敗しました');
+      }
+      const truncated = res.headers.get('X-Audit-Truncated') === 'true';
+      const rowCount = res.headers.get('X-Audit-Row-Count');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const disposition = res.headers.get('Content-Disposition') ?? '';
+      const m = /filename="([^"]+)"/.exec(disposition);
+      a.download = m ? m[1] : `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      if (truncated) {
+        alert(`CSV エクスポートは上限 ${rowCount} 件で打ち切られました。フィルタを絞ってください。`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エクスポートに失敗しました');
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -87,7 +133,7 @@ export function AuditLogBrowser({ tenantCode, initialItems, initialTotal, action
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-lg border border-gray-200 p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="bg-white rounded-lg border border-gray-200 p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
         <div className="space-y-1">
           <label className="text-xs font-medium text-gray-700" htmlFor="filter-action">アクション</label>
           <select
@@ -98,6 +144,18 @@ export function AuditLogBrowser({ tenantCode, initialItems, initialTotal, action
           >
             <option value="">（すべて）</option>
             {actions.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-700" htmlFor="filter-target-type">対象種別</label>
+          <select
+            id="filter-target-type"
+            value={targetType}
+            onChange={(e) => setTargetType(e.target.value)}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">（すべて）</option>
+            {targetTypes.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
         <div className="space-y-1">
@@ -127,7 +185,17 @@ export function AuditLogBrowser({ tenantCode, initialItems, initialTotal, action
           該当 <span className="font-semibold text-gray-900">{total}</span> 件
           {totalPages > 1 && ` (ページ ${page} / ${totalPages})`}
         </p>
-        {loading && <span className="text-xs text-gray-500">読み込み中...</span>}
+        <div className="flex items-center gap-3">
+          {loading && <span className="text-xs text-gray-500">読み込み中...</span>}
+          <button
+            type="button"
+            onClick={() => void downloadCsv()}
+            disabled={exporting || loading}
+            className="text-xs px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-40"
+          >
+            {exporting ? 'エクスポート中...' : '📥 CSV ダウンロード'}
+          </button>
+        </div>
       </div>
 
       {error && (

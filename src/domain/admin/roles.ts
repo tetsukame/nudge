@@ -13,9 +13,9 @@ export class AdminRoleError extends Error {
   }
 }
 
-export type AssignableRole = 'tenant_admin' | 'tenant_wide_requester' | 'manager';
+export type AssignableRole = 'tenant_admin' | 'tenant_wide_requester' | 'manager' | 'auditor';
 const ASSIGNABLE: ReadonlySet<string> = new Set([
-  'tenant_admin', 'tenant_wide_requester', 'manager',
+  'tenant_admin', 'tenant_wide_requester', 'manager', 'auditor',
 ]);
 
 export async function setUserRoles(

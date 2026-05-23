@@ -18,6 +18,7 @@ export type TransitionRule = {
     | 'user_not_needed'
     | 'user_forward'
     | 'manager_substitute'
+    | 'admin_substitute'
     | 'admin_exempt';
   requiresReason: boolean;
 };
@@ -36,6 +37,7 @@ const RULES: Record<AssignmentStatus, TransitionRule[]> = {
     { to: 'forwarded',   action: 'forward',    actor: 'assignee',     transitionKind: 'user_forward',       requiresReason: false },
     { to: 'substituted', action: 'substitute', actor: 'requester',    transitionKind: 'manager_substitute', requiresReason: true  },
     { to: 'substituted', action: 'substitute', actor: 'manager',      transitionKind: 'manager_substitute', requiresReason: true  },
+    { to: 'substituted', action: 'substitute', actor: 'tenant_admin', transitionKind: 'admin_substitute',   requiresReason: true  },
     { to: 'exempted',    action: 'exempt',     actor: 'tenant_admin', transitionKind: 'admin_exempt',       requiresReason: true  },
   ],
   opened: [
@@ -44,6 +46,7 @@ const RULES: Record<AssignmentStatus, TransitionRule[]> = {
     { to: 'forwarded',   action: 'forward',    actor: 'assignee',     transitionKind: 'user_forward',       requiresReason: false },
     { to: 'substituted', action: 'substitute', actor: 'requester',    transitionKind: 'manager_substitute', requiresReason: true  },
     { to: 'substituted', action: 'substitute', actor: 'manager',      transitionKind: 'manager_substitute', requiresReason: true  },
+    { to: 'substituted', action: 'substitute', actor: 'tenant_admin', transitionKind: 'admin_substitute',   requiresReason: true  },
     { to: 'exempted',    action: 'exempt',     actor: 'tenant_admin', transitionKind: 'admin_exempt',       requiresReason: true  },
   ],
   responded:   [],

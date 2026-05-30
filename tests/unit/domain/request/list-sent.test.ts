@@ -147,6 +147,29 @@ describe('listSentRequests', () => {
 
       expect(tenant.all).toBeGreaterThan(personal.all);
     });
+
+    // NDG-81: count が draft (予約送信中) を除外することを保証
+    it('excludes draft+scheduled requests so counts match listSentRequests', async () => {
+      const s = await createDomainScenario(getPool());
+      const actorCtx = ctx(s, s.users.admin);
+
+      // active 1件
+      await seedRequest(s, s.users.admin, [s.users.memberA]);
+      // draft+scheduled 2件
+      for (let i = 0; i < 2; i++) {
+        const { requestId } = await seedRequest(s, s.users.admin, [s.users.memberA]);
+        await getPool().query(
+          `UPDATE request SET status='draft', scheduled_at=now() + interval '1 day' WHERE id=$1`,
+          [requestId],
+        );
+      }
+
+      const counts = await countSentRequestsByFilter(getAppPool(), actorCtx, {});
+      const all = await listSentRequests(getAppPool(), actorCtx, { filter: 'all' });
+
+      expect(counts.all).toBe(all.total);
+      expect(counts.all).toBe(1);
+    });
   });
 
   it('sort puts earlier-due requests first', async () => {

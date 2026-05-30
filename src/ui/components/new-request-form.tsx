@@ -78,6 +78,10 @@ export function NewRequestForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // NDG-70: 予約送信。チェック時に日時を入力させる。空 / 過去日時 → 通常送信。
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState('');
+
   // NDG-68: テンプレ一覧を読み込み、選択時にフォームをプリフィル
   type TemplateItem = {
     id: string;
@@ -148,6 +152,24 @@ export function NewRequestForm({
       setError('送信先を1つ以上選択してください。');
       return;
     }
+    // NDG-70: 予約送信時の検証
+    let scheduledAtIso: string | undefined;
+    if (scheduleEnabled) {
+      if (!scheduledAt) {
+        setError('予約送信の日時を指定してください。');
+        return;
+      }
+      const t = Date.parse(scheduledAt);
+      if (Number.isNaN(t)) {
+        setError('予約送信の日時が不正です。');
+        return;
+      }
+      if (t <= Date.now()) {
+        setError('予約送信の日時は現在より後に設定してください。');
+        return;
+      }
+      scheduledAtIso = new Date(t).toISOString();
+    }
     setLoading(true);
     setError('');
     try {
@@ -161,13 +183,15 @@ export function NewRequestForm({
           estimatedMinutes,
           senderOrgUnitId: isPersonal ? null : senderOrgUnitId,
           targets,
+          scheduledAt: scheduledAtIso,
         }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error((data as { error?: string }).error ?? `エラー (${res.status})`);
       }
-      router.push(`/t/${code}/requests`);
+      // 予約送信時は送信した依頼 (予約中) に飛ばす
+      router.push(scheduledAtIso ? `/t/${code}/sent?filter=scheduled` : `/t/${code}/requests`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '予期しないエラーが発生しました');
     } finally {
@@ -456,13 +480,35 @@ export function NewRequestForm({
                 </p>
               )}
 
+              {/* NDG-70: 予約送信チェック + 日時 */}
+              <div className="space-y-2 pt-1">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={scheduleEnabled}
+                    onChange={(e) => setScheduleEnabled(e.target.checked)}
+                  />
+                  <span>⏰ 予約送信する</span>
+                </label>
+                {scheduleEnabled && (
+                  <Input
+                    type="datetime-local"
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                    className="w-full"
+                  />
+                )}
+              </div>
+
               <Button
                 onClick={handleSubmit}
                 disabled={!canSubmit}
                 className="w-full mt-2"
               >
                 <Send className="h-4 w-4 mr-1.5" />
-                {loading ? '送信中...' : '依頼を送信'}
+                {loading
+                  ? (scheduleEnabled ? '保存中...' : '送信中...')
+                  : (scheduleEnabled ? '予約送信を保存' : '依頼を送信')}
               </Button>
             </CardContent>
           </Card>

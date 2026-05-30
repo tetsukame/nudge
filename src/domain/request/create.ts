@@ -19,12 +19,22 @@ export type CreateRequestInput = {
   // string:    UUID of an org_unit the user belongs to
   senderOrgUnitId?: string | null;
   targets: TargetSpec[];
+  /**
+   * NDG-70: If set to a future ISO datetime, the request is stored as
+   * status='draft' with scheduled_at set; the worker will activate it (and
+   * emit 'created' notifications) when scheduled_at <= now().
+   * If omitted or in the past, the request is created with status='active'
+   * immediately, exactly like before.
+   */
+  scheduledAt?: string;
 };
 
 export type CreateRequestResult = {
   id: string;
   expandedCount: number;
   breakdown: ExpandBreakdown;
+  /** True when the request was created in scheduled (draft) state. */
+  scheduled: boolean;
 };
 
 export class CreateRequestError extends Error {
@@ -56,6 +66,21 @@ export async function createRequest(
   if (!Number.isInteger(estimatedMinutes) || estimatedMinutes <= 0) {
     throw new CreateRequestError('estimatedMinutes must be a positive integer', 'validation');
   }
+
+  // NDG-70: scheduled send. Only future timestamps count as "scheduled" — a past
+  // or current value falls through to immediate send (status='active'). This
+  // matches the user expectation of the checkbox being ignorable.
+  let scheduledAtIso: string | null = null;
+  if (input.scheduledAt) {
+    const t = Date.parse(input.scheduledAt);
+    if (Number.isNaN(t)) {
+      throw new CreateRequestError('scheduledAt is not a valid datetime', 'validation');
+    }
+    if (t > Date.now()) {
+      scheduledAtIso = new Date(t).toISOString();
+    }
+  }
+  const initialStatus = scheduledAtIso ? 'draft' : 'active';
 
   return withTenant(pool, actor.tenantId, async (client) => {
     const hasAll = input.targets.some((t) => t.type === 'all');
@@ -136,12 +161,13 @@ export async function createRequest(
     const { rows: reqRows } = await client.query<{ id: string }>(
       `INSERT INTO request
          (tenant_id, created_by_user_id, title, body, due_at, status,
-          estimated_minutes, sender_org_unit_id)
-       VALUES ($1, $2, $3, $4, $5, 'active', $6, $7)
+          estimated_minutes, sender_org_unit_id, scheduled_at)
+       VALUES ($1, $2, $3, $4, $5, $8, $6, $7, $9)
        RETURNING id`,
       [
         actor.tenantId, actor.userId, input.title, input.body,
         input.dueAt, estimatedMinutes, senderOrgUnitId,
+        initialStatus, scheduledAtIso,
       ],
     );
     const requestId = reqRows[0].id;
@@ -182,33 +208,40 @@ export async function createRequest(
       throw new CreateRequestError('no targets expanded', 'empty_expansion');
     }
 
-    const { rows: asgRows } = await client.query<{ id: string; user_id: string }>(
-      `SELECT id, user_id FROM assignment WHERE request_id = $1`,
-      [requestId],
-    );
-    for (const a of asgRows) {
-      await emitNotification(client, {
-        tenantId: actor.tenantId,
-        recipientUserId: a.user_id,
-        requestId,
-        assignmentId: a.id,
-        kind: 'created',
-        payload: { title: input.title },
-      });
+    // NDG-70: For scheduled (draft) requests, skip 'created' notifications.
+    // The worker emits them when scheduled_at <= now() and the status flips
+    // to 'active'. Assignments are still created immediately so the requester
+    // can review the recipient list, and so the worker has nothing to expand.
+    if (initialStatus === 'active') {
+      const { rows: asgRows } = await client.query<{ id: string; user_id: string }>(
+        `SELECT id, user_id FROM assignment WHERE request_id = $1`,
+        [requestId],
+      );
+      for (const a of asgRows) {
+        await emitNotification(client, {
+          tenantId: actor.tenantId,
+          recipientUserId: a.user_id,
+          requestId,
+          assignmentId: a.id,
+          kind: 'created',
+          payload: { title: input.title },
+        });
+      }
     }
 
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'request.created', 'request', $3, $4::jsonb)`,
+       VALUES ($1, $2, $5, 'request', $3, $4::jsonb)`,
       [
         actor.tenantId,
         actor.userId,
         requestId,
-        JSON.stringify({ expandedCount, breakdown }),
+        JSON.stringify({ expandedCount, breakdown, scheduledAt: scheduledAtIso }),
+        scheduledAtIso ? 'request.scheduled' : 'request.created',
       ],
     );
 
-    return { id: requestId, expandedCount, breakdown };
+    return { id: requestId, expandedCount, breakdown, scheduled: scheduledAtIso != null };
   });
 }

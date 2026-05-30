@@ -2,7 +2,7 @@ import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
 
-export type SentFilter = 'all' | 'in_progress' | 'done';
+export type SentFilter = 'all' | 'in_progress' | 'done' | 'scheduled';
 
 export type ListSentRequestsInput = {
   filter?: SentFilter;
@@ -26,6 +26,7 @@ export type SentRequestItem = {
   title: string;
   status: string;
   dueAt: string | null;
+  scheduledAt: string | null;
   createdAt: string;
   createdByUserId: string | null;
   createdByName: string | null;
@@ -91,6 +92,19 @@ export async function listSentRequests(
       retiredClause = `${kw} cu.status = 'inactive'`;
     }
 
+    // NDG-70: scheduled (draft + scheduled_at) は別系統。他フィルタとは排他。
+    let scheduledClause = '';
+    if (filter === 'scheduled') {
+      const kw = creatorClause === '' && qClause === '' && retiredClause === ''
+        ? 'WHERE' : 'AND';
+      scheduledClause = `${kw} r.status = 'draft' AND r.scheduled_at IS NOT NULL`;
+    } else {
+      // それ以外のタブ (all/in_progress/done) では draft は除外する
+      const kw = creatorClause === '' && qClause === '' && retiredClause === ''
+        ? 'WHERE' : 'AND';
+      scheduledClause = `${kw} r.status <> 'draft'`;
+    }
+
     let havingClause = '';
     if (filter === 'in_progress') {
       havingClause = `HAVING COUNT(*) FILTER (WHERE a.status IN ('unopened','opened')) > 0`;
@@ -106,7 +120,8 @@ export async function listSentRequests(
       ${creatorClause}
       ${qClause}
       ${retiredClause}
-      GROUP BY r.id, r.title, r.status, r.due_at, r.created_at,
+      ${scheduledClause}
+      GROUP BY r.id, r.title, r.status, r.due_at, r.scheduled_at, r.created_at,
                r.created_by_user_id, cu.display_name, cu.status
       ${havingClause}
     `;
@@ -128,6 +143,7 @@ export async function listSentRequests(
         r.title,
         r.status,
         r.due_at,
+        r.scheduled_at,
         r.created_at,
         r.created_by_user_id,
         cu.display_name AS created_by_name,
@@ -145,7 +161,7 @@ export async function listSentRequests(
             AND r.due_at < now()
         )::int AS overdue_count
       ${baseSql}
-      ORDER BY r.due_at ASC NULLS LAST, (COUNT(a.id) - COUNT(*) FILTER (WHERE a.status IN (${DONE_STATUSES}))) DESC
+      ORDER BY ${filter === 'scheduled' ? 'r.scheduled_at ASC' : 'r.due_at ASC NULLS LAST, (COUNT(a.id) - COUNT(*) FILTER (WHERE a.status IN (' + DONE_STATUSES + '))) DESC'}
       LIMIT ${pLimit} OFFSET ${pOffset}
     `;
 
@@ -157,6 +173,7 @@ export async function listSentRequests(
         title: r.title,
         status: r.status,
         dueAt: r.due_at ? new Date(r.due_at).toISOString() : null,
+        scheduledAt: r.scheduled_at ? new Date(r.scheduled_at).toISOString() : null,
         createdAt: new Date(r.created_at).toISOString(),
         createdByUserId: r.created_by_user_id ?? null,
         createdByName: r.created_by_name ?? null,

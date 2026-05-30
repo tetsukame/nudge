@@ -197,10 +197,59 @@ async function generateReNotify(client: pg.PoolClient): Promise<void> {
   }
 }
 
+/**
+ * NDG-70: Activates scheduled (draft) requests whose scheduled_at <= now().
+ * Flips status to 'active' and emits 'created' notifications to each assignee.
+ *
+ * Failures (e.g. CHECK violation) bubble up via runScheduler's catch — the
+ * request stays in 'draft' and will be retried on the next tick.
+ */
+async function activateScheduledRequests(client: pg.PoolClient): Promise<void> {
+  const { rows: due } = await client.query<{
+    id: string;
+    tenant_id: string;
+    title: string;
+  }>(
+    `UPDATE request
+        SET status = 'active', updated_at = now()
+      WHERE status = 'draft'
+        AND scheduled_at IS NOT NULL
+        AND scheduled_at <= now()
+     RETURNING id, tenant_id, title`,
+  );
+  for (const r of due) {
+    const channels = await getEnabledChannels(client, r.tenant_id);
+    const { rows: asgs } = await client.query<{ id: string; user_id: string }>(
+      `SELECT id, user_id FROM assignment WHERE request_id = $1`,
+      [r.id],
+    );
+    for (const a of asgs) {
+      for (const channel of channels) {
+        await client.query(
+          `INSERT INTO notification(tenant_id, request_id, assignment_id, recipient_user_id,
+                                    channel, kind, scheduled_at, status, payload_json)
+           VALUES ($1, $2, $3, $4, $5, 'created', now(), 'pending', $6::jsonb)`,
+          [
+            r.tenant_id, r.id, a.id, a.user_id, channel,
+            JSON.stringify({ title: r.title }),
+          ],
+        );
+      }
+    }
+    await client.query(
+      `INSERT INTO audit_log
+         (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
+       VALUES ($1, NULL, 'request.activated_scheduled', 'request', $2, $3::jsonb)`,
+      [r.tenant_id, r.id, JSON.stringify({ assigneeCount: asgs.length })],
+    );
+  }
+}
+
 export async function runScheduler(pool: pg.Pool): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await activateScheduledRequests(client);
     await generateReminderBefore(client);
     await generateDueToday(client);
     await generateReNotify(client);

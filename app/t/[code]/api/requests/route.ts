@@ -33,6 +33,7 @@ export async function POST(
     estimatedMinutes?: number;
     senderOrgUnitId?: string | null;
     targets?: unknown[];
+    scheduledAt?: string;
   };
   if (!b.title || !Array.isArray(b.targets)) {
     return NextResponse.json({ error: 'invalid payload' }, { status: 400 });
@@ -46,6 +47,7 @@ export async function POST(
       estimatedMinutes: b.estimatedMinutes,
       senderOrgUnitId: b.senderOrgUnitId,
       targets: b.targets as TargetSpec[],
+      scheduledAt: b.scheduledAt,
     });
     return NextResponse.json(result, { status: 201 });
   } catch (err) {

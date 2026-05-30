@@ -30,7 +30,10 @@ export default async function SentRequestsPage({
   const result = await listSentRequests(
     appPool(),
     { userId: session.userId, tenantId: session.tenantId, isTenantAdmin: false, isTenantWideRequester: false },
-    { filter: filter as 'all' | 'in_progress' | 'done', q, page, pageSize: 20 },
+    {
+      filter: filter as 'all' | 'in_progress' | 'done' | 'scheduled',
+      q, page, pageSize: 20,
+    },
   );
 
   return (
@@ -54,6 +57,10 @@ export default async function SentRequestsPage({
           className={`px-4 py-2 text-sm font-medium no-underline -mb-0.5 ${
             filter === 'done' ? 'border-b-2 border-primary text-primary' : 'text-gray-500'
           }`}>完了</Link>
+        <Link href={`/t/${code}/sent?filter=scheduled`}
+          className={`px-4 py-2 text-sm font-medium no-underline -mb-0.5 ${
+            filter === 'scheduled' ? 'border-b-2 border-primary text-primary' : 'text-gray-500'
+          }`}>⏰ 予約中</Link>
       </div>
 
       <div className="space-y-2">
@@ -64,28 +71,39 @@ export default async function SentRequestsPage({
           const pendingCount = item.total - item.done;
           // NDG-72: 取り消し済みは「🚫 取り消し済み」バッジ + 進捗バーは非表示
           const isCancelled = item.status === 'cancelled';
+          // NDG-70: 予約中 (status='draft' && scheduled_at) は「⏰ 予約送信」バッジ
+          const isScheduled = item.status === 'draft' && item.scheduledAt != null;
+          const scheduledLabel = isScheduled && item.scheduledAt
+            ? `送信予定: ${new Date(item.scheduledAt).toLocaleString('ja-JP')}`
+            : undefined;
           return (
             <RequestCard
               key={item.id}
               href={`/t/${code}/requests/${item.id}?from=sent`}
               title={item.title}
               dueLabel={
-                item.dueAt
-                  ? `締切: ${new Date(item.dueAt).toLocaleDateString('ja-JP')}`
-                  : undefined
+                isScheduled
+                  ? scheduledLabel
+                  : item.dueAt
+                    ? `締切: ${new Date(item.dueAt).toLocaleDateString('ja-JP')}`
+                    : undefined
               }
-              statusLabel={isCancelled ? '🚫 取り消し済み' : undefined}
-              statusVariant={isCancelled ? 'done' : undefined}
-              meta={isCancelled ? undefined : [
+              statusLabel={
+                isCancelled ? '🚫 取り消し済み'
+                : isScheduled ? '⏰ 予約送信'
+                : undefined
+              }
+              statusVariant={isCancelled || isScheduled ? 'done' : undefined}
+              meta={isCancelled || isScheduled ? undefined : [
                 { label: '未開封', value: item.unopened },
                 { label: '対応済み', value: item.responded },
               ]}
-              progress={isCancelled ? undefined : {
+              progress={isCancelled || isScheduled ? undefined : {
                 done: item.done,
                 total: item.total,
                 overdue: item.overdueCount,
               }}
-              actions={isCancelled ? undefined : (
+              actions={isCancelled || isScheduled ? undefined : (
                 <SentRequestCardActions
                   tenantCode={code}
                   requestId={item.id}

@@ -1,11 +1,91 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { MarkdownEditor } from './markdown-editor';
 import type { TemplateRow } from '@/domain/template/template';
 
-type FlatOrg = { id: string; name: string; level: number };
+type FlatOrg = { id: string; name: string; level: number; parentId: string | null };
+
+type OrgTreeNode = FlatOrg & { children: OrgTreeNode[] };
+
+function buildTree(flat: FlatOrg[]): OrgTreeNode[] {
+  const byId = new Map<string, OrgTreeNode>();
+  flat.forEach((o) => byId.set(o.id, { ...o, children: [] }));
+  const roots: OrgTreeNode[] = [];
+  byId.forEach((node) => {
+    if (node.parentId && byId.has(node.parentId)) {
+      byId.get(node.parentId)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+  return roots;
+}
+
+function OrgTreeSingleSelect({
+  orgs, allowableIds, value, onChange,
+}: {
+  orgs: FlatOrg[];
+  allowableIds: Set<string> | null; // null = 全許可 (tenant_admin)
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const tree = useMemo(() => buildTree(orgs), [orgs]);
+  return (
+    <div className="border border-gray-200 rounded-md max-h-60 overflow-y-auto bg-white">
+      {tree.map((node) => (
+        <TreeRow
+          key={node.id}
+          node={node}
+          depth={0}
+          value={value}
+          allowableIds={allowableIds}
+          onChange={onChange}
+        />
+      ))}
+    </div>
+  );
+}
+
+function TreeRow({
+  node, depth, value, allowableIds, onChange,
+}: {
+  node: OrgTreeNode;
+  depth: number;
+  value: string;
+  allowableIds: Set<string> | null;
+  onChange: (id: string) => void;
+}) {
+  const allowed = allowableIds === null || allowableIds.has(node.id);
+  const selected = value === node.id;
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => allowed && onChange(node.id)}
+        disabled={!allowed}
+        className={cn(
+          'w-full text-left text-sm py-1 px-2 flex items-center gap-1 select-none',
+          selected ? 'bg-primary/10 text-primary font-medium' : '',
+          allowed ? 'hover:bg-gray-50 cursor-pointer' : 'text-gray-400 cursor-not-allowed',
+        )}
+        style={{ paddingLeft: `${depth * 16 + 8}px` }}
+      >
+        <span className="text-gray-400 shrink-0">{node.children.length > 0 ? '▸' : '・'}</span>
+        <span className="truncate">{node.name}</span>
+      </button>
+      {node.children.map((c) => (
+        <TreeRow
+          key={c.id} node={c} depth={depth + 1}
+          value={value} allowableIds={allowableIds} onChange={onChange}
+        />
+      ))}
+    </div>
+  );
+}
 
 type Props = {
   tenantCode: string;
@@ -44,6 +124,7 @@ export function TemplateManager({
   const allowableOrgs = isTenantAdmin
     ? orgUnits
     : orgUnits.filter((o) => currentUserOrgUnitIds.includes(o.id));
+  const allowableIds = isTenantAdmin ? null : new Set(currentUserOrgUnitIds);
 
   function startCreate() {
     setError('');
@@ -188,17 +269,19 @@ export function TemplateManager({
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-gray-700">所有課（必須）</label>
-                <select
-                  value={editing.orgUnitId}
-                  onChange={(e) => setEditing({ ...editing, orgUnitId: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white mt-1"
-                >
-                  {allowableOrgs.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {'　'.repeat(o.level)}{o.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="mt-1">
+                  <OrgTreeSingleSelect
+                    orgs={orgUnits}
+                    allowableIds={allowableIds}
+                    value={editing.orgUnitId}
+                    onChange={(id) => setEditing({ ...editing, orgUnitId: id })}
+                  />
+                </div>
+                {!isTenantAdmin && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    ※ 自分が所属する課のみ選択できます
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-700">タイトル（必須）</label>
@@ -211,12 +294,14 @@ export function TemplateManager({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700">本文（Markdown 可）</label>
-                <textarea
-                  value={editing.body}
-                  onChange={(e) => setEditing({ ...editing, body: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm min-h-[120px] mt-1"
-                />
+                <label className="text-xs font-medium text-gray-700">本文（Markdown）</label>
+                <div className="mt-1">
+                  <MarkdownEditor
+                    value={editing.body}
+                    onChange={(body) => setEditing({ ...editing, body })}
+                    rows={6}
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

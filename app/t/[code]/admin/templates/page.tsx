@@ -26,8 +26,8 @@ export default async function AdminTemplatesPage({
     session.tenantId,
     async (client) => {
       const [{ rows: orgRows }, { rows: uouRows }, { rows: roleRows }] = await Promise.all([
-        client.query<{ id: string; name: string; level: number }>(
-          `SELECT id, name, level FROM org_unit WHERE status = 'active'
+        client.query<{ id: string; name: string; level: number; parent_id: string | null }>(
+          `SELECT id, name, level, parent_id FROM org_unit WHERE status = 'active'
            ORDER BY level ASC, name ASC`,
         ),
         client.query<{ org_unit_id: string }>(
@@ -41,7 +41,9 @@ export default async function AdminTemplatesPage({
       ]);
       const roles = new Set(roleRows.map((r) => r.role));
       return {
-        orgUnits: orgRows,
+        orgUnits: orgRows.map((r) => ({
+          id: r.id, name: r.name, level: r.level, parentId: r.parent_id,
+        })),
         userOrgUnitIds: uouRows.map((r) => r.org_unit_id),
         isTenantAdmin: roles.has('tenant_admin'),
       };

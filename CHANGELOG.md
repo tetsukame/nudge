@@ -4,6 +4,26 @@
 バージョンは開発上の節目で、各項目は Notion 課題管理 (`NDG-<n>`) と GitHub PR に対応します。
 直近（v0.20 以降）を詳細に、それ以前は要約で記載します。
 
+## [v0.22] — ガバナンス強化（代理完了 / 監査 / 取り消し）
+
+### 追加 (Added)
+- **代理完了の理由カテゴリ + tenant_admin 対応** — 代理完了モーダルに「本人不在 / 依頼者判断で完了 / 期限超過救済 / その他」のカテゴリを追加（「その他」のみ自由記述必須）。tenant_admin もテナント全体で代理完了可、`transition_kind` を `manager_substitute` / `admin_substitute` で監査区別 (NDG-61, #61)
+- **監査ログの対象種別フィルタ + CSV エクスポート** — `targetType` セレクトで絞り込み、現在のフィルタを適用して CSV ダウンロード（最大 10k 行、打ち切り時は警告）(NDG-67, #62)
+- **`auditor` ロール** — 監査ログ閲覧専用、編集権限なし。デフォルト OFF・tenant_admin が手動付与。`/admin/audit` を `/audit` に移して `/admin/*` の tenant_admin gate と分離 (NDG-67/NDG-77, #62)
+- **依頼取り消し** — 依頼者本人 / tenant_admin が `request.status='active'` の依頼を取り消し可能。理由必須、対象者全員へ「取り消し」通知、`request.cancelled` イベントを監査ログに記録。inbox は「未対応」から除外し「完了」に統合、sent は「🚫 取り消し済み」バッジ表示 (NDG-72/NDG-78, #64)
+
+### 修正 (Fixed)
+- 代理完了後に詳細ページ上部の全体進捗バーが古いまま残るバグ（router.refresh 追加で即時更新）(NDG-75, #61)
+- 代理完了モーダルの「緊急」ラベルが意味不明 →「依頼者判断で完了」に変更（内部コードは据え置き）(NDG-76, #61)
+- `/admin/*` レイアウトの `tenant_admin` gate が auditor を弾いていた問題 → 監査ログを `/audit` 配下に移動して権限分離 (NDG-77, #62)
+- 依頼取り消し時に `notification.kind` CHECK 制約が `'cancelled'` を未許可で 500 → マイグレーション 050 で許可リストに追加 (NDG-78, #64)
+
+### マイグレーション
+- 047: `assignment.substitute_reason_code` 列 + `assignment_status_history.transition_kind` CHECK に `admin_substitute` 追加
+- 048: `user_role.role` CHECK に `'auditor'` 追加
+- 049: `request.cancelled_at` / `cancelled_by_user_id` / `cancel_reason` 列追加
+- 050: `notification.kind` CHECK に `'cancelled'` 追加
+
 ## [v0.21] — UX 刷新・マネージャ機能・KC 連携強化
 
 ### 追加 (Added)

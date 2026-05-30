@@ -17,6 +17,7 @@ import { ActionButtons } from '@/ui/components/action-buttons';
 import { CommentSection } from '@/ui/components/comment-thread';
 import { RequesterSection } from '@/ui/components/requester-section';
 import { MarkdownRenderer } from '@/ui/components/markdown-renderer';
+import { CancelRequestAction } from '@/ui/components/cancel-request-action';
 import { formatMinutes } from '@/lib/format-duration';
 
 export const runtime = 'nodejs';
@@ -76,11 +77,14 @@ export default async function RequestDetailPage({
     const { rows: reqRows } = await client.query(
       `SELECT r.id, r.title, r.body, r.status, r.due_at, r.created_at,
               r.created_by_user_id, r.estimated_minutes, r.sender_org_unit_id,
+              r.cancelled_at, r.cancelled_by_user_id, r.cancel_reason,
               u.display_name AS sender_name,
-              ou.name AS sender_org_unit_name
+              ou.name AS sender_org_unit_name,
+              cu.display_name AS cancelled_by_name
          FROM request r
          LEFT JOIN users u ON u.id = r.created_by_user_id
          LEFT JOIN org_unit ou ON ou.id = r.sender_org_unit_id
+         LEFT JOIN users cu ON cu.id = r.cancelled_by_user_id
         WHERE r.id = $1`,
       [id],
     );
@@ -221,6 +225,25 @@ export default async function RequestDetailPage({
         }
       />
 
+      {/* NDG-72: cancelled banner */}
+      {req.status === 'cancelled' && (
+        <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 text-sm space-y-1">
+          <div className="font-semibold text-gray-700">🚫 この依頼は取り消されました</div>
+          <div className="text-gray-600">
+            {req.cancelled_by_name && <>取り消し者: {req.cancelled_by_name} </>}
+            {req.cancelled_at && <>／ {formatDate(req.cancelled_at)}</>}
+          </div>
+          {req.cancel_reason && (
+            <div className="text-gray-700 whitespace-pre-wrap">理由: {req.cancel_reason}</div>
+          )}
+        </div>
+      )}
+
+      {/* NDG-72: cancel action (requester or tenant_admin, only when active) */}
+      {req.status === 'active' && (isRequesterStrict || isAdmin) && (
+        <CancelRequestAction tenantCode={code} requestId={id} backHref={backHref} />
+      )}
+
       {/* Header */}
       <div className="bg-white rounded-lg border border-gray-200 p-5 space-y-4">
         <div className="flex flex-wrap gap-4 text-sm text-gray-600">
@@ -272,8 +295,8 @@ export default async function RequestDetailPage({
         )}
       </div>
 
-      {/* Action buttons */}
-      {myAssignment && (
+      {/* Action buttons (suppressed when request is cancelled — NDG-72) */}
+      {myAssignment && req.status !== 'cancelled' && (
         <div className="bg-white rounded-lg border border-gray-200 p-5">
           <h2 className="text-sm font-medium text-gray-700 mb-3">アクション</h2>
           <ActionButtons

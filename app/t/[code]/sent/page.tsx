@@ -62,6 +62,8 @@ export default async function SentRequestsPage({
         )}
         {result.items.map((item) => {
           const pendingCount = item.total - item.done;
+          // NDG-72: 取り消し済みは「🚫 取り消し済み」バッジ + 進捗バーは非表示
+          const isCancelled = item.status === 'cancelled';
           return (
             <RequestCard
               key={item.id}
@@ -72,16 +74,18 @@ export default async function SentRequestsPage({
                   ? `締切: ${new Date(item.dueAt).toLocaleDateString('ja-JP')}`
                   : undefined
               }
-              meta={[
+              statusLabel={isCancelled ? '🚫 取り消し済み' : undefined}
+              statusVariant={isCancelled ? 'done' : undefined}
+              meta={isCancelled ? undefined : [
                 { label: '未開封', value: item.unopened },
                 { label: '対応済み', value: item.responded },
               ]}
-              progress={{
+              progress={isCancelled ? undefined : {
                 done: item.done,
                 total: item.total,
                 overdue: item.overdueCount,
               }}
-              actions={
+              actions={isCancelled ? undefined : (
                 <SentRequestCardActions
                   tenantCode={code}
                   requestId={item.id}
@@ -89,7 +93,7 @@ export default async function SentRequestsPage({
                   pendingCount={pendingCount}
                   overdueCount={item.overdueCount}
                 />
-              }
+              )}
             />
           );
         })}

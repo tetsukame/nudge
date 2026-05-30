@@ -13,5 +13,13 @@ export function renderMessage(ctx: NotificationContext): { title: string; body: 
       return { title: '⚠️ 期限超過', body: `「${title}」\n\n${ctx.recipientName} さん、ご確認ください。` };
     case 'completed':
       return { title: '✅ 依頼が完了しました', body: `「${title}」が完了されました。` };
+    case 'cancelled': {
+      const reason = typeof ctx.payload.reason === 'string' ? ctx.payload.reason : '';
+      const reasonLine = reason ? `\n理由: ${reason}` : '';
+      return {
+        title: '🚫 依頼が取り消されました',
+        body: `「${title}」は取り消されました。今後の対応は不要です。${reasonLine}`,
+      };
+    }
   }
 }

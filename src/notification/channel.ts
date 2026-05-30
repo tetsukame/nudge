@@ -8,7 +8,7 @@ export type NotificationContext = {
   recipientUserId: string;
   recipientEmail: string;
   recipientName: string;
-  kind: 'created' | 'reminder_before' | 'due_today' | 're_notify' | 'completed';
+  kind: 'created' | 'reminder_before' | 'due_today' | 're_notify' | 'completed' | 'cancelled';
   payload: Record<string, unknown>;
 };
 

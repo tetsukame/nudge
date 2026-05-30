@@ -36,6 +36,7 @@ export const runtime = 'nodejs';
 type AssignmentRow = {
   id: string;
   status: string;
+  request_status: string;
   request_id: string;
   title: string;
   due_at: Date | null;
@@ -73,11 +74,13 @@ export default async function RequestListPage({
   const page = Math.max(1, parseInt(sp.page ?? '1', 10) || 1);
   const offset = (page - 1) * PAGE_SIZE;
 
-  // Hardcoded status sets — NOT user input, safe to interpolate
+  // Hardcoded status sets — NOT user input, safe to interpolate.
+  // NDG-72: cancelled request は未対応タブから除外し、完了タブに含める
+  // (受け取り側の "やるべきこと" には出さない / 履歴としては完了側で見える)
   const statusSql =
     statusFilter === 'done'
-      ? `a.status IN ('responded','not_needed','forwarded','substituted','exempted','expired')`
-      : `a.status IN ('unopened','opened')`;
+      ? `(a.status IN ('responded','not_needed','forwarded','substituted','exempted','expired') OR r.status = 'cancelled')`
+      : `a.status IN ('unopened','opened') AND r.status <> 'cancelled'`;
 
   const { items, total, totalMinutes } = await withTenant(
     appPool(),
@@ -98,12 +101,14 @@ export default async function RequestListPage({
         `SELECT
            a.id,
            a.status,
+           r.status AS request_status,
            r.id AS request_id,
            r.title,
            r.due_at,
            r.estimated_minutes,
            (r.due_at IS NOT NULL AND r.due_at < now()
-            AND a.status IN ('unopened','opened')) AS is_overdue,
+            AND a.status IN ('unopened','opened')
+            AND r.status <> 'cancelled') AS is_overdue,
            (
              SELECT COALESCE(MAX(rc.created_at) > a.last_viewed_at, a.last_viewed_at IS NULL)
                FROM request_comment rc
@@ -208,6 +213,10 @@ export default async function RequestListPage({
               meta.push({ label: '想定時間', value: formatMinutes(item.estimated_minutes) });
             }
             const isPending = item.status === 'unopened' || item.status === 'opened';
+            // NDG-72: cancelled は履歴扱い。バッジは「🚫 取り消し済み」を優先表示
+            const isCancelled = item.request_status === 'cancelled';
+            const statusLabel = isCancelled ? '🚫 取り消し済み' : cfg.label;
+            const statusVariant = isCancelled ? 'done' : statusVariantFor(item.status, item.is_overdue);
             return (
               <li key={item.id}>
                 <RequestCard
@@ -216,11 +225,11 @@ export default async function RequestListPage({
                   subtitle={senderText}
                   dueLabel={item.due_at ? `期限：${formatDate(item.due_at)}` : undefined}
                   dueOverdue={item.is_overdue}
-                  statusLabel={cfg.label}
-                  statusVariant={statusVariantFor(item.status, item.is_overdue)}
+                  statusLabel={statusLabel}
+                  statusVariant={statusVariant}
                   meta={meta.length > 0 ? meta : undefined}
                   unread={item.has_unread}
-                  actionLabel={isPending ? '対応する' : undefined}
+                  actionLabel={isPending && !isCancelled ? '対応する' : undefined}
                 />
               </li>
             );

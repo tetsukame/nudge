@@ -5,7 +5,8 @@ export type NotificationKind =
   | 'reminder_before'
   | 'due_today'
   | 're_notify'
-  | 'completed';
+  | 'completed'
+  | 'cancelled';
 
 export type EmitInput = {
   tenantId: string;

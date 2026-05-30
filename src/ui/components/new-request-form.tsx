@@ -7,6 +7,7 @@ import {
   CalendarClock,
   CheckCircle2,
   FileText,
+  Files,
   Send,
   Users,
 } from 'lucide-react';
@@ -76,6 +77,40 @@ export function NewRequestForm({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // NDG-68: テンプレ一覧を読み込み、選択時にフォームをプリフィル
+  type TemplateItem = {
+    id: string;
+    title: string;
+    body: string | null;
+    estimatedMinutes: number | null;
+    defaultDueOffsetDays: number | null;
+    orgUnitName: string | null;
+  };
+  const [templates, setTemplates] = useState<TemplateItem[]>([]);
+
+  useEffect(() => {
+    fetch(`/t/${code}/api/templates`)
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((data: { items: TemplateItem[] }) => setTemplates(data.items ?? []))
+      .catch(() => setTemplates([]));
+  }, [code]);
+
+  function applyTemplate(templateId: string) {
+    const t = templates.find((x) => x.id === templateId);
+    if (!t) return;
+    setTitle(t.title);
+    if (t.body != null) setBody(t.body);
+    if (t.estimatedMinutes != null && t.estimatedMinutes > 0) {
+      setEstimatedMinutes(t.estimatedMinutes);
+    }
+    if (t.defaultDueOffsetDays != null && t.defaultDueOffsetDays >= 0) {
+      const d = new Date();
+      d.setDate(d.getDate() + t.defaultDueOffsetDays);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      setDueAt(iso);
+    }
+  }
 
   useEffect(() => {
     fetch(`/t/${code}/api/me/org-units`)
@@ -157,6 +192,42 @@ export function NewRequestForm({
             一部の送信先は参照先が存在しないため引き継げませんでした（
             {droppedTargets.join(' / ')}）。必要に応じて送信先を選び直してください。
           </div>
+        )}
+
+        {/* NDG-68: テンプレから作成 */}
+        {templates.length > 0 && (
+          <Card>
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Files className="h-4 w-4 text-primary" />
+                テンプレから作成
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0">
+              <div className="flex items-center gap-2">
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      applyTemplate(e.target.value);
+                      e.target.value = '';
+                    }
+                  }}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                >
+                  <option value="">（テンプレを選択して内容をプリフィル）</option>
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title}{t.orgUnitName ? ` — ${t.orgUnitName}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                ※ 選択後はタイトル・本文・想定時間・期限が上書きされます。送信先は手動で選んでください。
+              </p>
+            </CardContent>
+          </Card>
         )}
 
         {/* Section: 依頼内容 */}

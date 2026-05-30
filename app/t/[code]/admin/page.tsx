@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import {
   Bell,
   Building2,
+  FileText,
   ScrollText,
   Settings,
   TriangleAlert,
@@ -116,6 +117,12 @@ export default async function AdminDashboardPage({
             icon={ScrollText}
             title="監査ログ"
             description="操作履歴の確認"
+          />
+          <AdminMenuCard
+            href={`/t/${code}/admin/templates`}
+            icon={FileText}
+            title="依頼テンプレ"
+            description="課単位で共有する依頼の雛形"
           />
           <AdminMenuCard
             href={`/t/${code}/settings/notification`}

@@ -48,4 +48,14 @@ describe('sidebar isItemActive', () => {
     expect(isItemActive(item('requests'), path, h('requests'), null)).toBe(false);
     expect(isItemActive(item('requests/new'), path, h('requests/new'), null)).toBe(true);
   });
+
+  it('NDG-77: auditor on /audit lights its own item; tenant_admin from=admin keeps 管理 active', () => {
+    const auditPath = h('audit');
+    // Auditor: 「監査ログ」 (href='audit') is active by exact match
+    expect(isItemActive(item('audit'), auditPath, h('audit'), null)).toBe(true);
+    expect(isItemActive(item('requests'), auditPath, h('requests'), null)).toBe(false);
+    // tenant_admin opened audit from /admin (?from=admin) — keep 管理 active
+    expect(isItemActive(item('admin'), auditPath, h('admin'), 'admin')).toBe(true);
+    expect(isItemActive(item('audit'), auditPath, h('audit'), 'admin')).toBe(false);
+  });
 });

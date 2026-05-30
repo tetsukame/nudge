@@ -112,7 +112,7 @@ export default async function AdminDashboardPage({
             description="組織の作成・アーカイブ"
           />
           <AdminMenuCard
-            href={`/t/${code}/admin/audit`}
+            href={`/t/${code}/audit?from=admin`}
             icon={ScrollText}
             title="監査ログ"
             description="操作履歴の確認"

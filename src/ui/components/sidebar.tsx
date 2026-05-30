@@ -10,6 +10,7 @@ import {
   Users,
   UserCheck,
   Settings,
+  ScrollText,
   TriangleAlert,
   type LucideIcon,
 } from 'lucide-react';
@@ -28,6 +29,8 @@ type Props = {
   displayName: string;
   isManager: boolean;
   isTenantAdmin: boolean;
+  /** NDG-67: 監査ログ閲覧専用ロール。tenant_admin がいないときだけサイドバーに表示。 */
+  isAuditor?: boolean;
   failedNotifications?: number;
 };
 
@@ -56,6 +59,10 @@ export function isItemActive(
   if (inAdminContext) {
     // In admin context, only the "admin" / "admin/failed-notifications" items can be active
     if (!item.href.startsWith('admin')) return false;
+    // NDG-77: admin が /audit を ?from=admin で開いたとき、
+    // pathname に /admin が含まれないので prefix match では「管理」が light up しない。
+    // ここで明示的に「管理」を active に維持する。
+    if (item.href === 'admin' && !pathname.includes('/admin')) return true;
   } else if (fromParam === 'sent' || fromParam === 'subordinates') {
     // Opened a request detail from the 送信した依頼 / 部下の依頼 list
     // (?from=sent|subordinates). Keep that list item active instead of
@@ -124,7 +131,7 @@ function NavList({
 }
 
 export function Sidebar({
-  tenantCode, displayName, isManager, isTenantAdmin,
+  tenantCode, displayName, isManager, isTenantAdmin, isAuditor = false,
   failedNotifications = 0,
 }: Props) {
   const navItems: NavItem[] = [
@@ -137,7 +144,11 @@ export function Sidebar({
             ? [{ href: 'admin/failed-notifications', label: '失敗通知', icon: TriangleAlert, badge: failedNotifications }]
             : []),
         ]
-      : []),
+      : isAuditor
+        // NDG-67 / NDG-77: auditor が tenant_admin 兼任でないときは「監査ログ」を直接表示。
+        // パスは /admin/* の外（admin layout の tenant_admin gate を回避）
+        ? [{ href: 'audit', label: '監査ログ', icon: ScrollText }]
+        : []),
   ];
 
   return (

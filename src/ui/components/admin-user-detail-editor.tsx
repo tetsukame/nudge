@@ -14,8 +14,8 @@ type ManagedOrg = {
   assignedAt: string;
 };
 type Status = 'active' | 'inactive';
-type Role = 'tenant_admin' | 'tenant_wide_requester' | 'manager';
-const ROLES: Role[] = ['tenant_admin', 'tenant_wide_requester', 'manager'];
+type Role = 'tenant_admin' | 'tenant_wide_requester' | 'manager' | 'auditor';
+const ROLES: Role[] = ['tenant_admin', 'tenant_wide_requester', 'manager', 'auditor'];
 
 type Props = {
   tenantCode: string;
@@ -34,6 +34,7 @@ const ROLE_LABEL: Record<Role, string> = {
   tenant_admin: 'テナント管理者 (tenant_admin)',
   tenant_wide_requester: '組織横断送信者 (tenant_wide_requester)',
   manager: '管理職 (manager)',
+  auditor: '監査閲覧 (auditor) ※監査ログのみ閲覧可',
 };
 
 export function AdminUserDetailEditor({

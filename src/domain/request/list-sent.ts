@@ -237,6 +237,13 @@ export async function countSentRequestsByFilter(
       retiredClause = `${kw} cu.status = 'inactive'`;
     }
 
+    // NDG-81: listSentRequests (filter=all/in_progress/done) は draft を除外する
+    // のでカウントも揃える。scheduled タブは別系統のため all/in_progress/done
+    // のいずれにも含めない。
+    const draftExcludeKw =
+      creatorClause === '' && qClause === '' && retiredClause === '' ? 'WHERE' : 'AND';
+    const draftExcludeClause = `${draftExcludeKw} r.status <> 'draft'`;
+
     const sql = `
       WITH req AS (
         SELECT
@@ -250,6 +257,7 @@ export async function countSentRequestsByFilter(
         ${creatorClause}
         ${qClause}
         ${retiredClause}
+        ${draftExcludeClause}
         GROUP BY r.id
       )
       SELECT

@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { unsealSession } from '@/auth/session';
 import { loadConfig } from '@/config';
 import { appPool } from '@/db/pools';
-import { listSentRequests } from '@/domain/request/list-sent';
+import { listSentRequests, countSentRequestsByFilter } from '@/domain/request/list-sent';
 import { RequestCard } from '@/ui/components/request-card';
 import { RequesterReassignAction } from '@/ui/components/requester-reassign-action';
 
@@ -29,20 +29,22 @@ export default async function AdminSentPage({
   const session = await unsealSession(sealed, cfg.IRON_SESSION_PASSWORD);
   if (!session) redirect(`/t/${code}/login`);
 
-  const result = await listSentRequests(
-    appPool(),
-    {
-      userId: session.userId,
-      tenantId: session.tenantId,
-      isTenantAdmin: true,
-      isTenantWideRequester: false,
-    },
-    {
+  const actor = {
+    userId: session.userId,
+    tenantId: session.tenantId,
+    isTenantAdmin: true,
+    isTenantWideRequester: false,
+  };
+  const [result, counts] = await Promise.all([
+    listSentRequests(appPool(), actor, {
       filter: filter as 'all' | 'in_progress' | 'done',
       q, page, pageSize: 20, tenantWide: true,
       retiredRequesterOnly: retiredOnly,
-    },
-  );
+    }),
+    countSentRequestsByFilter(appPool(), actor, {
+      q, tenantWide: true, retiredRequesterOnly: retiredOnly,
+    }),
+  ]);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
@@ -64,7 +66,7 @@ export default async function AdminSentPage({
             filter === 'all' ? 'border-b-2 border-primary text-primary' : 'text-gray-500'
           }`}
         >
-          すべて ({result.total})
+          すべて ({counts.all})
         </Link>
         <Link
           href={`/t/${code}/admin/sent?filter=in_progress`}
@@ -72,7 +74,7 @@ export default async function AdminSentPage({
             filter === 'in_progress' ? 'border-b-2 border-primary text-primary' : 'text-gray-500'
           }`}
         >
-          進行中
+          進行中 ({counts.inProgress})
         </Link>
         <Link
           href={`/t/${code}/admin/sent?filter=done`}
@@ -80,7 +82,7 @@ export default async function AdminSentPage({
             filter === 'done' ? 'border-b-2 border-primary text-primary' : 'text-gray-500'
           }`}
         >
-          完了
+          完了 ({counts.done})
         </Link>
       </div>
 

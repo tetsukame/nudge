@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { startTestDb, stopTestDb, getPool, getAppPool } from '../../../helpers/pg-container.js';
 import { createDomainScenario } from '../../../helpers/fixtures/domain-scenario.js';
-import { listSentRequests } from '../../../../src/domain/request/list-sent.js';
+import { listSentRequests, countSentRequestsByFilter } from '../../../../src/domain/request/list-sent.js';
 import type { ActorContext } from '../../../../src/domain/types.js';
 
 function ctx(s: { tenantId: string }, userId: string, opts: Partial<ActorContext> = {}): ActorContext {
@@ -104,6 +104,49 @@ describe('listSentRequests', () => {
     const doneIds = doneResult.items.map((i) => i.id);
     expect(doneIds).toContain(doneId);
     expect(doneIds).not.toContain(activeId);
+  });
+
+  // NDG-80: タブ件数表示用カウント
+  describe('countSentRequestsByFilter', () => {
+    it('returns {all, inProgress, done} matching listSentRequests totals', async () => {
+      const s = await createDomainScenario(getPool());
+      const actorCtx = ctx(s, s.users.admin);
+
+      // active 1件
+      await seedRequest(s, s.users.admin, [s.users.memberA, s.users.memberB]);
+      // done 2件
+      for (let i = 0; i < 2; i++) {
+        const { assignmentIds } = await seedRequest(s, s.users.admin, [s.users.memberA, s.users.memberB]);
+        await getPool().query(
+          `UPDATE assignment SET status='responded', responded_at=now() WHERE id=ANY($1::uuid[])`,
+          [assignmentIds],
+        );
+      }
+
+      const counts = await countSentRequestsByFilter(getAppPool(), actorCtx, {});
+      const all = await listSentRequests(getAppPool(), actorCtx, { filter: 'all' });
+      const inProgress = await listSentRequests(getAppPool(), actorCtx, { filter: 'in_progress' });
+      const done = await listSentRequests(getAppPool(), actorCtx, { filter: 'done' });
+
+      expect(counts.all).toBe(all.total);
+      expect(counts.inProgress).toBe(inProgress.total);
+      expect(counts.done).toBe(done.total);
+      expect(counts.all).toBe(3);
+      expect(counts.inProgress).toBe(1);
+      expect(counts.done).toBe(2);
+    });
+
+    it('tenantWide=true counts every request regardless of creator', async () => {
+      const s = await createDomainScenario(getPool());
+      await seedRequest(s, s.users.admin, [s.users.memberA]);
+      await seedRequest(s, s.users.wideReq, [s.users.memberA]);
+
+      const adminCtx = ctx(s, s.users.admin, { isTenantAdmin: true });
+      const personal = await countSentRequestsByFilter(getAppPool(), adminCtx, {});
+      const tenant = await countSentRequestsByFilter(getAppPool(), adminCtx, { tenantWide: true });
+
+      expect(tenant.all).toBeGreaterThan(personal.all);
+    });
   });
 
   it('sort puts earlier-due requests first', async () => {

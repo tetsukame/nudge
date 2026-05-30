@@ -4,6 +4,7 @@ import { startTestDb, stopTestDb, getPool } from '../helpers/pg-container.js';
 import { createDomainScenario } from '../helpers/fixtures/domain-scenario.js';
 import { makeSessionCookie } from '../helpers/session-cookie.js';
 import { POST as createReq } from '../../app/t/[code]/api/requests/route.js';
+import { PATCH as patchReq } from '../../app/t/[code]/api/requests/[id]/route.js';
 import { runScheduler } from '../../src/worker/scheduler.js';
 
 describe('NDG-70: scheduled send', () => {
@@ -108,5 +109,73 @@ describe('NDG-70: scheduled send', () => {
       [id],
     );
     expect(audit.length).toBe(1);
+  });
+
+  // NDG-79: 予約取り消し
+  async function patchCancel(
+    s: Awaited<ReturnType<typeof createDomainScenario>>,
+    actorId: string,
+    id: string,
+  ) {
+    const cookie = await makeSessionCookie({
+      userId: actorId, tenantId: s.tenantId, tenantCode: s.tenantCode,
+    });
+    return patchReq(
+      new NextRequest(`http://localhost/t/${s.tenantCode}/api/requests/${id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', cookie },
+        body: JSON.stringify({ action: 'cancel', reason: '予約取り消し' }),
+      }),
+      { params: Promise.resolve({ code: s.tenantCode, id }) },
+    );
+  }
+
+  it('creator can cancel a scheduled draft — no notifications, audit logged', async () => {
+    const s = await createDomainScenario(getPool());
+    const future = new Date(Date.now() + 86400000).toISOString();
+    const id = await createScheduled(s, s.users.wideReq, s.users.memberA, future);
+
+    const res = await patchCancel(s, s.users.wideReq, id);
+    expect(res.status).toBe(200);
+
+    const { rows: r } = await getPool().query(
+      `SELECT status, cancel_reason FROM request WHERE id=$1`, [id],
+    );
+    expect(r[0].status).toBe('cancelled');
+    expect(r[0].cancel_reason).toBe('予約取り消し');
+
+    const { rows: n } = await getPool().query(
+      `SELECT 1 FROM notification WHERE request_id=$1 AND kind='cancelled'`, [id],
+    );
+    expect(n.length).toBe(0);
+
+    const { rows: audit } = await getPool().query(
+      `SELECT action FROM audit_log WHERE target_id=$1 AND action='request.scheduled_cancelled'`,
+      [id],
+    );
+    expect(audit.length).toBe(1);
+  });
+
+  it('non-creator cannot cancel a scheduled draft', async () => {
+    const s = await createDomainScenario(getPool());
+    const future = new Date(Date.now() + 86400000).toISOString();
+    const id = await createScheduled(s, s.users.wideReq, s.users.memberA, future);
+
+    const res = await patchCancel(s, s.users.memberA, id);
+    expect(res.status).toBe(403);
+  });
+
+  it('active request still uses notification-emitting cancel path', async () => {
+    const s = await createDomainScenario(getPool());
+    const past = new Date(Date.now() - 1000).toISOString();
+    const id = await createScheduled(s, s.users.wideReq, s.users.memberA, past);
+
+    const res = await patchCancel(s, s.users.wideReq, id);
+    expect(res.status).toBe(200);
+
+    const { rows: n } = await getPool().query(
+      `SELECT 1 FROM notification WHERE request_id=$1 AND kind='cancelled'`, [id],
+    );
+    expect(n.length).toBeGreaterThan(0);
   });
 });

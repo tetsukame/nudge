@@ -7,6 +7,7 @@ import { listSentRequests } from '@/domain/request/list-sent';
 import { PageHeader } from '@/ui/components/page-header';
 import { RequestCard } from '@/ui/components/request-card';
 import { SentRequestCardActions } from '@/ui/components/sent-card-actions';
+import { ScheduledCancelButton } from '@/ui/components/scheduled-cancel-button';
 import Link from 'next/link';
 
 export const runtime = 'nodejs';
@@ -103,15 +104,25 @@ export default async function SentRequestsPage({
                 total: item.total,
                 overdue: item.overdueCount,
               }}
-              actions={isCancelled || isScheduled ? undefined : (
-                <SentRequestCardActions
-                  tenantCode={code}
-                  requestId={item.id}
-                  fromQuery="sent"
-                  pendingCount={pendingCount}
-                  overdueCount={item.overdueCount}
-                />
-              )}
+              actions={
+                isCancelled ? undefined
+                : isScheduled && item.scheduledAt ? (
+                  <ScheduledCancelButton
+                    tenantCode={code}
+                    requestId={item.id}
+                    title={item.title}
+                    scheduledAt={item.scheduledAt}
+                  />
+                ) : (
+                  <SentRequestCardActions
+                    tenantCode={code}
+                    requestId={item.id}
+                    fromQuery="sent"
+                    pendingCount={pendingCount}
+                    overdueCount={item.overdueCount}
+                  />
+                )
+              }
             />
           );
         })}

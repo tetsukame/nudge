@@ -48,6 +48,12 @@ export type ListSentRequestsResult = {
   pageSize: number;
 };
 
+export type SentFilterCounts = {
+  all: number;
+  inProgress: number;
+  done: number;
+};
+
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
 
@@ -191,5 +197,73 @@ export async function listSentRequests(
       page,
       pageSize,
     };
+  });
+}
+
+/**
+ * NDG-80: タブごとの件数を 1 クエリでまとめて取得する。
+ *
+ * `listSentRequests` 側の filter 別 HAVING と完全に整合させるため、
+ * リクエスト単位に集約した CTE の上で FILTER (...) を被せている。
+ * filter/page/pageSize は無関係（カウント専用）。q / retiredRequesterOnly /
+ * tenantWide は listSentRequests と同じく作用する。
+ */
+export async function countSentRequestsByFilter(
+  pool: pg.Pool,
+  actor: ActorContext,
+  input: Pick<ListSentRequestsInput, 'q' | 'retiredRequesterOnly' | 'tenantWide'>,
+): Promise<SentFilterCounts> {
+  const tenantWide = input.tenantWide ?? false;
+  if (tenantWide && !actor.isTenantAdmin) {
+    throw new Error('tenantWide listing requires tenant_admin');
+  }
+  return withTenant(pool, actor.tenantId, async (client) => {
+    const params: unknown[] = [];
+    let creatorClause: string;
+    if (tenantWide) {
+      creatorClause = '';
+    } else {
+      params.push(actor.userId);
+      creatorClause = `WHERE r.created_by_user_id = $${params.length}`;
+    }
+    let qClause = '';
+    if (input.q && input.q.trim()) {
+      params.push(`%${input.q.trim()}%`);
+      qClause = `${creatorClause === '' ? 'WHERE' : 'AND'} r.title ILIKE $${params.length}`;
+    }
+    let retiredClause = '';
+    if (tenantWide && input.retiredRequesterOnly) {
+      const kw = creatorClause === '' && qClause === '' ? 'WHERE' : 'AND';
+      retiredClause = `${kw} cu.status = 'inactive'`;
+    }
+
+    const sql = `
+      WITH req AS (
+        SELECT
+          r.id,
+          COUNT(*) FILTER (WHERE a.status IN ('unopened','opened'))::int AS pending,
+          COUNT(a.id)::int AS total_asg,
+          COUNT(*) FILTER (WHERE a.status IN (${DONE_STATUSES}))::int AS done_asg
+        FROM request r
+        LEFT JOIN assignment a ON a.request_id = r.id
+        LEFT JOIN users cu ON cu.id = r.created_by_user_id
+        ${creatorClause}
+        ${qClause}
+        ${retiredClause}
+        GROUP BY r.id
+      )
+      SELECT
+        COUNT(*)::int AS all_count,
+        COUNT(*) FILTER (WHERE pending > 0)::int AS in_progress_count,
+        COUNT(*) FILTER (WHERE total_asg > 0 AND done_asg = total_asg)::int AS done_count
+      FROM req
+    `;
+    const { rows } = await client.query<{
+      all_count: number;
+      in_progress_count: number;
+      done_count: number;
+    }>(sql, params);
+    const r = rows[0];
+    return { all: r.all_count, inProgress: r.in_progress_count, done: r.done_count };
   });
 }

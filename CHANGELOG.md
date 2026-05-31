@@ -4,6 +4,27 @@
 バージョンは開発上の節目で、各項目は Notion 課題管理 (`NDG-<n>`) と GitHub PR に対応します。
 直近（v0.20 以降）を詳細に、それ以前は要約で記載します。
 
+## [v0.23] — 効率化（テンプレ / 予約送信 / AI 整形）
+
+### 追加 (Added)
+- **依頼テンプレ** — 部 / 課単位で共有する依頼の雛形。月次・四半期の定例依頼を 1 クリックで起票。所有: org_unit、閲覧/編集は作成課のメンバー OR tenant_admin。論理削除 (archived_at)、版管理なし。新規依頼作成画面に「テンプレから作成」UI、tenant_admin で `/admin/templates` から CRUD (NDG-68, #66)
+- **予約送信** — 依頼を作成しつつ未来日時に発送予約。状態 `status='draft' + scheduled_at` で保持し、worker (60s tick) が到来時に `active` 化＋通知を発火。送信側の一覧に「⏰ 予約中」タブ。過去日時を指定した場合は即時送信にフォールバック (NDG-70, #67)
+- **予約送信の取り消し** — 予約中の依頼を発送前にキャンセル。誰にも通知していないので受信者には完全に不可視、送信者の履歴には「🚫 取り消し済み」で残る。audit_log は `request.scheduled_cancelled` (NDG-79, #67)
+- **AI 整形（依頼作成支援）** — 依頼者が要件メモを書く → AI に整形させてタイトル + 本文を提案 → 採用 / 再生成 / 破棄。プロバイダ抽象化 (Dify workflow / OpenAI 互換 API) でローカル LM Studio / Ollama / OpenAI / OpenRouter から選択可能。tenant_admin が `/admin/settings/ai` で有効化、API キーは AES-256-GCM 暗号化保存、デフォルト OFF (NDG-73, #70/#71)
+
+### 修正 (Fixed)
+- `/admin/sent` のタブ件数表示で「すべて」ラベルだけに件数があり、しかも現在選択中フィルタの件数を表示していた問題 → タブごとに件数表示 (NDG-80, #68)
+- 上記カウントクエリが draft (予約送信中) を除外していなかった merge race バグ → `r.status <> 'draft'` 追加 (NDG-81, #69)
+- OpenAI 互換プロバイダの `response_format=json_object` を LM Studio が受け付けず 400 エラー → JSON Schema 形式 (`json_schema`) に変更、OpenAI / LM Studio / Ollama 0.5+ 互換 (NDG-82, #70)
+
+### マイグレーション
+- 051: `request_template` テーブル + RLS + 部分インデックス
+- 052: `request.scheduled_at` 列追加 + 予約送信用部分インデックス
+- 053: `tenant_ai_config` テーブル (provider/endpoint/暗号化 API key/system_prompt/extras JSONB)
+
+### スコープ外
+- **通知スケジューラ (NDG-63)**: 勤務時間外抑止 + 緊急バイパスを v0.23 で計画していたが、テーブル名衝突 (既存 `tenant_notification_config` と重複) と緊急バイパスの前提 (`request.priority` 列が未存在) で検討コストが過大と判断、**未定** に戻し別バージョンで再検討
+
 ## [v0.22] — ガバナンス強化（代理完了 / 監査 / 取り消し）
 
 ### 追加 (Added)

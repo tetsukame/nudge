@@ -120,7 +120,8 @@ export async function assertSafeHostname(
   if (!hostname || !hostname.trim()) {
     throw new SafeUrlError('hostname is empty');
   }
-  const host = hostname.toLowerCase();
+  // WHATWG URL の hostname は IPv6 を `[::1]` 形式で返すため括弧を剥がす
+  const host = hostname.toLowerCase().replace(/^\[(.+)\]$/, '$1');
 
   const allowed = new Set([
     ...defaultAllowedHosts(),

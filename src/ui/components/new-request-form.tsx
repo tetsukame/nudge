@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { TargetPicker } from '@/ui/components/target-picker';
 import type { UserResult } from '@/ui/components/user-search';
 import { MarkdownEditor } from '@/ui/components/markdown-editor';
+import { AIFormatModal } from '@/ui/components/ai-format-modal';
 import type { TargetSpec } from '@/domain/request/expand-targets';
 import { cn } from '@/lib/utils';
 import { DURATION_PRESETS, formatMinutes } from '@/lib/format-duration';
@@ -42,6 +43,8 @@ type Props = {
   /** NDG-50: コピー時に送信先チップを名前表示するための id→名前 メタ。 */
   initialOrgMeta?: Record<string, string>;
   initialUserMeta?: Record<string, UserResult>;
+  /** NDG-73 Phase 2: tenant_ai_config.enabled が true のときに AI 整形ボタンを表示 */
+  aiEnabled?: boolean;
 };
 
 function formatDateLabel(value: string): string {
@@ -53,7 +56,7 @@ function formatDateLabel(value: string): string {
 
 export function NewRequestForm({
   tenantCode, initialGroupId, initialValues, copySourceTitle,
-  droppedTargets, initialOrgMeta, initialUserMeta,
+  droppedTargets, initialOrgMeta, initialUserMeta, aiEnabled,
 }: Props) {
   const code = tenantCode;
   const router = useRouter();
@@ -257,9 +260,19 @@ export function NewRequestForm({
         {/* Section: 依頼内容 */}
         <Card>
           <CardHeader className="p-5 pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" />
-              依頼内容
+            <CardTitle className="text-base flex items-center gap-2 justify-between">
+              <span className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                依頼内容
+              </span>
+              {aiEnabled && (
+                <AIFormatModal
+                  tenantCode={code}
+                  currentTitle={title}
+                  currentBody={body}
+                  onAdopt={(r) => { setTitle(r.title); setBody(r.body); }}
+                />
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-5 pt-0 space-y-4">

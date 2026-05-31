@@ -1,6 +1,7 @@
 import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import { encryptSecret, decryptSecret } from '../../notification/crypto';
+import { assertSafeHttpUrl, SafeUrlError } from '../../lib/safe-url';
 import type { ActorContext } from '../types';
 import type { AIProviderKind, TenantAIConfig } from './provider';
 
@@ -100,20 +101,21 @@ export async function getAIConfigForCall(
   });
 }
 
-function validate(input: UpsertAIConfigInput) {
+async function validate(input: UpsertAIConfigInput): Promise<void> {
   if (input.provider !== 'dify' && input.provider !== 'openai_compat') {
     throw new AIConfigError(`invalid provider: ${input.provider}`, 'validation');
   }
   if (!input.endpoint?.trim()) {
     throw new AIConfigError('endpoint required', 'validation');
   }
+  // NDG-84: SSRF 対策。内部 RFC1918 / loopback / link-local を拒否
   try {
-    const u = new URL(input.endpoint);
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') {
-      throw new Error('non-http(s)');
+    await assertSafeHttpUrl(input.endpoint);
+  } catch (err) {
+    if (err instanceof SafeUrlError) {
+      throw new AIConfigError(`endpoint: ${err.message}`, 'validation');
     }
-  } catch {
-    throw new AIConfigError('endpoint must be a valid http(s) URL', 'validation');
+    throw err;
   }
   if (input.provider === 'dify') {
     if (!input.difyAppId?.trim()) {
@@ -133,7 +135,7 @@ export async function upsertAIConfig(
   input: UpsertAIConfigInput,
 ): Promise<void> {
   ensureAdmin(actor);
-  validate(input);
+  await validate(input);
   await withTenant(pool, actor.tenantId, async (client) => {
     // apiKey が null かつ既存に値あり → 既存を維持。空文字 → 削除。値あり → 暗号化置換。
     let apiKeyClause = '';

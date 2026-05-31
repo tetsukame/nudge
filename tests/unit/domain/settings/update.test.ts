@@ -1,4 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+
+// NDG-84: 旧テストフィクスチャの fake hostname を SafeUrl allowlist に登録して
+// DNS 解決失敗で SettingsUpdateError にならないようにする
+process.env.SAFE_URL_HOST_ALLOWLIST = [
+  'smtp.example.com',
+  'smtp.new.com',
+  'teams.example.com',
+  'hooks.slack.com',
+  'mail.example.com',
+].join(',');
 import { startTestDb, stopTestDb, getPool, getAppPool } from '../../../helpers/pg-container.js';
 import { createDomainScenario } from '../../../helpers/fixtures/domain-scenario.js';
 import { updateNotificationSettings, SettingsUpdateError } from '../../../../src/domain/settings/update.js';

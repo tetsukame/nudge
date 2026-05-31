@@ -2,6 +2,7 @@ import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
 import { encryptSecret } from '../../notification/crypto';
+import { assertSafeHttpUrl, assertSafeHostname, SafeUrlError } from '../../lib/safe-url';
 
 export class SettingsUpdateError extends Error {
   constructor(msg: string, readonly code: 'permission_denied' | 'validation') {
@@ -38,6 +39,25 @@ export async function updateNotificationSettings(
 ): Promise<void> {
   if (!actor.isTenantAdmin) {
     throw new SettingsUpdateError('tenant_admin required', 'permission_denied');
+  }
+
+  // NDG-84: SSRF 対策。SMTP host / Teams / Slack の各エンドポイントを検証。
+  // 値変更時 (undefined / 空文字以外) のみチェック。
+  try {
+    if (input.smtp.host !== undefined && input.smtp.host !== null && input.smtp.host !== '') {
+      await assertSafeHostname(input.smtp.host);
+    }
+    if (input.teams.webhookUrl !== undefined && input.teams.webhookUrl !== '') {
+      await assertSafeHttpUrl(input.teams.webhookUrl);
+    }
+    if (input.slack.webhookUrl !== undefined && input.slack.webhookUrl !== '') {
+      await assertSafeHttpUrl(input.slack.webhookUrl);
+    }
+  } catch (err) {
+    if (err instanceof SafeUrlError) {
+      throw new SettingsUpdateError(err.message, 'validation');
+    }
+    throw err;
   }
 
   await withTenant(pool, actor.tenantId, async (client) => {

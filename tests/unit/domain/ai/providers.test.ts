@@ -85,7 +85,7 @@ describe('OpenAICompatProvider', () => {
   beforeEach(() => { fetchSpy = vi.spyOn(globalThis, 'fetch'); });
   afterEach(() => { fetchSpy.mockRestore(); });
 
-  it('posts to /chat/completions with JSON-mode and parses title/body from content', async () => {
+  it('posts to /chat/completions with json_schema response_format and parses title/body', async () => {
     fetchSpy.mockResolvedValue(new Response(JSON.stringify({
       choices: [{ message: { content: JSON.stringify({ title: 't1', body: 'b1' }) } }],
     }), { status: 200 }));
@@ -98,7 +98,20 @@ describe('OpenAICompatProvider', () => {
     expect((init.headers as Record<string, string>).authorization).toBeUndefined();
     const body = JSON.parse(init.body as string);
     expect(body.model).toBe('qwen2.5-coder');
-    expect(body.response_format).toEqual({ type: 'json_object' });
+    // NDG-82: LM Studio が json_object を受け付けないため json_schema 形式に統一
+    expect(body.response_format).toMatchObject({
+      type: 'json_schema',
+      json_schema: {
+        name: 'request_format',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: { title: { type: 'string' }, body: { type: 'string' } },
+          required: ['title', 'body'],
+          additionalProperties: false,
+        },
+      },
+    });
     expect(body.messages[1]).toEqual({ role: 'user', content: 'アンケート回答依頼' });
   });
 

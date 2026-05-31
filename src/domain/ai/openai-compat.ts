@@ -43,7 +43,22 @@ export class OpenAICompatProvider implements AIProvider {
           { role: 'system', content: system },
           { role: 'user', content: memo },
         ],
-        response_format: { type: 'json_object' },
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'request_format',
+            strict: true,
+            schema: {
+              type: 'object',
+              properties: {
+                title: { type: 'string' },
+                body: { type: 'string' },
+              },
+              required: ['title', 'body'],
+              additionalProperties: false,
+            },
+          },
+        },
         temperature: 0.3,
       }),
     });

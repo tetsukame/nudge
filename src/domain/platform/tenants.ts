@@ -1,4 +1,5 @@
 import type pg from 'pg';
+import { encryptSecret } from '../../notification/crypto';
 
 export class PlatformTenantError extends Error {
   constructor(
@@ -90,7 +91,7 @@ export async function getTenant(pool: pg.Pool, id: string): Promise<TenantDetail
     sc_org_group_prefix: string | null;
     sc_interval_minutes: number | null;
     sc_client_id: string | null;
-    sc_client_secret: string | null;
+    sc_has_secret: boolean;
     sc_last_full: Date | null;
     sc_last_delta: Date | null;
     sc_last_error: string | null;
@@ -103,7 +104,8 @@ export async function getTenant(pool: pg.Pool, id: string): Promise<TenantDetail
             sc.org_group_prefix AS sc_org_group_prefix,
             sc.interval_minutes AS sc_interval_minutes,
             sc.sync_client_id AS sc_client_id,
-            sc.sync_client_secret AS sc_client_secret,
+            -- NDG-85: 平文と暗号化のどちらかが入っていれば「設定済み」と判定
+            (sc.sync_client_secret IS NOT NULL OR sc.sync_client_secret_encrypted IS NOT NULL) AS sc_has_secret,
             sc.last_full_synced_at AS sc_last_full,
             sc.last_delta_synced_at AS sc_last_delta,
             sc.last_error AS sc_last_error
@@ -136,7 +138,7 @@ export async function getTenant(pool: pg.Pool, id: string): Promise<TenantDetail
           orgGroupPrefix: r.sc_org_group_prefix,
           intervalMinutes: r.sc_interval_minutes ?? 60,
           hasClientId: r.sc_client_id != null && r.sc_client_id.length > 0,
-          hasClientSecret: r.sc_client_secret != null && r.sc_client_secret.length > 0,
+          hasClientSecret: r.sc_has_secret,
         }
       : null,
   };
@@ -252,10 +254,14 @@ export async function upsertSyncConfig(
     [tenantId],
   );
   if (existing.length === 0) {
+    // NDG-85: 新規行は secret を暗号化列に直接書く
+    const encryptedSecret = input.syncClientSecret
+      ? encryptSecret(input.syncClientSecret)
+      : null;
     await pool.query(
       `INSERT INTO tenant_sync_config (
          tenant_id, enabled, user_source_type, org_source_type,
-         org_group_prefix, interval_minutes, sync_client_id, sync_client_secret
+         org_group_prefix, interval_minutes, sync_client_id, sync_client_secret_encrypted
        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         tenantId,
@@ -265,7 +271,7 @@ export async function upsertSyncConfig(
         input.orgGroupPrefix ?? null,
         input.intervalMinutes ?? 60,
         input.syncClientId ?? null,
-        input.syncClientSecret ?? null,
+        encryptedSecret,
       ],
     );
     return;
@@ -278,7 +284,13 @@ export async function upsertSyncConfig(
   if (input.orgGroupPrefix !== undefined) { values.push(input.orgGroupPrefix); fields.push(`org_group_prefix = $${values.length}`); }
   if (input.intervalMinutes !== undefined) { values.push(input.intervalMinutes); fields.push(`interval_minutes = $${values.length}`); }
   if (input.syncClientId !== undefined) { values.push(input.syncClientId); fields.push(`sync_client_id = $${values.length}`); }
-  if (input.syncClientSecret !== undefined) { values.push(input.syncClientSecret); fields.push(`sync_client_secret = $${values.length}`); }
+  // NDG-85: secret 更新時は暗号化列に書き、旧平文列は同時クリア
+  if (input.syncClientSecret !== undefined) {
+    const enc = input.syncClientSecret ? encryptSecret(input.syncClientSecret) : null;
+    values.push(enc);
+    fields.push(`sync_client_secret_encrypted = $${values.length}`);
+    fields.push(`sync_client_secret = NULL`);
+  }
   if (fields.length === 0) return;
   fields.push(`updated_at = now()`);
   values.push(tenantId);

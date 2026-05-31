@@ -5,6 +5,7 @@ import { verifySyncAuth } from '@/sync/api-auth';
 import { reconcileUsers } from '@/sync/reconciler';
 import { KeycloakSyncSource } from '@/sync/keycloak-source';
 import { unsealSession } from '@/auth/session';
+import { getSyncClientSecret } from '@/sync/secrets';
 
 export const runtime = 'nodejs';
 
@@ -75,12 +76,13 @@ export async function POST(req: NextRequest) {
 
     const { rows: configRows } = await pool.query<{
       sync_client_id: string;
-      sync_client_secret: string;
     }>(
-      `SELECT sync_client_id, sync_client_secret FROM tenant_sync_config WHERE tenant_id = $1`,
+      `SELECT sync_client_id FROM tenant_sync_config WHERE tenant_id = $1`,
       [tenant.id],
     );
-    if (!configRows[0]?.sync_client_id || !configRows[0]?.sync_client_secret) {
+    // NDG-85: secret は暗号化列経由で取得 (lazy migration あり)
+    const syncClientSecret = await getSyncClientSecret(pool, tenant.id);
+    if (!configRows[0]?.sync_client_id || !syncClientSecret) {
       results.push({ tenantCode: tenant.code, skipped: true, reason: 'sync credentials not configured' });
       continue;
     }
@@ -96,7 +98,7 @@ export async function POST(req: NextRequest) {
       const source = new KeycloakSyncSource(
         tenant.keycloak_issuer_url,
         configRows[0].sync_client_id,
-        configRows[0].sync_client_secret,
+        syncClientSecret,
       );
 
       let orgResult = null;

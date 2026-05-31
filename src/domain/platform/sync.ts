@@ -2,6 +2,7 @@ import type pg from 'pg';
 import { reconcileUsers } from '../../sync/reconciler';
 import { reconcileOrgs } from '../../sync/org-reconciler';
 import { KeycloakSyncSource } from '../../sync/keycloak-source';
+import { getSyncClientSecret } from '../../sync/secrets';
 import { appPool } from '../../db/pools';
 
 export class PlatformSyncError extends Error {
@@ -39,12 +40,11 @@ export async function runSyncForTenant(
     keycloak_issuer_url: string;
     enabled: boolean | null;
     sync_client_id: string | null;
-    sync_client_secret: string | null;
     org_source_type: string | null;
     org_group_prefix: string | null;
   }>(
     `SELECT t.code, t.keycloak_issuer_url,
-            sc.enabled, sc.sync_client_id, sc.sync_client_secret,
+            sc.enabled, sc.sync_client_id,
             sc.org_source_type, sc.org_group_prefix
        FROM tenant t
        LEFT JOIN tenant_sync_config sc ON sc.tenant_id = t.id
@@ -58,7 +58,9 @@ export async function runSyncForTenant(
   if (!t.enabled) {
     throw new PlatformSyncError('sync is not enabled for this tenant', 'not_configured');
   }
-  if (!t.sync_client_id || !t.sync_client_secret) {
+  // NDG-85: sync_client_secret は暗号化列経由で取得 (lazy migration あり)
+  const syncClientSecret = await getSyncClientSecret(pool, tenantId);
+  if (!t.sync_client_id || !syncClientSecret) {
     throw new PlatformSyncError('sync_client_id / sync_client_secret not configured', 'not_configured');
   }
 
@@ -84,7 +86,7 @@ export async function runSyncForTenant(
     const source = new KeycloakSyncSource(
       t.keycloak_issuer_url,
       t.sync_client_id,
-      t.sync_client_secret,
+      syncClientSecret,
     );
 
     let orgs: SyncRunResult['orgs'];

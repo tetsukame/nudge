@@ -7,6 +7,7 @@ import {
   FileText,
   ScrollText,
   Settings,
+  Sparkles,
   TriangleAlert,
   UserRound,
   Users,
@@ -135,6 +136,12 @@ export default async function AdminDashboardPage({
             icon={UserRound}
             title="職位と管理職"
             description="管理職とみなす職位 (KC 同期)"
+          />
+          <AdminMenuCard
+            href={`/t/${code}/admin/settings/ai`}
+            icon={Sparkles}
+            title="AI 整形"
+            description="依頼作成時の要件メモ → タイトル/本文 整形"
           />
           <AdminMenuCard
             href={`/t/${code}/admin/failed-notifications`}

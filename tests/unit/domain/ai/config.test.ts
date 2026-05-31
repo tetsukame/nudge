@@ -1,4 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+
+// NDG-84: テストフィクスチャの fake hostname を SafeUrl allowlist に登録
+process.env.SAFE_URL_HOST_ALLOWLIST = [
+  'api.dify.example',
+  'x',
+  'host.docker.internal',
+].join(',');
 import { startTestDb, stopTestDb, getPool, getAppPool } from '../../../helpers/pg-container.js';
 import { createDomainScenario } from '../../../helpers/fixtures/domain-scenario.js';
 import {

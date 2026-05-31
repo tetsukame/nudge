@@ -54,6 +54,19 @@ export default async function NewRequestPage({
     },
   );
 
+  // NDG-73 Phase 2: AI 整形ボタン表示判定
+  const aiEnabled = await withTenant(
+    appPool(),
+    session.tenantId,
+    async (client) => {
+      const { rows } = await client.query(
+        `SELECT 1 FROM tenant_ai_config WHERE tenant_id = $1 AND enabled = true LIMIT 1`,
+        [session.tenantId],
+      );
+      return rows.length > 0;
+    },
+  );
+
   let copySource: CopySource | null = null;
   let copyError: string | null = null;
   let copySourceTitle: string | null = null;
@@ -121,6 +134,7 @@ export default async function NewRequestPage({
         droppedTargets={copySource?.droppedTargets}
         initialOrgMeta={copySource?.orgMeta}
         initialUserMeta={copySource?.userMeta}
+        aiEnabled={aiEnabled}
       />
     </div>
   );

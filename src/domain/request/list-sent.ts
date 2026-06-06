@@ -1,5 +1,6 @@
 import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
+import { WhereBuilder } from '../../db/where-builder';
 import type { ActorContext } from '../types';
 
 export type SentFilter = 'all' | 'in_progress' | 'done' | 'scheduled';
@@ -59,6 +60,29 @@ const MAX_PAGE_SIZE = 100;
 
 const DONE_STATUSES = `'responded','not_needed','forwarded','substituted','exempted','expired'`;
 
+/**
+ * NDG-88: 「sent 系」共通の WHERE 部分を組み立てる。
+ * filter 由来の draft / scheduled 振り分けは含めず、呼び出し側 (list / count)
+ * で `addRaw` する。これにより list と count の draft 扱いが二重定義にならない。
+ */
+function buildSharedWhere(
+  actor: ActorContext,
+  input: Pick<ListSentRequestsInput, 'q' | 'retiredRequesterOnly' | 'tenantWide'>,
+): WhereBuilder {
+  const wb = new WhereBuilder();
+  const tenantWide = input.tenantWide ?? false;
+  if (!tenantWide) {
+    wb.add('r.created_by_user_id = ?', actor.userId);
+  }
+  if (input.q && input.q.trim()) {
+    wb.add('r.title ILIKE ?', `%${input.q.trim()}%`);
+  }
+  if (tenantWide && input.retiredRequesterOnly) {
+    wb.addRaw(`cu.status = 'inactive'`);
+  }
+  return wb;
+}
+
 export async function listSentRequests(
   pool: pg.Pool,
   actor: ActorContext,
@@ -77,38 +101,13 @@ export async function listSentRequests(
   }
 
   return withTenant(pool, actor.tenantId, async (client) => {
-    const params: unknown[] = [];
-    let creatorClause: string;
-    if (tenantWide) {
-      creatorClause = '';
-    } else {
-      params.push(actor.userId);
-      creatorClause = `WHERE r.created_by_user_id = $${params.length}`;
-    }
-
-    let qClause = '';
-    if (input.q && input.q.trim()) {
-      params.push(`%${input.q.trim()}%`);
-      qClause = `${creatorClause === '' ? 'WHERE' : 'AND'} r.title ILIKE $${params.length}`;
-    }
-
-    let retiredClause = '';
-    if (tenantWide && input.retiredRequesterOnly) {
-      const kw = creatorClause === '' && qClause === '' ? 'WHERE' : 'AND';
-      retiredClause = `${kw} cu.status = 'inactive'`;
-    }
-
+    const wb = buildSharedWhere(actor, input);
     // NDG-70: scheduled (draft + scheduled_at) は別系統。他フィルタとは排他。
-    let scheduledClause = '';
     if (filter === 'scheduled') {
-      const kw = creatorClause === '' && qClause === '' && retiredClause === ''
-        ? 'WHERE' : 'AND';
-      scheduledClause = `${kw} r.status = 'draft' AND r.scheduled_at IS NOT NULL`;
+      wb.addRaw(`r.status = 'draft' AND r.scheduled_at IS NOT NULL`);
     } else {
-      // それ以外のタブ (all/in_progress/done) では draft は除外する
-      const kw = creatorClause === '' && qClause === '' && retiredClause === ''
-        ? 'WHERE' : 'AND';
-      scheduledClause = `${kw} r.status <> 'draft'`;
+      // それ以外のタブ (all/in_progress/done) では draft は除外
+      wb.addRaw(`r.status <> 'draft'`);
     }
 
     let havingClause = '';
@@ -123,10 +122,7 @@ export async function listSentRequests(
       FROM request r
       LEFT JOIN assignment a ON a.request_id = r.id
       LEFT JOIN users cu ON cu.id = r.created_by_user_id
-      ${creatorClause}
-      ${qClause}
-      ${retiredClause}
-      ${scheduledClause}
+      ${wb.whereClause()}
       GROUP BY r.id, r.title, r.status, r.due_at, r.scheduled_at, r.created_at,
                r.created_by_user_id, cu.display_name, cu.status
       ${havingClause}
@@ -136,12 +132,16 @@ export async function listSentRequests(
       SELECT r.id
       ${baseSql}
     ) sub`;
-    const { rows: countRows } = await client.query<{ n: number }>(countSql, params);
+    const { rows: countRows } = await client.query<{ n: number }>(countSql, wb.values());
     const total = countRows[0].n;
 
-    params.push(pageSize, offset);
-    const pLimit = `$${params.length - 1}`;
-    const pOffset = `$${params.length}`;
+    // LIMIT / OFFSET の値を末尾に追加して $N を取る
+    const pLimit = wb.pushValue(pageSize);
+    const pOffset = wb.pushValue(offset);
+
+    const orderBy = filter === 'scheduled'
+      ? 'r.scheduled_at ASC'
+      : `r.due_at ASC NULLS LAST, (COUNT(a.id) - COUNT(*) FILTER (WHERE a.status IN (${DONE_STATUSES}))) DESC`;
 
     const itemSql = `
       SELECT
@@ -167,11 +167,11 @@ export async function listSentRequests(
             AND r.due_at < now()
         )::int AS overdue_count
       ${baseSql}
-      ORDER BY ${filter === 'scheduled' ? 'r.scheduled_at ASC' : 'r.due_at ASC NULLS LAST, (COUNT(a.id) - COUNT(*) FILTER (WHERE a.status IN (' + DONE_STATUSES + '))) DESC'}
+      ORDER BY ${orderBy}
       LIMIT ${pLimit} OFFSET ${pOffset}
     `;
 
-    const { rows } = await client.query(itemSql, params);
+    const { rows } = await client.query(itemSql, wb.values());
 
     return {
       items: rows.map((r) => ({
@@ -207,6 +207,12 @@ export async function listSentRequests(
  * リクエスト単位に集約した CTE の上で FILTER (...) を被せている。
  * filter/page/pageSize は無関係（カウント専用）。q / retiredRequesterOnly /
  * tenantWide は listSentRequests と同じく作用する。
+ *
+ * NDG-81: draft (予約送信中) は all/in_progress/done のいずれにも含めない
+ * (listSentRequests も filter !== 'scheduled' の時は draft を除外しているため)。
+ *
+ * NDG-88: WhereBuilder で list と共通の WHERE を組み立て、draft 除外条件を
+ * 同じ場所で追加する。
  */
 export async function countSentRequestsByFilter(
   pool: pg.Pool,
@@ -218,31 +224,8 @@ export async function countSentRequestsByFilter(
     throw new Error('tenantWide listing requires tenant_admin');
   }
   return withTenant(pool, actor.tenantId, async (client) => {
-    const params: unknown[] = [];
-    let creatorClause: string;
-    if (tenantWide) {
-      creatorClause = '';
-    } else {
-      params.push(actor.userId);
-      creatorClause = `WHERE r.created_by_user_id = $${params.length}`;
-    }
-    let qClause = '';
-    if (input.q && input.q.trim()) {
-      params.push(`%${input.q.trim()}%`);
-      qClause = `${creatorClause === '' ? 'WHERE' : 'AND'} r.title ILIKE $${params.length}`;
-    }
-    let retiredClause = '';
-    if (tenantWide && input.retiredRequesterOnly) {
-      const kw = creatorClause === '' && qClause === '' ? 'WHERE' : 'AND';
-      retiredClause = `${kw} cu.status = 'inactive'`;
-    }
-
-    // NDG-81: listSentRequests (filter=all/in_progress/done) は draft を除外する
-    // のでカウントも揃える。scheduled タブは別系統のため all/in_progress/done
-    // のいずれにも含めない。
-    const draftExcludeKw =
-      creatorClause === '' && qClause === '' && retiredClause === '' ? 'WHERE' : 'AND';
-    const draftExcludeClause = `${draftExcludeKw} r.status <> 'draft'`;
+    const wb = buildSharedWhere(actor, input);
+    wb.addRaw(`r.status <> 'draft'`);
 
     const sql = `
       WITH req AS (
@@ -254,10 +237,7 @@ export async function countSentRequestsByFilter(
         FROM request r
         LEFT JOIN assignment a ON a.request_id = r.id
         LEFT JOIN users cu ON cu.id = r.created_by_user_id
-        ${creatorClause}
-        ${qClause}
-        ${retiredClause}
-        ${draftExcludeClause}
+        ${wb.whereClause()}
         GROUP BY r.id
       )
       SELECT
@@ -270,7 +250,7 @@ export async function countSentRequestsByFilter(
       all_count: number;
       in_progress_count: number;
       done_count: number;
-    }>(sql, params);
+    }>(sql, wb.values());
     const r = rows[0];
     return { all: r.all_count, inProgress: r.in_progress_count, done: r.done_count };
   });

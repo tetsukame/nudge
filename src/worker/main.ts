@@ -2,6 +2,7 @@ import 'dotenv/config';
 import pg from 'pg';
 import { runScheduler } from './scheduler';
 import { runSender } from './sender';
+import { runRetention } from './retention';
 
 const TICK_INTERVAL_MS = 60_000;
 
@@ -21,6 +22,11 @@ async function tick(adminPool: pg.Pool): Promise<void> {
     await runSender(adminPool);
   } catch (err) {
     console.error('[worker] sender error:', (err as Error).message);
+  }
+  try {
+    await runRetention(adminPool);
+  } catch (err) {
+    console.error('[worker] retention error:', (err as Error).message);
   }
 }
 

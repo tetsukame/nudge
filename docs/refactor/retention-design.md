@@ -1,8 +1,9 @@
 # データ保持期間 (retention) 設計
 
-ステータス: **設計レビュー中** (NDG-87 / v0.24)
-作成日: 2026-05-31
+ステータス: **設計確定** (NDG-87 / v0.24)
+作成日: 2026-05-31 / 確定: 2026-06-06
 親チケット: A3 性能棚卸し ([docs/refactor/performance-audit-v0.23.md](performance-audit-v0.23.md) P3)
+行政職員向け運用マニュアル: [Notion ドキュメント DB](https://app.notion.com/p/377062c9be5c81d5bca5c228054ae002)
 
 ## 背景
 
@@ -142,16 +143,22 @@ audit_log 自体を消すのは「監査記録の消去」という業務的に�
 
 これで「削除した形跡」が retention_log に最低 1 行残る。
 
-## 残課題 / オープン質問
+## 決定事項 (2026-06-06 確定)
 
-設計合意のために、本 PR レビューで以下を確定したい:
+設計レビューで合意した事項:
 
-1. **soft → hard の grace 期間**: デフォルト 7 日で良いか？ 30 日が安全という意見もあり
-2. **tenant_admin の retention 設定 UI**: `/admin/settings/retention` ページを v0.24 で出すか、API のみで v0.25 に UI を回すか
-3. **`assignment_status_history` の特殊扱い**: 依頼が active のままなら遷移履歴は消さない方が良い (差し戻し時の根拠等)。`WHERE r.status IN ('closed', 'cancelled')` の追加条件案
-4. **`audit_log` の保持期間**: 2 年で十分か / 7 年が必要か / tenant の業界に応じて選べるよう preset (general/healthcare/finance) を用意するか
-5. **削除後の集計値**: 「過去 1 年の通知失敗率」みたいな統計を /admin で出してる箇所はないか確認 (現状 NO) — あれば月次集計を別テーブルに保存する追加設計
-6. **DB size のリアル計測**: 現 dev DB で各テーブルの実際の MB を測ってから「効果見込み」を試算するか
+1. **soft → hard の grace 期間 = 7 日** (デフォルト)。30 日案も検討したが、論理段階で 7 日あれば誤設定気付くには十分で、ストレージ削減効果との bilance を取る
+2. **tenant_admin の retention 設定 UI は v0.25 にリリース**。v0.24 では API のみ提供し、tenant 設定変更は platform_admin の SQL or `/root/retention` で実行。3 か月程度の運用を経てから UI 投資を判断
+3. **`assignment_status_history` は `WHERE r.status IN ('closed', 'cancelled')` 限定で削除**。active 中の依頼の遷移履歴は差し戻し対応根拠として保持する
+4. **`audit_log` 保持期間は単一 2 年で開始**。業界別プリセット (general/healthcare/finance) は実需要が出てから別チケットで導入。tenant 上書きで個別対応可能なため、デフォルトの過剰一般化を避ける
+5. **削除後の集計値の維持は不要**。grep 確認の結果、`/admin` に「過去 N 期間の通知失敗率」等の統計表示は現状なし。要望が発生したら月次集計テーブルの追加で対応
+6. **DB size 実測は設計確定後 / 実装着手前に実施**。本設計の「効果見込み」が運用判断のキー指標になるため、実装 PR の前段で測って数値を記録する
+
+## 残課題
+
+実装 PR 着手前に行うこと:
+- dev DB の各対象テーブル size 実測 (`SELECT pg_size_pretty(pg_total_relation_size('notification'))` 等)
+- 既存環境の `archived_at` 列追加 (migration 055) に伴うロック時間の見立て (テーブルが既に大きいとき、`ADD COLUMN` のロック時間)
 
 ## 推奨次アクション
 

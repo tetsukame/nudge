@@ -11,6 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useAsyncAction } from '@/ui/hooks/use-async-action';
+import { apiFetch } from '@/lib/api-fetch';
 
 type Props = {
   tenantCode: string;
@@ -23,49 +25,30 @@ type Props = {
 
 type Result = { title: string; body: string };
 
+/**
+ * 2 段階 (入力 → 提案表示) + 採用/再生成/破棄 の複雑な遷移を持つので
+ * 共通 ConfirmDialog ではなく Dialog を直接使う。useAsyncAction で
+ * busy/error/result の state 管理だけ共通化する。
+ */
 export function AIFormatModal({ tenantCode, currentTitle, currentBody, onAdopt }: Props) {
   const [open, setOpen] = useState(false);
   const [memo, setMemo] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [result, setResult] = useState<Result | null>(null);
 
-  function reset() {
-    setMemo('');
-    setBusy(false);
-    setError('');
-    setResult(null);
-  }
+  const action = useAsyncAction<Result>(() =>
+    apiFetch<Result>(`/t/${tenantCode}/api/requests/format`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ memo }),
+    }),
+  );
 
   function close() {
     setOpen(false);
-    setTimeout(reset, 200);
-  }
-
-  async function generate() {
-    if (!memo.trim()) return;
-    setBusy(true);
-    setError('');
-    try {
-      const res = await fetch(`/t/${tenantCode}/api/requests/format`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ memo }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error((data as { error?: string }).error ?? `エラー (${res.status})`);
-      }
-      setResult(data as Result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'エラー');
-    } finally {
-      setBusy(false);
-    }
+    setTimeout(() => { setMemo(''); action.reset(); }, 200);
   }
 
   function adopt() {
-    if (!result) return;
+    if (!action.result) return;
     const willOverwrite = !!currentTitle.trim() || !!currentBody.trim();
     if (willOverwrite) {
       const ok = window.confirm(
@@ -73,7 +56,7 @@ export function AIFormatModal({ tenantCode, currentTitle, currentBody, onAdopt }
       );
       if (!ok) return;
     }
-    onAdopt(result);
+    onAdopt(action.result);
     close();
   }
 
@@ -104,7 +87,7 @@ export function AIFormatModal({ tenantCode, currentTitle, currentBody, onAdopt }
             </DialogDescription>
           </DialogHeader>
 
-          {!result && (
+          {!action.result && (
             <div className="space-y-2">
               <label className="text-xs text-gray-600" htmlFor="ai-memo">
                 要件メモ
@@ -116,54 +99,54 @@ export function AIFormatModal({ tenantCode, currentTitle, currentBody, onAdopt }
                 placeholder="例: 来週月曜までに月次の勤怠アンケートに回答してもらう"
                 rows={6}
                 className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                disabled={busy}
+                disabled={action.busy}
               />
             </div>
           )}
 
-          {result && (
+          {action.result && (
             <div className="space-y-3">
               <div className="space-y-1">
                 <div className="text-xs text-gray-500">提案タイトル</div>
                 <div className="text-sm font-medium text-gray-900 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
-                  {result.title}
+                  {action.result.title}
                 </div>
               </div>
               <div className="space-y-1">
                 <div className="text-xs text-gray-500">提案本文</div>
                 <pre className="text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 whitespace-pre-wrap font-sans max-h-64 overflow-auto">
-                  {result.body}
+                  {action.result.body}
                 </pre>
               </div>
             </div>
           )}
 
-          {error && (
+          {action.error && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-              {error}
+              {action.error}
             </p>
           )}
 
           <DialogFooter className="flex gap-2 sm:gap-2">
-            {!result && (
+            {!action.result && (
               <>
-                <Button variant="outline" onClick={close} disabled={busy}>
+                <Button variant="outline" onClick={close} disabled={action.busy}>
                   キャンセル
                 </Button>
-                <Button onClick={() => void generate()} disabled={busy || !memo.trim()}>
-                  {busy ? '生成中...' : '提案を生成'}
+                <Button onClick={() => void action.run()} disabled={action.busy || !memo.trim()}>
+                  {action.busy ? '生成中...' : '提案を生成'}
                 </Button>
               </>
             )}
-            {result && (
+            {action.result && (
               <>
-                <Button variant="outline" onClick={() => setResult(null)} disabled={busy}>
+                <Button variant="outline" onClick={action.reset} disabled={action.busy}>
                   破棄
                 </Button>
-                <Button variant="outline" onClick={() => void generate()} disabled={busy}>
-                  {busy ? '生成中...' : '再生成'}
+                <Button variant="outline" onClick={() => void action.run()} disabled={action.busy}>
+                  {action.busy ? '生成中...' : '再生成'}
                 </Button>
-                <Button onClick={adopt} disabled={busy}>
+                <Button onClick={adopt} disabled={action.busy}>
                   採用
                 </Button>
               </>

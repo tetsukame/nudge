@@ -3,15 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { XCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/ui/components/confirm-dialog';
+import { useAsyncAction } from '@/ui/hooks/use-async-action';
+import { apiSend } from '@/lib/api-fetch';
 
 type Props = {
   tenantCode: string;
@@ -25,35 +19,16 @@ export function ScheduledCancelButton({
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
 
-  async function submit() {
-    setSending(true);
-    setError('');
-    try {
-      const res = await fetch(
-        `/t/${tenantCode}/api/requests/${requestId}`,
-        {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ action: 'cancel', reason: '予約取り消し' }),
-        },
-      );
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(
-          (data as { error?: string }).error ?? `エラー (${res.status})`,
-        );
-      }
-      setOpen(false);
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'エラー');
-    } finally {
-      setSending(false);
-    }
-  }
+  const action = useAsyncAction(async () => {
+    await apiSend(`/t/${tenantCode}/api/requests/${requestId}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'cancel', reason: '予約取り消し' }),
+    });
+    setOpen(false);
+    router.refresh();
+  });
 
   return (
     <>
@@ -66,41 +41,27 @@ export function ScheduledCancelButton({
         予約を取り消す
       </button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>予約送信を取り消す</DialogTitle>
-            <DialogDescription>
-              「{title}」 の予約送信を取り消します。<br />
-              送信予定: {new Date(scheduledAt).toLocaleString('ja-JP')}<br />
-              <span className="text-xs text-gray-500">
-                まだ誰にも通知されていないため、受信者への通知は発生しません。
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-              {error}
-            </p>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={sending}
-            >
-              戻る
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => void submit()}
-              disabled={sending}
-            >
-              {sending ? '取り消し中...' : '予約を取り消す'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="予約送信を取り消す"
+        description={
+          <>
+            「{title}」 の予約送信を取り消します。<br />
+            送信予定: {new Date(scheduledAt).toLocaleString('ja-JP')}<br />
+            <span className="text-xs text-gray-500">
+              まだ誰にも通知されていないため、受信者への通知は発生しません。
+            </span>
+          </>
+        }
+        cancelLabel="戻る"
+        confirmLabel="予約を取り消す"
+        busyLabel="取り消し中..."
+        busy={action.busy}
+        error={action.error}
+        danger
+        onConfirm={() => void action.run()}
+      />
     </>
   );
 }

@@ -18,6 +18,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/ui/components/confirm-dialog';
+import { useAsyncAction } from '@/ui/hooks/use-async-action';
+import { apiFetch, apiSend } from '@/lib/api-fetch';
 
 type Props = {
   tenantCode: string;
@@ -42,72 +45,36 @@ export function SentRequestCardActions({
 }: Props) {
   const [commentOpen, setCommentOpen] = useState(false);
   const [commentBody, setCommentBody] = useState('');
-  const [commentSending, setCommentSending] = useState(false);
-  const [commentError, setCommentError] = useState('');
-
   const [remindOpen, setRemindOpen] = useState(false);
-  const [remindSending, setRemindSending] = useState(false);
-  const [remindError, setRemindError] = useState('');
-  const [remindResult, setRemindResult] = useState<string | null>(null);
 
   const detailBase = `/t/${tenantCode}/requests/${requestId}?from=${fromQuery}`;
 
-  async function postBroadcast() {
+  const broadcast = useAsyncAction(async () => {
     if (!commentBody.trim()) return;
-    setCommentSending(true);
-    setCommentError('');
-    try {
-      const res = await fetch(
-        `/t/${tenantCode}/api/requests/${requestId}/comments`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ body: commentBody, assignmentId: null }),
-        },
-      );
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(
-          (data as { error?: string }).error ?? `エラー (${res.status})`,
-        );
-      }
-      setCommentBody('');
-      setCommentOpen(false);
-    } catch (err) {
-      setCommentError(err instanceof Error ? err.message : 'エラー');
-    } finally {
-      setCommentSending(false);
-    }
-  }
+    await apiSend(`/t/${tenantCode}/api/requests/${requestId}/comments`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ body: commentBody, assignmentId: null }),
+    });
+    setCommentBody('');
+    setCommentOpen(false);
+  });
 
-  async function sendRemind() {
-    setRemindSending(true);
-    setRemindError('');
-    setRemindResult(null);
+  const remind = useAsyncAction(async () => {
     try {
-      const res = await fetch(
+      const data = await apiFetch<{ recipients?: number }>(
         `/t/${tenantCode}/api/requests/${requestId}/remind`,
         { method: 'POST' },
       );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        if (res.status === 429) {
-          throw new Error(
-            '前回のリマインドから 1 時間以上空けてから再送してください',
-          );
-        }
-        throw new Error(
-          (data as { error?: string }).error ?? `エラー (${res.status})`,
-        );
-      }
-      const recipients = (data as { recipients?: number }).recipients ?? 0;
-      setRemindResult(`${recipients} 名にリマインドを送りました`);
+      return `${data.recipients ?? 0} 名にリマインドを送りました`;
     } catch (err) {
-      setRemindError(err instanceof Error ? err.message : 'エラー');
-    } finally {
-      setRemindSending(false);
+      // 429 を分かりやすい日本語に置換
+      if (err instanceof Error && /\(429\)/.test(err.message)) {
+        throw new Error('前回のリマインドから 1 時間以上空けてから再送してください');
+      }
+      throw err;
     }
-  }
+  });
 
   return (
     <>
@@ -117,17 +84,13 @@ export function SentRequestCardActions({
         label="コピーして作成"
       />
       <ActionButton
-        onClick={() => setCommentOpen(true)}
+        onClick={() => { setCommentOpen(true); broadcast.reset(); }}
         icon={<MessageSquare className="h-3.5 w-3.5" />}
         label="全員にコメント"
       />
       {pendingCount > 0 && (
         <ActionButton
-          onClick={() => {
-            setRemindOpen(true);
-            setRemindResult(null);
-            setRemindError('');
-          }}
+          onClick={() => { setRemindOpen(true); remind.reset(); }}
           icon={<Bell className="h-3.5 w-3.5" />}
           label="リマインド"
         />
@@ -150,43 +113,29 @@ export function SentRequestCardActions({
       )}
 
       {/* Broadcast comment dialog */}
-      <Dialog open={commentOpen} onOpenChange={setCommentOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>全員にコメント</DialogTitle>
-            <DialogDescription>
-              依頼を受け取った全員に表示されるコメントを送信します。
-            </DialogDescription>
-          </DialogHeader>
-          <textarea
-            value={commentBody}
-            onChange={(e) => setCommentBody(e.target.value)}
-            placeholder="例: 期限が近づいています。お忙しいところ恐縮ですがご対応をお願いします。"
-            rows={4}
-            className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          {commentError && (
-            <p className="text-xs text-red-600">{commentError}</p>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setCommentOpen(false)}
-              disabled={commentSending}
-            >
-              キャンセル
-            </Button>
-            <Button
-              onClick={() => void postBroadcast()}
-              disabled={commentSending || !commentBody.trim()}
-            >
-              {commentSending ? '送信中...' : '送信'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={commentOpen}
+        onOpenChange={setCommentOpen}
+        title="全員にコメント"
+        description="依頼を受け取った全員に表示されるコメントを送信します。"
+        confirmLabel="送信"
+        busyLabel="送信中..."
+        busy={broadcast.busy}
+        error={broadcast.error}
+        disabled={!commentBody.trim()}
+        onConfirm={() => void broadcast.run()}
+      >
+        <textarea
+          value={commentBody}
+          onChange={(e) => setCommentBody(e.target.value)}
+          placeholder="例: 期限が近づいています。お忙しいところ恐縮ですがご対応をお願いします。"
+          rows={4}
+          className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+      </ConfirmDialog>
 
-      {/* Remind confirmation dialog */}
+      {/* Remind dialog: 成功後は結果メッセージを表示して「閉じる」のみ。
+          ConfirmDialog の二段階遷移は守備範囲外なので生 Dialog を残す。 */}
       <Dialog open={remindOpen} onOpenChange={setRemindOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
@@ -200,30 +149,27 @@ export function SentRequestCardActions({
               </span>
             </DialogDescription>
           </DialogHeader>
-          {remindResult && (
+          {remind.result && (
             <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
-              {remindResult}
+              {remind.result}
             </p>
           )}
-          {remindError && (
+          {remind.error && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-              {remindError}
+              {remind.error}
             </p>
           )}
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setRemindOpen(false)}
-              disabled={remindSending}
+              disabled={remind.busy}
             >
-              {remindResult ? '閉じる' : 'キャンセル'}
+              {remind.result ? '閉じる' : 'キャンセル'}
             </Button>
-            {!remindResult && (
-              <Button
-                onClick={() => void sendRemind()}
-                disabled={remindSending}
-              >
-                {remindSending ? '送信中...' : '送信'}
+            {!remind.result && (
+              <Button onClick={() => void remind.run()} disabled={remind.busy}>
+                {remind.busy ? '送信中...' : '送信'}
               </Button>
             )}
           </DialogFooter>

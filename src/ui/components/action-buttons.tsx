@@ -3,16 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { ConfirmDialog } from '@/ui/components/confirm-dialog';
+import { useAsyncAction } from '@/ui/hooks/use-async-action';
+import { apiSend } from '@/lib/api-fetch';
 
 type Props = {
   tenantCode: string;
@@ -28,35 +23,31 @@ export function ActionButtons({ tenantCode, assignmentId, requestId, status }: P
   const [open, setOpen] = useState<DialogType>(null);
   const [note, setNote] = useState('');
   const [reason, setReason] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+
+  const respond = useAsyncAction(async () => {
+    await apiSend(`/t/${tenantCode}/api/assignments/${assignmentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'respond', note: note || undefined }),
+    });
+    setOpen(null);
+    setNote('');
+    router.refresh();
+  });
+
+  const notNeeded = useAsyncAction(async () => {
+    await apiSend(`/t/${tenantCode}/api/assignments/${assignmentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'not_needed', reason }),
+    });
+    setOpen(null);
+    setReason('');
+    router.refresh();
+  });
 
   if (status !== 'unopened' && status !== 'opened') {
     return null;
-  }
-
-  async function dispatch(action: string, payload: Record<string, unknown>) {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch(`/t/${tenantCode}/api/assignments/${assignmentId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, ...payload }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error ?? `エラー (${res.status})`);
-      }
-      setOpen(null);
-      setNote('');
-      setReason('');
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '予期しないエラーが発生しました');
-    } finally {
-      setLoading(false);
-    }
   }
 
   return (
@@ -64,13 +55,13 @@ export function ActionButtons({ tenantCode, assignmentId, requestId, status }: P
       <div className="flex gap-3 flex-wrap">
         <Button
           variant="default"
-          onClick={() => { setOpen('respond'); setNote(''); setError(''); }}
+          onClick={() => { setOpen('respond'); setNote(''); respond.reset(); }}
         >
           ✅ 対応済み
         </Button>
         <Button
           variant="destructive"
-          onClick={() => { setOpen('not_needed'); setReason(''); setError(''); }}
+          onClick={() => { setOpen('not_needed'); setReason(''); notNeeded.reset(); }}
         >
           🚫 対応不要
         </Button>
@@ -82,74 +73,53 @@ export function ActionButtons({ tenantCode, assignmentId, requestId, status }: P
         </Button>
       </div>
 
-      {/* Respond dialog */}
-      <Dialog open={open === 'respond'} onOpenChange={(v) => !v && setOpen(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>対応済みにする</DialogTitle>
-            <DialogDescription>
-              この依頼を対応済みとして記録します。必要であればメモを入力してください。
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <Label htmlFor="respond-note">メモ（任意）</Label>
-            <Textarea
-              id="respond-note"
-              placeholder="対応内容や備考をここに入力..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={3}
-            />
-            {error && <p className="text-sm text-red-600">{error}</p>}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(null)} disabled={loading}>
-              キャンセル
-            </Button>
-            <Button
-              onClick={() => dispatch('respond', { note: note || undefined })}
-              disabled={loading}
-            >
-              {loading ? '送信中...' : '対応済みにする'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={open === 'respond'}
+        onOpenChange={(v) => !v && setOpen(null)}
+        title="対応済みにする"
+        description="この依頼を対応済みとして記録します。必要であればメモを入力してください。"
+        confirmLabel="対応済みにする"
+        busyLabel="送信中..."
+        busy={respond.busy}
+        error={respond.error}
+        onConfirm={() => void respond.run()}
+      >
+        <div className="space-y-2">
+          <Label htmlFor="respond-note">メモ（任意）</Label>
+          <Textarea
+            id="respond-note"
+            placeholder="対応内容や備考をここに入力..."
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={3}
+          />
+        </div>
+      </ConfirmDialog>
 
-      {/* Not Needed dialog */}
-      <Dialog open={open === 'not_needed'} onOpenChange={(v) => !v && setOpen(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>対応不要にする</DialogTitle>
-            <DialogDescription>
-              対応不要とする理由を入力してください（必須）。
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <Label htmlFor="not-needed-reason">理由（必須）</Label>
-            <Textarea
-              id="not-needed-reason"
-              placeholder="対応不要とする理由を入力してください..."
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={3}
-            />
-            {error && <p className="text-sm text-red-600">{error}</p>}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(null)} disabled={loading}>
-              キャンセル
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => dispatch('not_needed', { reason })}
-              disabled={loading || !reason.trim()}
-            >
-              {loading ? '送信中...' : '対応不要にする'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={open === 'not_needed'}
+        onOpenChange={(v) => !v && setOpen(null)}
+        title="対応不要にする"
+        description="対応不要とする理由を入力してください（必須）。"
+        confirmLabel="対応不要にする"
+        busyLabel="送信中..."
+        busy={notNeeded.busy}
+        error={notNeeded.error}
+        danger
+        disabled={!reason.trim()}
+        onConfirm={() => void notNeeded.run()}
+      >
+        <div className="space-y-2">
+          <Label htmlFor="not-needed-reason">理由（必須）</Label>
+          <Textarea
+            id="not-needed-reason"
+            placeholder="対応不要とする理由を入力してください..."
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+          />
+        </div>
+      </ConfirmDialog>
     </>
   );
 }

@@ -1,6 +1,7 @@
 import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
+import { AUDIT_ACTION, ROLE } from '../_constants';
 
 export class ManagerError extends Error {
   constructor(
@@ -91,8 +92,8 @@ export async function addManagedOrg(
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'org_unit_manager.add', 'user', $3, $4::jsonb)`,
-      [actor.tenantId, actor.userId, userId, JSON.stringify({ orgUnitId })],
+       VALUES ($1, $2, $3, 'user', $4, $5::jsonb)`,
+      [actor.tenantId, actor.userId, AUDIT_ACTION.ORG_UNIT_MANAGER_ADD, userId, JSON.stringify({ orgUnitId })],
     );
   });
 }
@@ -114,8 +115,8 @@ export async function removeManagedOrg(
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'org_unit_manager.remove', 'user', $3, $4::jsonb)`,
-      [actor.tenantId, actor.userId, userId, JSON.stringify({ orgUnitId })],
+       VALUES ($1, $2, $3, 'user', $4, $5::jsonb)`,
+      [actor.tenantId, actor.userId, AUDIT_ACTION.ORG_UNIT_MANAGER_REMOVE, userId, JSON.stringify({ orgUnitId })],
     );
   });
 }
@@ -146,8 +147,8 @@ export async function applyTransferToManagerRoles(
   );
 
   const { rows: roleRows } = await client.query(
-    `SELECT 1 FROM user_role WHERE user_id = $1 AND role = 'manager'`,
-    [userId],
+    `SELECT 1 FROM user_role WHERE user_id = $1 AND role = $2`,
+    [userId, ROLE.MANAGER],
   );
   const isManager = roleRows.length > 0;
 
@@ -173,10 +174,11 @@ export async function applyTransferToManagerRoles(
   await client.query(
     `INSERT INTO audit_log
        (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-     VALUES ($1, $2, 'org_unit_manager.transferred', 'user', $3, $4::jsonb)`,
+     VALUES ($1, $2, $3, 'user', $4, $5::jsonb)`,
     [
       tenantId,
       actorUserId,
+      AUDIT_ACTION.ORG_UNIT_MANAGER_TRANSFERRED,
       userId,
       JSON.stringify({
         wiped: prev.map((p) => p.org_unit_id),

@@ -1,4 +1,5 @@
 import type pg from 'pg';
+import { AUDIT_ACTION } from '../domain/_constants';
 
 async function getEnabledChannels(client: pg.PoolClient, tenantId: string): Promise<string[]> {
   const { rows } = await client.query(
@@ -239,8 +240,8 @@ async function activateScheduledRequests(client: pg.PoolClient): Promise<void> {
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, NULL, 'request.activated_scheduled', 'request', $2, $3::jsonb)`,
-      [r.tenant_id, r.id, JSON.stringify({ assigneeCount: asgs.length })],
+       VALUES ($1, NULL, $2, 'request', $3, $4::jsonb)`,
+      [r.tenant_id, AUDIT_ACTION.REQUEST_ACTIVATED_SCHEDULED, r.id, JSON.stringify({ assigneeCount: asgs.length })],
     );
   }
 }

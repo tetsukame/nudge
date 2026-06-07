@@ -2,6 +2,7 @@ import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
 import { applyTransferToManagerRoles } from './managers';
+import { AUDIT_ACTION } from '../_constants';
 
 export class AdminUserError extends Error {
   constructor(
@@ -231,8 +232,8 @@ export async function setUserStatus(
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'admin.user.status_changed', 'user', $3, $4::jsonb)`,
-      [actor.tenantId, actor.userId, userId, JSON.stringify({ status })],
+       VALUES ($1, $2, $3, 'user', $4, $5::jsonb)`,
+      [actor.tenantId, actor.userId, AUDIT_ACTION.ADMIN_USER_STATUS_CHANGED, userId, JSON.stringify({ status })],
     );
   });
 }
@@ -300,9 +301,9 @@ export async function setUserOrgUnits(
       await client.query(
         `INSERT INTO audit_log
            (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-         VALUES ($1, $2, 'admin.user.org_units_changed', 'user', $3, $4::jsonb)`,
+         VALUES ($1, $2, $3, 'user', $4, $5::jsonb)`,
         [
-          actor.tenantId, actor.userId, userId,
+          actor.tenantId, actor.userId, AUDIT_ACTION.ADMIN_USER_ORG_UNITS_CHANGED, userId,
           JSON.stringify({ orgUnitIds: ids, primaryOrgUnitId: input.primaryOrgUnitId }),
         ],
       );

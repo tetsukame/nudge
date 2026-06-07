@@ -3,6 +3,7 @@ import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
 import { encryptSecret } from '../../notification/crypto';
 import { assertSafeHttpUrl, assertSafeHostname, SafeUrlError } from '../../lib/safe-url';
+import { AUDIT_ACTION } from '../_constants';
 
 export class SettingsUpdateError extends Error {
   constructor(msg: string, readonly code: 'permission_denied' | 'validation') {
@@ -138,9 +139,9 @@ export async function updateNotificationSettings(
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'settings.notification.updated', 'tenant', $1, $3::jsonb)`,
+       VALUES ($1, $2, $3, 'tenant', $1, $4::jsonb)`,
       [
-        actor.tenantId, actor.userId,
+        actor.tenantId, actor.userId, AUDIT_ACTION.SETTINGS_NOTIFICATION_UPDATED,
         JSON.stringify({
           channels: input.channels,
           reminders: input.reminders,

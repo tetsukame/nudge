@@ -1,12 +1,7 @@
 import type pg from 'pg';
+import type { NotificationKind } from '../_constants';
 
-export type NotificationKind =
-  | 'created'
-  | 'reminder_before'
-  | 'due_today'
-  | 're_notify'
-  | 'completed'
-  | 'cancelled';
+export type { NotificationKind };
 
 export type EmitInput = {
   tenantId: string;

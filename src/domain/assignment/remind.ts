@@ -2,6 +2,7 @@ import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import { emitNotification } from '../notification/emit';
 import type { ActorContext } from '../types';
+import { AUDIT_ACTION } from '../_constants';
 
 export class AssignmentRemindError extends Error {
   constructor(
@@ -116,10 +117,11 @@ export async function remindAssignment(
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'assignment.manual_remind', 'assignment', $3, $4::jsonb)`,
+       VALUES ($1, $2, $3, 'assignment', $4, $5::jsonb)`,
       [
         actor.tenantId,
         actor.userId,
+        AUDIT_ACTION.ASSIGNMENT_MANUAL_REMIND,
         assignmentId,
         JSON.stringify({ recipientUserId: a.user_id, requestId: a.request_id }),
       ],

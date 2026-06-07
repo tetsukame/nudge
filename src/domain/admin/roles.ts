@@ -2,6 +2,7 @@ import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
 import { applyTransferToManagerRoles } from './managers';
+import { ASSIGNABLE_ROLES, AUDIT_ACTION, ROLE, type Role } from '../_constants';
 
 export class AdminRoleError extends Error {
   constructor(
@@ -13,10 +14,8 @@ export class AdminRoleError extends Error {
   }
 }
 
-export type AssignableRole = 'tenant_admin' | 'tenant_wide_requester' | 'manager' | 'auditor';
-const ASSIGNABLE: ReadonlySet<string> = new Set([
-  'tenant_admin', 'tenant_wide_requester', 'manager', 'auditor',
-]);
+export type AssignableRole = Exclude<Role, typeof ROLE.PLATFORM_ADMIN>;
+const ASSIGNABLE: ReadonlySet<string> = new Set(ASSIGNABLE_ROLES);
 
 export async function setUserRoles(
   pool: pg.Pool,
@@ -46,10 +45,11 @@ export async function setUserRoles(
     }
 
     // 安全策: 最後の tenant_admin を奪う動きを拒否
-    const willHaveAdmin = requested.includes('tenant_admin');
+    const willHaveAdmin = requested.includes(ROLE.TENANT_ADMIN);
     if (!willHaveAdmin) {
       const { rows: adminRows } = await client.query<{ user_id: string }>(
-        `SELECT user_id FROM user_role WHERE role = 'tenant_admin'`,
+        `SELECT user_id FROM user_role WHERE role = $1`,
+        [ROLE.TENANT_ADMIN],
       );
       const remaining = adminRows.filter((r) => r.user_id !== userId);
       if (remaining.length === 0) {
@@ -65,8 +65,8 @@ export async function setUserRoles(
       `SELECT role FROM user_role WHERE user_id = $1 AND role = ANY($2::text[])`,
       [userId, [...ASSIGNABLE]],
     );
-    const wasManager = priorRoleRows.some((r) => r.role === 'manager');
-    const willBeManager = requested.includes('manager');
+    const wasManager = priorRoleRows.some((r) => r.role === ROLE.MANAGER);
+    const willBeManager = requested.includes(ROLE.MANAGER);
     const managerToggled = wasManager !== willBeManager;
 
     await client.query('BEGIN');
@@ -84,8 +84,8 @@ export async function setUserRoles(
       await client.query(
         `INSERT INTO audit_log
            (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-         VALUES ($1, $2, 'admin.user.roles_changed', 'user', $3, $4::jsonb)`,
-        [actor.tenantId, actor.userId, userId, JSON.stringify({ roles: requested })],
+         VALUES ($1, $2, $3, 'user', $4, $5::jsonb)`,
+        [actor.tenantId, actor.userId, AUDIT_ACTION.ADMIN_USER_ROLES_CHANGED, userId, JSON.stringify({ roles: requested })],
       );
       if (managerToggled) {
         // NDG-48: a manual toggle locks the user out of KC position sync so

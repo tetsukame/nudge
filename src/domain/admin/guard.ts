@@ -1,5 +1,6 @@
 import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
+import { ROLE } from '../_constants';
 
 /**
  * Returns true if the given user is a tenant_admin in the given tenant.
@@ -14,9 +15,9 @@ export async function isTenantAdmin(
     const { rows } = await client.query<{ ok: boolean }>(
       `SELECT EXISTS(
          SELECT 1 FROM user_role
-          WHERE user_id = $1 AND role = 'tenant_admin'
+          WHERE user_id = $1 AND role = $2
        ) AS ok`,
-      [userId],
+      [userId, ROLE.TENANT_ADMIN],
     );
     return rows[0].ok;
   });
@@ -36,9 +37,9 @@ export async function canViewAuditLog(
     const { rows } = await client.query<{ ok: boolean }>(
       `SELECT EXISTS(
          SELECT 1 FROM user_role
-          WHERE user_id = $1 AND role IN ('tenant_admin', 'auditor')
+          WHERE user_id = $1 AND role = ANY($2::text[])
        ) AS ok`,
-      [userId],
+      [userId, [ROLE.TENANT_ADMIN, ROLE.AUDITOR]],
     );
     return rows[0].ok;
   });

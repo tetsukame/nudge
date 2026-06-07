@@ -2,6 +2,7 @@ import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
 import type { TargetSpec } from '../request/expand-targets';
+import { AUDIT_ACTION } from '../_constants';
 
 export class TemplateError extends Error {
   constructor(
@@ -200,8 +201,8 @@ export async function createTemplate(
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'request_template.created', 'request_template', $3, $4::jsonb)`,
-      [actor.tenantId, actor.userId, rows[0].id,
+       VALUES ($1, $2, $3, 'request_template', $4, $5::jsonb)`,
+      [actor.tenantId, actor.userId, AUDIT_ACTION.REQUEST_TEMPLATE_CREATED, rows[0].id,
        JSON.stringify({ orgUnitId: input.orgUnitId, title: input.title })],
     );
     return { id: rows[0].id };
@@ -246,8 +247,8 @@ export async function updateTemplate(
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'request_template.updated', 'request_template', $3, $4::jsonb)`,
-      [actor.tenantId, actor.userId, id,
+       VALUES ($1, $2, $3, 'request_template', $4, $5::jsonb)`,
+      [actor.tenantId, actor.userId, AUDIT_ACTION.REQUEST_TEMPLATE_UPDATED, id,
        JSON.stringify({ orgUnitId: input.orgUnitId, title: input.title })],
     );
   });
@@ -272,8 +273,8 @@ export async function archiveTemplate(
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'request_template.archived', 'request_template', $3, '{}'::jsonb)`,
-      [actor.tenantId, actor.userId, id],
+       VALUES ($1, $2, $3, 'request_template', $4, '{}'::jsonb)`,
+      [actor.tenantId, actor.userId, AUDIT_ACTION.REQUEST_TEMPLATE_ARCHIVED, id],
     );
   });
 }

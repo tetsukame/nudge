@@ -1,6 +1,7 @@
 import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
+import { AUDIT_ACTION } from '../_constants';
 
 export class PositionConfigError extends Error {
   constructor(
@@ -66,8 +67,8 @@ export async function setTenantPositionConfig(
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'tenant.position_config_changed', 'tenant', $1, $3::jsonb)`,
-      [actor.tenantId, actor.userId, JSON.stringify({ managerPositions: cleaned })],
+       VALUES ($1, $2, $3, 'tenant', $1, $4::jsonb)`,
+      [actor.tenantId, actor.userId, AUDIT_ACTION.TENANT_POSITION_CONFIG_CHANGED, JSON.stringify({ managerPositions: cleaned })],
     );
   });
 }

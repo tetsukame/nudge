@@ -1,6 +1,7 @@
 import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
+import { AUDIT_ACTION } from '../_constants';
 
 export class ReassignRequesterError extends Error {
   constructor(
@@ -84,10 +85,11 @@ export async function reassignRequester(
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'request.requester_reassigned', 'request', $3, $4::jsonb)`,
+       VALUES ($1, $2, $3, 'request', $4, $5::jsonb)`,
       [
         actor.tenantId,
         actor.userId,
+        AUDIT_ACTION.REQUEST_REQUESTER_REASSIGNED,
         requestId,
         JSON.stringify({ previousUserId, newUserId }),
       ],

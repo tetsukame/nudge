@@ -2,6 +2,7 @@ import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
 import { PLATFORM_RETENTION_DEFAULTS } from './defaults';
+import { AUDIT_ACTION } from '../_constants';
 
 export class RetentionConfigError extends Error {
   constructor(
@@ -215,9 +216,9 @@ export async function upsertRetentionConfig(
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'settings.retention.changed', 'tenant', $1, $3::jsonb)`,
+       VALUES ($1, $2, $3, 'tenant', $1, $4::jsonb)`,
       [
-        actor.tenantId, actor.userId,
+        actor.tenantId, actor.userId, AUDIT_ACTION.SETTINGS_RETENTION_CHANGED,
         JSON.stringify({
           enabled: input.enabled,
           hardDeleteEnabled: input.hardDeleteEnabled ?? false,

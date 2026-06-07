@@ -2,6 +2,7 @@ import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
 import { emitNotification } from '../notification/emit';
+import { AUDIT_ACTION } from '../_constants';
 
 export class RequestCancelError extends Error {
   constructor(
@@ -118,7 +119,7 @@ export async function cancelRequest(
          VALUES ($1, $2, $3, 'request', $4, $5::jsonb)`,
         [
           actor.tenantId, actor.userId,
-          isScheduledCancel ? 'request.scheduled_cancelled' : 'request.cancelled',
+          isScheduledCancel ? AUDIT_ACTION.REQUEST_SCHEDULED_CANCELLED : AUDIT_ACTION.REQUEST_CANCELLED,
           requestId,
           JSON.stringify({
             actorRole: isAdmin && !isRequester ? 'tenant_admin' : 'requester',

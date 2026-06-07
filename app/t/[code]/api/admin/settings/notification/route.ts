@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../_lib/session-guard';
+import { mapDomainError } from '../../../_lib/respond';
 import { getNotificationSettings } from '@/domain/settings/get';
 import {
   updateNotificationSettings,
-  SettingsUpdateError,
   type UpdateSettingsInput,
 } from '@/domain/settings/update';
 
@@ -43,10 +43,8 @@ export async function PUT(
     await updateNotificationSettings(appPool(), guard.actor, body as UpdateSettingsInput);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof SettingsUpdateError) {
-      const status = err.code === 'permission_denied' ? 403 : 400;
-      return NextResponse.json({ error: err.message }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

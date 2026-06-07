@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../_lib/session-guard';
+import { mapDomainError } from '../../_lib/respond';
 import { getAIConfigForCall } from '@/domain/ai/config';
-import { createProvider, AIFormatError } from '@/domain/ai/provider';
+import { createProvider } from '@/domain/ai/provider';
 
 export const runtime = 'nodejs';
 
@@ -49,18 +50,8 @@ export async function POST(
     const result = await provider.formatRequest(memo);
     return NextResponse.json(result);
   } catch (err) {
-    if (err instanceof AIFormatError) {
-      const status =
-        err.code === 'auth' ? 502 :
-        err.code === 'rate_limited' ? 429 :
-        err.code === 'timeout' ? 504 :
-        err.code === 'config' ? 500 :
-        502;
-      return NextResponse.json(
-        { error: err.message, code: err.code, providerStatus: err.status },
-        { status },
-      );
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

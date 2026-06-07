@@ -5,12 +5,12 @@ import { PlusCircle } from 'lucide-react';
 import { unsealSession } from '@/auth/session';
 import { loadConfig } from '@/config';
 import { appPool } from '@/db/pools';
-import { withTenant } from '@/db/with-tenant';
 import {
   getRequestForCopy,
   CopySourceError,
   type CopySource,
 } from '@/domain/request/get-for-copy';
+import { loadPageContext } from '@/domain/page-context';
 import { PageHeader } from '@/ui/components/page-header';
 import { NewRequestForm } from '@/ui/components/new-request-form';
 
@@ -31,40 +31,12 @@ export default async function NewRequestPage({
   const session = await unsealSession(sealed, cfg.IRON_SESSION_PASSWORD);
   if (!session) redirect(`/t/${code}/login`);
 
-  const isTenantAdmin = await withTenant(
+  // NDG-93 (A3 P8): ロール 2 種 + AI 設定を 1 トランザクションでまとめて取得
+  const ctx = await loadPageContext(
     appPool(),
     session.tenantId,
-    async (client) => {
-      const { rows } = await client.query(
-        `SELECT 1 FROM user_role WHERE user_id = $1 AND role = 'tenant_admin' LIMIT 1`,
-        [session.userId],
-      );
-      return rows.length > 0;
-    },
-  );
-  const isTenantWideRequester = await withTenant(
-    appPool(),
-    session.tenantId,
-    async (client) => {
-      const { rows } = await client.query(
-        `SELECT 1 FROM user_role WHERE user_id = $1 AND role = 'tenant_wide_requester' LIMIT 1`,
-        [session.userId],
-      );
-      return rows.length > 0;
-    },
-  );
-
-  // NDG-73 Phase 2: AI 整形ボタン表示判定
-  const aiEnabled = await withTenant(
-    appPool(),
-    session.tenantId,
-    async (client) => {
-      const { rows } = await client.query(
-        `SELECT 1 FROM tenant_ai_config WHERE tenant_id = $1 AND enabled = true LIMIT 1`,
-        [session.tenantId],
-      );
-      return rows.length > 0;
-    },
+    session.userId,
+    { needAIEnabled: true },
   );
 
   let copySource: CopySource | null = null;
@@ -77,8 +49,8 @@ export default async function NewRequestPage({
         {
           userId: session.userId,
           tenantId: session.tenantId,
-          isTenantAdmin,
-          isTenantWideRequester,
+          isTenantAdmin: ctx.isTenantAdmin,
+          isTenantWideRequester: ctx.isTenantWideRequester,
         },
         sp.copyFrom,
       );
@@ -134,7 +106,7 @@ export default async function NewRequestPage({
         droppedTargets={copySource?.droppedTargets}
         initialOrgMeta={copySource?.orgMeta}
         initialUserMeta={copySource?.userMeta}
-        aiEnabled={aiEnabled}
+        aiEnabled={ctx.aiEnabled ?? false}
       />
     </div>
   );

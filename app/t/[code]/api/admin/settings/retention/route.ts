@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../_lib/session-guard';
+import { mapDomainError } from '../../../_lib/respond';
 import {
   getRetentionConfigView,
   upsertRetentionConfig,
-  RetentionConfigError,
   type UpsertRetentionConfigInput,
 } from '@/domain/retention/config';
 
@@ -21,10 +21,8 @@ export async function GET(
     const view = await getRetentionConfigView(appPool(), guard.actor);
     return NextResponse.json(view);
   } catch (err) {
-    if (err instanceof RetentionConfigError) {
-      const status = err.code === 'permission_denied' ? 403 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }
@@ -48,10 +46,8 @@ export async function PUT(
     await upsertRetentionConfig(appPool(), guard.actor, body as UpsertRetentionConfigInput);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof RetentionConfigError) {
-      const status = err.code === 'permission_denied' ? 403 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

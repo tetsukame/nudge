@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../_lib/session-guard';
+import { mapDomainError } from '../../_lib/respond';
 import {
   openAssignment,
   respondAssignment,
@@ -8,7 +9,6 @@ import {
   forwardAssignment,
   substituteAssignment,
   exemptAssignment,
-  AssignmentActionError,
 } from '@/domain/assignment/actions';
 
 export const runtime = 'nodejs';
@@ -68,13 +68,8 @@ export async function PATCH(
     }
     return NextResponse.json(payload);
   } catch (err) {
-    if (err instanceof AssignmentActionError) {
-      const status =
-        err.code === 'not_found' ? 404 :
-        err.code === 'permission_denied' ? 403 :
-        err.code === 'conflict' ? 409 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

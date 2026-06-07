@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../_lib/session-guard';
+import { mapDomainError } from '../../_lib/respond';
 import {
   listTemplates,
   createTemplate,
-  TemplateError,
 } from '@/domain/template/template';
 
 export const runtime = 'nodejs';
@@ -48,12 +48,8 @@ export async function POST(
     });
     return NextResponse.json(created, { status: 201 });
   } catch (err) {
-    if (err instanceof TemplateError) {
-      const status =
-        err.code === 'not_found' ? 404 :
-        err.code === 'permission_denied' ? 403 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

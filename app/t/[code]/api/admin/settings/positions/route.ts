@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../_lib/session-guard';
+import { mapDomainError } from '../../../_lib/respond';
 import { isTenantAdmin } from '@/domain/admin/guard';
 import {
   getTenantPositionConfig,
   setTenantPositionConfig,
-  PositionConfigError,
 } from '@/domain/admin/positions';
 
 export const runtime = 'nodejs';
@@ -56,10 +56,8 @@ export async function PUT(
     );
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof PositionConfigError) {
-      const status = err.code === 'permission_denied' ? 403 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

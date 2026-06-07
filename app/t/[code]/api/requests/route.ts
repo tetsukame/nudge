@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../_lib/session-guard';
-import { createRequest, CreateRequestError } from '@/domain/request/create';
-import { listRequests, ListRequestsError, type ListScope } from '@/domain/request/list';
+import { mapDomainError } from '../_lib/respond';
+import { createRequest } from '@/domain/request/create';
+import { listRequests, type ListScope } from '@/domain/request/list';
 import { listSentRequests } from '@/domain/request/list-sent';
 import type { TargetSpec } from '@/domain/request/expand-targets';
 
@@ -51,10 +52,8 @@ export async function POST(
     });
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
-    if (err instanceof CreateRequestError) {
-      const status = err.code === 'permission_denied' ? 403 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }
@@ -87,9 +86,8 @@ export async function GET(
     const result = await listRequests(appPool(), guard.actor, { scope: scope as ListScope, page, pageSize });
     return NextResponse.json(result);
   } catch (err) {
-    if (err instanceof ListRequestsError) {
-      return NextResponse.json({ error: err.message }, { status: 403 });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

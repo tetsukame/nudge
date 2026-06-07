@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../_lib/session-guard';
+import { mapDomainError } from '../../../_lib/respond';
 import {
   getAIConfigView,
   upsertAIConfig,
-  AIConfigError,
   type UpsertAIConfigInput,
 } from '@/domain/ai/config';
 
@@ -21,10 +21,8 @@ export async function GET(
     const view = await getAIConfigView(appPool(), guard.actor);
     return NextResponse.json(view ?? null);
   } catch (err) {
-    if (err instanceof AIConfigError) {
-      const status = err.code === 'permission_denied' ? 403 : 400;
-      return NextResponse.json({ error: err.message }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }
@@ -48,10 +46,8 @@ export async function PUT(
     await upsertAIConfig(appPool(), guard.actor, body as UpsertAIConfigInput);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof AIConfigError) {
-      const status = err.code === 'permission_denied' ? 403 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

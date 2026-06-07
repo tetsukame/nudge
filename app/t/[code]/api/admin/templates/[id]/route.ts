@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../_lib/session-guard';
+import { mapDomainError } from '../../../_lib/respond';
 import {
   getTemplate,
   updateTemplate,
   archiveTemplate,
-  TemplateError,
 } from '@/domain/template/template';
 
 export const runtime = 'nodejs';
@@ -21,12 +21,8 @@ export async function GET(
     const t = await getTemplate(appPool(), guard.actor, id);
     return NextResponse.json(t);
   } catch (err) {
-    if (err instanceof TemplateError) {
-      const status =
-        err.code === 'not_found' ? 404 :
-        err.code === 'permission_denied' ? 403 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }
@@ -59,12 +55,8 @@ export async function PUT(
     });
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof TemplateError) {
-      const status =
-        err.code === 'not_found' ? 404 :
-        err.code === 'permission_denied' ? 403 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }
@@ -80,12 +72,8 @@ export async function DELETE(
     await archiveTemplate(appPool(), guard.actor, id);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof TemplateError) {
-      const status =
-        err.code === 'not_found' ? 404 :
-        err.code === 'permission_denied' ? 403 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

@@ -4,6 +4,7 @@ import type { ActorContext, AssignmentStatus } from '../types';
 import { canTransition } from './transitions';
 import { canSubstitute } from './permissions';
 import { emitNotification } from '../notification/emit';
+import { AUDIT_ACTION } from '../_constants';
 
 export class AssignmentActionError extends Error {
   constructor(
@@ -249,9 +250,9 @@ export async function forwardAssignment(
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'assignment.forwarded', 'assignment', $3, $4::jsonb)`,
+       VALUES ($1, $2, $3, 'assignment', $4, $5::jsonb)`,
       [
-        actor.tenantId, actor.userId, asg.id,
+        actor.tenantId, actor.userId, AUDIT_ACTION.ASSIGNMENT_FORWARDED, asg.id,
         JSON.stringify({
           requestId: asg.request_id,
           toUserId: input.toUserId,
@@ -354,9 +355,9 @@ export async function substituteAssignment(
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'assignment.substituted', 'assignment', $3, $4::jsonb)`,
+       VALUES ($1, $2, $3, 'assignment', $4, $5::jsonb)`,
       [
-        actor.tenantId, actor.userId, asg.id,
+        actor.tenantId, actor.userId, AUDIT_ACTION.ASSIGNMENT_SUBSTITUTED, asg.id,
         JSON.stringify({
           requestId: asg.request_id,
           assigneeUserId: asg.user_id,
@@ -397,9 +398,9 @@ export async function exemptAssignment(
     await client.query(
       `INSERT INTO audit_log
          (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-       VALUES ($1, $2, 'assignment.exempted', 'assignment', $3, $4::jsonb)`,
+       VALUES ($1, $2, $3, 'assignment', $4, $5::jsonb)`,
       [
-        actor.tenantId, actor.userId, asg.id,
+        actor.tenantId, actor.userId, AUDIT_ACTION.ASSIGNMENT_EXEMPTED, asg.id,
         JSON.stringify({
           requestId: asg.request_id,
           assigneeUserId: asg.user_id,

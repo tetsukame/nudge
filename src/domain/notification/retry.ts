@@ -1,6 +1,7 @@
 import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
+import { AUDIT_ACTION } from '../_constants';
 
 export class RetryNotificationError extends Error {
   constructor(message: string, readonly code: 'permission_denied' | 'validation') {
@@ -41,8 +42,8 @@ export async function retryNotifications(
       await client.query(
         `INSERT INTO audit_log
            (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-         VALUES ($1, $2, 'notification.retry_requested', 'notification', NULL, $3::jsonb)`,
-        [actor.tenantId, actor.userId, JSON.stringify({ ids, retried })],
+         VALUES ($1, $2, $3, 'notification', NULL, $4::jsonb)`,
+        [actor.tenantId, actor.userId, AUDIT_ACTION.NOTIFICATION_RETRY_REQUESTED, JSON.stringify({ ids, retried })],
       );
     }
     return { retried };

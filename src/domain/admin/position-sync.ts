@@ -1,5 +1,6 @@
 import type pg from 'pg';
 import { applyTransferToManagerRoles } from './managers';
+import { AUDIT_ACTION, ROLE } from '../_constants';
 
 /**
  * KC 同期で取得した職位 (`position`) を NudgeFlow の「管理職」状態に反映する。
@@ -42,8 +43,8 @@ export async function applySyncedPosition(
     normalized != null && managerPositions.includes(normalized);
 
   const { rows: roleRows } = await client.query(
-    `SELECT 1 FROM user_role WHERE user_id = $1 AND role = 'manager'`,
-    [userId],
+    `SELECT 1 FROM user_role WHERE user_id = $1 AND role = $2`,
+    [userId, ROLE.MANAGER],
   );
   const isManager = roleRows.length > 0;
 
@@ -60,14 +61,14 @@ export async function applySyncedPosition(
   if (shouldBeManager) {
     await client.query(
       `INSERT INTO user_role (tenant_id, user_id, role)
-       VALUES ($1, $2, 'manager')
+       VALUES ($1, $2, $3)
        ON CONFLICT (user_id, role) DO NOTHING`,
-      [tenantId, userId],
+      [tenantId, userId, ROLE.MANAGER],
     );
   } else {
     await client.query(
-      `DELETE FROM user_role WHERE user_id = $1 AND role = 'manager'`,
-      [userId],
+      `DELETE FROM user_role WHERE user_id = $1 AND role = $2`,
+      [userId, ROLE.MANAGER],
     );
   }
   await client.query(
@@ -81,9 +82,10 @@ export async function applySyncedPosition(
   await client.query(
     `INSERT INTO audit_log
        (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
-     VALUES ($1, NULL, 'user_role.manager_synced', 'user', $2, $3::jsonb)`,
+     VALUES ($1, NULL, $2, 'user', $3, $4::jsonb)`,
     [
       tenantId,
+      AUDIT_ACTION.USER_ROLE_MANAGER_SYNCED,
       userId,
       JSON.stringify({ position: normalized, shouldBeManager }),
     ],

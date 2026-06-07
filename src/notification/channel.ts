@@ -1,4 +1,5 @@
 import type { TenantSettings } from './types';
+import type { NotificationKind } from '../domain/_constants';
 
 export type NotificationContext = {
   notificationId: string;
@@ -8,7 +9,7 @@ export type NotificationContext = {
   recipientUserId: string;
   recipientEmail: string;
   recipientName: string;
-  kind: 'created' | 'reminder_before' | 'due_today' | 're_notify' | 'completed' | 'cancelled';
+  kind: NotificationKind;
   payload: Record<string, unknown>;
 };
 

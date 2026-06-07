@@ -8,6 +8,7 @@ import {
   getVisibleGroupIds,
 } from './permissions';
 import { emitNotification } from '../notification/emit';
+import { AUDIT_ACTION } from '../_constants';
 
 export type CreateRequestInput = {
   title: string;
@@ -238,7 +239,7 @@ export async function createRequest(
         actor.userId,
         requestId,
         JSON.stringify({ expandedCount, breakdown, scheduledAt: scheduledAtIso }),
-        scheduledAtIso ? 'request.scheduled' : 'request.created',
+        scheduledAtIso ? AUDIT_ACTION.REQUEST_SCHEDULED : AUDIT_ACTION.REQUEST_CREATED,
       ],
     );
 

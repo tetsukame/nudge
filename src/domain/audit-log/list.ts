@@ -1,6 +1,7 @@
 import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
+import { ROLE } from '../_constants';
 
 export class AuditLogError extends Error {
   constructor(message: string, readonly code: 'permission_denied' | 'validation') {
@@ -57,9 +58,9 @@ async function ensurePermission(client: pg.PoolClient, actorUserId: string): Pro
   const { rows } = await client.query<{ ok: boolean }>(
     `SELECT EXISTS(
        SELECT 1 FROM user_role
-        WHERE user_id = $1 AND role IN ('tenant_admin', 'auditor')
+        WHERE user_id = $1 AND role = ANY($2::text[])
      ) AS ok`,
-    [actorUserId],
+    [actorUserId, [ROLE.TENANT_ADMIN, ROLE.AUDITOR]],
   );
   if (!rows[0].ok) {
     throw new AuditLogError('tenant_admin or auditor required', 'permission_denied');

@@ -58,8 +58,38 @@ export function RetentionConfigForm({ tenantCode, initial }: Props) {
     return Math.floor(n);
   }
 
+  /**
+   * NDG-94: 「空欄」または「1 以上の整数」を有効とする。0 / 負値 / 小数 /
+   * 非数値はクライアント側で弾いてバックエンドのバリデーション文言を
+   * 画面に出さない。
+   */
+  function isValidDaysInput(s: string): boolean {
+    const t = s.trim();
+    if (t === '') return true; // 空欄 = platform default
+    if (!/^[0-9]+$/.test(t)) return false;
+    return Number(t) >= 1;
+  }
+
+  // 各フィールドの妥当性
+  const invalidFields: string[] = [];
+  if (!isValidDaysInput(notificationDays)) invalidFields.push('通知履歴');
+  if (!isValidDaysInput(auditLogDays)) invalidFields.push('監査ログ');
+  if (!isValidDaysInput(historyDays)) invalidFields.push('対応経過履歴');
+  if (!isValidDaysInput(syncLogDays)) invalidFields.push('同期ログ');
+  // grace は必須 (空欄なら既定 7 を送る形で OK だが、0 / 負値 / 非数は不可)
+  const graceTrim = softDeleteGraceDays.trim();
+  const graceValid = graceTrim === '' || (/^[0-9]+$/.test(graceTrim) && Number(graceTrim) >= 1);
+  if (!graceValid) invalidFields.push('猶予期間');
+  const hasInvalid = invalidFields.length > 0;
+
   const save = useAsyncAction(async () => {
     setSaved(false);
+    // NDG-94: クライアント側で先に弾く (バックエンドは保険として残す)
+    if (hasInvalid) {
+      throw new Error(
+        `次の項目は「空欄（既定値）」または「1 以上の整数」を入力してください: ${invalidFields.join('、')}`,
+      );
+    }
     await apiSend(`/t/${tenantCode}/api/admin/settings/retention`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
@@ -133,7 +163,9 @@ export function RetentionConfigForm({ tenantCode, initial }: Props) {
               onChange={(e) => setNotificationDays(e.target.value)}
               disabled={save.busy}
             />
-            <p className="text-xs text-gray-500">プラットフォーム既定: 90 日</p>
+            <p className="text-xs text-gray-500">
+              空欄にすると既定値（90 日）に従います
+            </p>
           </div>
           <div className="space-y-1">
             <Label htmlFor="ret-audit">監査ログ (日数)</Label>
@@ -145,7 +177,9 @@ export function RetentionConfigForm({ tenantCode, initial }: Props) {
               onChange={(e) => setAuditLogDays(e.target.value)}
               disabled={save.busy}
             />
-            <p className="text-xs text-gray-500">プラットフォーム既定: 730 日 (2 年)</p>
+            <p className="text-xs text-gray-500">
+              空欄にすると既定値（730 日 = 2 年）に従います
+            </p>
           </div>
           <div className="space-y-1">
             <Label htmlFor="ret-history">対応経過履歴 (日数)</Label>
@@ -158,7 +192,7 @@ export function RetentionConfigForm({ tenantCode, initial }: Props) {
               disabled={save.busy}
             />
             <p className="text-xs text-gray-500">
-              既定: 365 日。完了・取消済みの依頼のみ対象
+              空欄にすると既定値（365 日）に従います。完了・取消済みの依頼のみ対象
             </p>
           </div>
           <div className="space-y-1">
@@ -171,7 +205,9 @@ export function RetentionConfigForm({ tenantCode, initial }: Props) {
               onChange={(e) => setSyncLogDays(e.target.value)}
               disabled={save.busy}
             />
-            <p className="text-xs text-gray-500">プラットフォーム既定: 90 日</p>
+            <p className="text-xs text-gray-500">
+              空欄にすると既定値（90 日）に従います
+            </p>
           </div>
         </div>
 
@@ -187,10 +223,16 @@ export function RetentionConfigForm({ tenantCode, initial }: Props) {
             disabled={save.busy}
           />
           <p className="text-xs text-gray-500">
-            既定: 7 日。論理削除（archived_at セット）から物理削除までの猶予。
-            この期間内なら設定変更で復旧可能
+            空欄にすると既定値（7 日）に従います。論理削除（archived_at セット）から
+            物理削除までの猶予で、この期間内なら設定変更で復旧可能
           </p>
         </div>
+
+        {hasInvalid && (
+          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            次の項目は「空欄（既定値）」または「1 以上の整数」を入力してください: {invalidFields.join('、')}
+          </p>
+        )}
 
         {save.error && (
           <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
@@ -201,7 +243,7 @@ export function RetentionConfigForm({ tenantCode, initial }: Props) {
           <p className="text-sm text-emerald-700">保存しました。</p>
         )}
 
-        <Button onClick={() => void save.run()} disabled={save.busy}>
+        <Button onClick={() => void save.run()} disabled={save.busy || hasInvalid}>
           {save.busy ? '保存中...' : '保存'}
         </Button>
       </div>

@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
+  Archive,
   Bell,
   Building2,
   FileText,
@@ -142,6 +143,12 @@ export default async function AdminDashboardPage({
             icon={Sparkles}
             title="AI 整形"
             description="依頼作成時の要件メモ → タイトル/本文 整形"
+          />
+          <AdminMenuCard
+            href={`/t/${code}/admin/settings/retention`}
+            icon={Archive}
+            title="データ保持"
+            description="通知履歴・監査ログ等の保持期間と削除戦略"
           />
           <AdminMenuCard
             href={`/t/${code}/admin/failed-notifications`}

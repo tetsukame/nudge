@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Building2, RefreshCw, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Building2, RefreshCw, Archive, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -14,6 +14,7 @@ const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/root', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/root/tenants', label: 'テナント', icon: Building2 },
   { href: '/root/sync', label: '同期実行 / ログ', icon: RefreshCw },
+  { href: '/root/retention', label: 'Retention 実行状況', icon: Archive },
 ];
 
 export function RootSidebar({ displayName, email }: Props) {

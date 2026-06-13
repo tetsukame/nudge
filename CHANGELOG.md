@@ -4,6 +4,35 @@
 バージョンは開発上の節目で、各項目は Notion 課題管理 (`NDG-<n>`) と GitHub PR に対応します。
 直近（v0.20 以降）を詳細に、それ以前は要約で記載します。
 
+## [v0.24] — セキュリティ堅牢化 + データ保持戦略 + リファクタ整理
+
+### 追加 (Added)
+- **データ保持 (retention) 機能** — 通知履歴・監査ログ・遷移履歴・同期ログを「組織のルールに沿って整理する」仕組み。tenant 単位で保持日数を設定、platform デフォルトに fallback。**ソフト → ハード削除の 2 段階方式** (期限超過 → `archived_at` で論理削除 → grace 7 日経過 → 物理 DELETE)。worker tick で 1h ごと処理、各テーブル LIMIT 5000、削除実績を `retention_log` + audit_log に記録。**デフォルト無効化**で既存環境の挙動は変更なし。tenant_admin が API で明示的に有効化するまで動かない (NDG-87/88/89, #81/#82/#83)
+- **行政職員向け運用マニュアル** — retention 機能を「公文書管理・個人情報保護条例」の文脈で説明するドキュメントを Notion ドキュメント DB に登録 (NDG-87 参考資料)
+
+### セキュリティ (Security)
+- **next を 15.5.18 に bump** — high 7 件の CVE を解消 (Middleware/Proxy bypass、DoS、SSRF 他)。14 件 → 1 件まで削減 (NDG-83, #74)
+- **`tenant_sync_config.sync_client_secret` を AES-256-GCM 暗号化** — SMTP/Teams/Slack と同じ暗号化パターンを KC sync client secret にも適用。lazy migration で旧平文値は次回 sync 時に自動移行 (NDG-84, #75)
+- **SSRF 防護: `assertSafeHttpUrl`** — tenant_admin が AI endpoint / Teams webhook / Slack webhook / SMTP host を保存する際、private (RFC1918) / loopback / link-local / cloud metadata を遮断。`SAFE_URL_HOST_ALLOWLIST` env var で運用者が opt-in 許可可能 (NDG-85, #76)
+- **棚卸し** — セキュリティ観点での全体監査を実施し、H 級 3 件 (上記) / M 級 3 件 (v0.25 持ち越し) / L 級 5 件 (観察) を `docs/refactor/security-audit-v0.23.md` に記録 (#73)
+
+### 変更・リファクタ (Changed)
+- **`WhereBuilder` 抽象化** — 動的 WHERE 句を `?` プレースホルダで組み立てる軽量ビルダを `src/db/where-builder.ts` に新設。`list-sent.ts` の `clause === ''` 分岐方式 (NDG-81 race の遠因) を解消、`buildSharedWhere` で list と count の共通 WHERE を 1 箇所に集約 (NDG-86, #80)
+- **マジック文字列を const + 型ユニオン化** — `'tenant_admin'` / `'request.cancelled'` 等を `src/domain/_constants.ts` に集約 (ROLE / AUDIT_ACTION / NOTIFICATION_KIND + 型)。audit_log INSERT 18 箇所と role 参照 13 箇所を `AUDIT_ACTION.*` / `ROLE.*` 経由に置換 (NDG-91, #84)
+- **クライアント Dialog + state パターンをフック + コンポーネント化** — `useAsyncAction` / `apiFetch` / `<ConfirmDialog>` の 3 プリミティブを新設し、5 箇所の Dialog 利用を共通化 (`ScheduledCancelButton` / `RequesterReassignAction` / `SentRequestCardActions` / `ActionButtons` / `AIFormatModal`) (NDG-92, #85)
+- **`mapDomainError` + route → domain 抽出 + page context 統合** — `app/t/[code]/api/_lib/respond.ts` に共通エラー → status マッピング、14 route の catch ブロックを `mapDomainError` 経由に変更。`requests/[id]/route.ts` GET の 70 行を `src/domain/request/get-detail.ts` (`getRequestDetail` + `RequestDetailError`) に抽出。`src/domain/page-context.ts` の `loadPageContext` で `/requests/new/page.tsx` の 3 連発 `withTenant` を 1 トランザクションに統合 (NDG-93, #86)
+- **棚卸し** — 拡張性 / 性能観点での全体監査も実施し、`docs/refactor/extensibility-audit-v0.23.md` / `performance-audit-v0.23.md` に記録 (#78/#79)
+
+### マイグレーション
+- 055: `retention_config` テーブル新設 + 4 テーブル (`notification` / `audit_log` / `assignment_status_history` / `sync_log`) に `archived_at TIMESTAMPTZ` 追加 + 部分インデックス 4 本
+- 056: `retention_log` テーブル新設 (削除実績の記録)
+- (補足) `054_tenant_sync_secret_encrypted.sql` は v0.23 リリース後に追加された暗号化列で、v0.24 で正式採用
+
+### スコープ外（v0.25 以降に持ち越し）
+- **`/admin/settings/retention` UI** — NDG-87 設計で確定したとおり v0.25 リリース（API のみ動作確認してから UI 投資）
+- **M 級リファクタの残り**: P4 (OFFSET → seek pagination) / P6 (`withTenant` read-only 緩和) / E5 残 ~24 route の `mapDomainError` 適用
+- **通知スケジューラ (NDG-63)** — 引き続き未定
+
 ## [v0.23] — 効率化（テンプレ / 予約送信 / AI 整形）
 
 ### 追加 (Added)

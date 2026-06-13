@@ -109,6 +109,88 @@ export function RetentionConfigForm({ tenantCode, initial }: Props) {
 
   return (
     <>
+      <details className="bg-white border border-gray-200 rounded-lg group">
+        <summary className="cursor-pointer px-5 py-3 text-sm font-medium text-gray-900 hover:bg-gray-50 rounded-lg list-none flex items-center justify-between">
+          <span>ℹ 各設定の意味と削除タイミングを見る</span>
+          <span className="text-gray-400 text-xs group-open:rotate-180 transition-transform">▾</span>
+        </summary>
+        <div className="px-5 pb-5 pt-2 space-y-5 text-sm text-gray-700 border-t border-gray-100">
+          <section className="space-y-2">
+            <h3 className="font-medium text-gray-900">対象となる記録</h3>
+            <dl className="space-y-2">
+              <div>
+                <dt className="font-medium text-gray-800">通知履歴 (notification)</dt>
+                <dd className="text-gray-600 ml-4 text-xs">
+                  「期限○日前」のメール送信記録、配信失敗の記録など。
+                  <code className="bg-gray-100 px-1 py-0.5 rounded">status</code> が
+                  <code className="bg-gray-100 px-1 py-0.5 rounded">sent</code> /
+                  <code className="bg-gray-100 px-1 py-0.5 rounded">failed</code> /
+                  <code className="bg-gray-100 px-1 py-0.5 rounded">skipped</code> のものだけが整理対象。
+                  処理中（pending / sending）は除外
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-gray-800">監査ログ (audit_log)</dt>
+                <dd className="text-gray-600 ml-4 text-xs">
+                  誰がいつ何の操作をしたかの記録（依頼作成・取消・代理完了など）。
+                  業務本体ではなく操作の証跡。設定変更も別途記録
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-gray-800">対応経過履歴 (assignment_status_history)</dt>
+                <dd className="text-gray-600 ml-4 text-xs">
+                  依頼に対する「未開封 → 開封 → 対応済」等の遷移記録。
+                  <strong>完了・取消済みの依頼に紐づくものだけ</strong>を整理対象とする
+                  （対応中の依頼の根拠は差し戻し用に保持）
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-gray-800">同期ログ (sync_log)</dt>
+                <dd className="text-gray-600 ml-4 text-xs">
+                  Keycloak からの職員情報同期の実行記録。
+                  エラー履歴の追跡に短期保持
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="font-medium text-gray-900">削除タイミングのタイムライン</h3>
+            <pre className="bg-gray-50 border border-gray-200 rounded-md p-3 text-xs font-mono leading-relaxed overflow-x-auto">{`記録が作成される
+   │
+   │   ◀── 保持期間 (例: 通知履歴 90 日) ──▶
+   │
+   ▼
+保持期間が経過
+   │
+   ▼
+[第 1 段階] 論理削除 (自動)
+   │   画面上の一覧から非表示になる。データベース内には残る
+   │   この時点で職員の通常業務に影響なし
+   │
+   │   ◀── 猶予期間 (既定 7 日) ──▶
+   │
+   ▼
+[第 2 段階] 物理削除 (既定では無効)
+   ※ 「物理削除も有効化する」をチェックした場合のみ実行
+   データベースから完全に削除され、バックアップからのみ復旧可能`}</pre>
+            <p className="text-xs text-gray-600">
+              <strong>猶予期間内（既定 7 日）</strong>に保持期間を伸ばせば、
+              論理削除された記録を再表示できます。
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="font-medium text-gray-900">空欄の意味</h3>
+            <p className="text-xs text-gray-600">
+              各日数フィールドを<strong>空欄にする</strong>と、
+              プラットフォーム既定値が適用されます。組織独自の保持期間を設定するときだけ
+              数値を入力してください。
+            </p>
+          </section>
+        </div>
+      </details>
+
       <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-5">
         {initial.isUsingPlatformDefault && (
           <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm text-blue-900">

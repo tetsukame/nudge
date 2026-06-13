@@ -54,15 +54,9 @@ export default async function RetentionConfigPage({
         description="通知履歴・監査ログ・遷移履歴・同期ログの保持期間を組織のルールに沿って設定します。"
       />
 
-      <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-sm text-amber-900 space-y-2">
-        <p>
-          ⚠️ 既定では <strong>無効化</strong> されています。有効化するまでは
-          何も削除されません。
-        </p>
-        <p>
-          詳細は「行政職員向け運用マニュアル」（Notion ドキュメント DB）と
-          NDG-87 retention 設計書を参照してください。
-        </p>
+      <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-sm text-amber-900">
+        ⚠️ 既定では <strong>無効化</strong> されています。有効化するまでは
+        何も削除されません。
       </div>
 
       <RetentionConfigForm tenantCode={code} initial={view} />

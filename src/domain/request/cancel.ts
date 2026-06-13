@@ -2,7 +2,7 @@ import type pg from 'pg';
 import { withTenant } from '../../db/with-tenant';
 import type { ActorContext } from '../types';
 import { emitNotification } from '../notification/emit';
-import { AUDIT_ACTION } from '../_constants';
+import { AUDIT_ACTION, MAX_CANCEL_REASON } from '../_constants';
 
 export class RequestCancelError extends Error {
   constructor(
@@ -34,6 +34,14 @@ export async function cancelRequest(
   requestId: string,
   reason: string,
 ): Promise<void> {
+  // NDG-95 (S5): 自由入力欄の上限。空欄は scheduled cancel で '予約取り消し'
+  // をデフォルト適用するため withTenant 内で再チェック。
+  if (reason && reason.length > MAX_CANCEL_REASON) {
+    throw new RequestCancelError(
+      `reason too long (max ${MAX_CANCEL_REASON})`,
+      'validation',
+    );
+  }
   await withTenant(pool, actor.tenantId, async (client) => {
     const { rows: reqRows } = await client.query<{
       id: string;

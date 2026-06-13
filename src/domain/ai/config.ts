@@ -4,6 +4,7 @@ import { encryptSecret, decryptSecret } from '../../notification/crypto';
 import { assertSafeHttpUrl, SafeUrlError } from '../../lib/safe-url';
 import type { ActorContext } from '../types';
 import type { AIProviderKind, TenantAIConfig } from './provider';
+import { AUDIT_ACTION } from '../_constants';
 
 export class AIConfigError extends Error {
   constructor(
@@ -177,6 +178,22 @@ export async function upsertAIConfig(
          api_key_encrypted = EXCLUDED.api_key_encrypted,
          updated_at = now()`,
       params,
+    );
+
+    // NDG-95 (S9): tenant_ai_config の変更 (API キー含む) は監査ログに残す
+    await client.query(
+      `INSERT INTO audit_log
+         (tenant_id, actor_user_id, action, target_type, target_id, payload_json)
+       VALUES ($1, $2, $3, 'tenant', $1, $4::jsonb)`,
+      [
+        actor.tenantId, actor.userId, AUDIT_ACTION.SETTINGS_AI_UPDATED,
+        JSON.stringify({
+          enabled: input.enabled,
+          provider: input.provider,
+          endpoint: input.endpoint.trim(),
+          apiKeyChanged: input.apiKey !== undefined,
+        }),
+      ],
     );
   });
 }

@@ -188,4 +188,40 @@ describe('createRequest', () => {
       }),
     ).rejects.toThrow(CreateRequestError);
   });
+
+  // NDG-95 (S5): 自由入力欄の文字数上限
+  it('rejects title exceeding MAX_REQUEST_TITLE with validation error', async () => {
+    const s = await createDomainScenario(getPool());
+    await expect(
+      createRequest(getAppPool(), adminCtx(s), {
+        title: 'a'.repeat(201), // MAX_REQUEST_TITLE = 200
+        body: '',
+        dueAt: new Date(Date.now() + 86400000).toISOString(),
+        targets: [{ type: 'user', userId: s.users.memberA }],
+      }),
+    ).rejects.toMatchObject({ code: 'validation', message: /title too long/ });
+  });
+
+  it('rejects body exceeding MAX_REQUEST_BODY with validation error', async () => {
+    const s = await createDomainScenario(getPool());
+    await expect(
+      createRequest(getAppPool(), adminCtx(s), {
+        title: 'ok',
+        body: 'b'.repeat(20001), // MAX_REQUEST_BODY = 20000
+        dueAt: new Date(Date.now() + 86400000).toISOString(),
+        targets: [{ type: 'user', userId: s.users.memberA }],
+      }),
+    ).rejects.toMatchObject({ code: 'validation', message: /body too long/ });
+  });
+
+  it('accepts title at exactly MAX_REQUEST_TITLE', async () => {
+    const s = await createDomainScenario(getPool());
+    const r = await createRequest(getAppPool(), adminCtx(s), {
+      title: 'x'.repeat(200),
+      body: '',
+      dueAt: new Date(Date.now() + 86400000).toISOString(),
+      targets: [{ type: 'user', userId: s.users.memberA }],
+    });
+    expect(r.id).toBeTypeOf('string');
+  });
 });

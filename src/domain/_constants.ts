@@ -74,6 +74,10 @@ export const AUDIT_ACTION = {
   TENANT_POSITION_CONFIG_CHANGED: 'tenant.position_config_changed',
   SETTINGS_NOTIFICATION_UPDATED: 'settings.notification.updated',
   SETTINGS_RETENTION_CHANGED: 'settings.retention.changed',
+  SETTINGS_AI_UPDATED: 'settings.ai.updated',
+
+  // AI 整形リクエスト (rate limit 検出にも利用)
+  AI_FORMAT_REQUESTED: 'ai.format_requested',
 
   // user_role 関連
   USER_ROLE_MANAGER_SYNCED: 'user_role.manager_synced',
@@ -98,3 +102,25 @@ export const NOTIFICATION_KIND = {
 } as const;
 
 export type NotificationKind = (typeof NOTIFICATION_KIND)[keyof typeof NOTIFICATION_KIND];
+
+// ─────────────────────────────────────────────────────────
+// 自由入力欄の文字数上限 (NDG-95 / A1 S5)
+// ─────────────────────────────────────────────────────────
+
+/** 依頼タイトル */
+export const MAX_REQUEST_TITLE = 200;
+/** 依頼本文 (Markdown) */
+export const MAX_REQUEST_BODY = 20000;
+/** 取消理由 (request.cancel_reason) */
+export const MAX_CANCEL_REASON = 2000;
+/** AI 整形メモ (route 側にすでに 4000 として宣言済み、参考値) */
+export const MAX_AI_FORMAT_MEMO = 4000;
+
+// ─────────────────────────────────────────────────────────
+// AI 整形 rate limit (NDG-95 / A1 S8)
+// ─────────────────────────────────────────────────────────
+
+/** 同一 actor の連続呼び出しを許す最小間隔（秒） */
+export const AI_FORMAT_COOLDOWN_SECONDS = 10;
+/** 同一 actor / tenant の 1 分間あたり許容回数 */
+export const AI_FORMAT_MAX_PER_MINUTE = 20;

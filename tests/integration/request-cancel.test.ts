@@ -174,4 +174,27 @@ describe('NDG-72: request cancel', () => {
     );
     expect(res.status).toBe(400);
   });
+
+  // NDG-95 (S5): cancel reason 上限
+  it('rejects cancel with reason longer than MAX_CANCEL_REASON', async () => {
+    const s = await createDomainScenario(getPool());
+    const requestId = await seedOne(s.tenantCode, s.users.admin, s.users.memberA, s.tenantId);
+    const cookie = await makeSessionCookie({
+      userId: s.users.admin, tenantId: s.tenantId, tenantCode: s.tenantCode,
+    });
+    const res = await patchReq(
+      new NextRequest(
+        `http://localhost/t/${s.tenantCode}/api/requests/${requestId}`,
+        {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json', cookie },
+          body: JSON.stringify({ action: 'cancel', reason: 'x'.repeat(2001) }),
+        },
+      ),
+      { params: Promise.resolve({ code: s.tenantCode, id: requestId }) },
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe('validation');
+  });
 });

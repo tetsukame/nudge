@@ -136,4 +136,41 @@ describe('tenant_ai_config CRUD', () => {
       endpoint: 'ftp://x', model: 'm',
     })).rejects.toBeInstanceOf(AIConfigError);
   });
+
+  // NDG-95 (S9): upsert は audit_log に記録される
+  it('writes settings.ai.updated audit log on upsert', async () => {
+    const s = await createDomainScenario(getPool());
+    await upsertAIConfig(getAppPool(), adminCtx(s), {
+      enabled: true, provider: 'openai_compat',
+      endpoint: 'http://x/v1', model: 'qwen',
+      apiKey: 'sk-new',
+    });
+    const { rows } = await getPool().query<{
+      action: string; payload_json: { enabled: boolean; apiKeyChanged: boolean };
+    }>(
+      `SELECT action, payload_json FROM audit_log
+        WHERE tenant_id=$1 AND action='settings.ai.updated'`,
+      [s.tenantId],
+    );
+    expect(rows.length).toBe(1);
+    expect(rows[0].payload_json.enabled).toBe(true);
+    expect(rows[0].payload_json.apiKeyChanged).toBe(true);
+  });
+
+  it('audit log apiKeyChanged=false when apiKey omitted from upsert', async () => {
+    const s = await createDomainScenario(getPool());
+    await upsertAIConfig(getAppPool(), adminCtx(s), {
+      enabled: true, provider: 'openai_compat',
+      endpoint: 'http://x/v1', model: 'qwen',
+      // apiKey omitted
+    });
+    const { rows } = await getPool().query<{
+      payload_json: { apiKeyChanged: boolean };
+    }>(
+      `SELECT payload_json FROM audit_log
+        WHERE tenant_id=$1 AND action='settings.ai.updated'`,
+      [s.tenantId],
+    );
+    expect(rows[0].payload_json.apiKeyChanged).toBe(false);
+  });
 });

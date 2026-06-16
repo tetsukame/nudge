@@ -8,7 +8,7 @@ import {
   getVisibleGroupIds,
 } from './permissions';
 import { emitNotification } from '../notification/emit';
-import { AUDIT_ACTION } from '../_constants';
+import { AUDIT_ACTION, MAX_REQUEST_TITLE, MAX_REQUEST_BODY } from '../_constants';
 
 export type CreateRequestInput = {
   title: string;
@@ -59,6 +59,19 @@ export async function createRequest(
 ): Promise<CreateRequestResult> {
   if (!input.title.trim()) {
     throw new CreateRequestError('title required', 'validation');
+  }
+  // NDG-95 (S5): 自由入力欄の文字数上限。template と揃える。
+  if (input.title.length > MAX_REQUEST_TITLE) {
+    throw new CreateRequestError(
+      `title too long (max ${MAX_REQUEST_TITLE})`,
+      'validation',
+    );
+  }
+  if (input.body && input.body.length > MAX_REQUEST_BODY) {
+    throw new CreateRequestError(
+      `body too long (max ${MAX_REQUEST_BODY})`,
+      'validation',
+    );
   }
   if (input.targets.length === 0) {
     throw new CreateRequestError('targets required', 'validation');

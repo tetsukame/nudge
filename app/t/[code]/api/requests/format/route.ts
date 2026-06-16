@@ -4,16 +4,22 @@ import { requireSession, isGuardFailure } from '../../_lib/session-guard';
 import { mapDomainError } from '../../_lib/respond';
 import { getAIConfigForCall } from '@/domain/ai/config';
 import { createProvider } from '@/domain/ai/provider';
+import {
+  assertAIFormatNotRateLimited,
+  recordAIFormatRequest,
+} from '@/domain/ai/rate-limit';
+import { MAX_AI_FORMAT_MEMO } from '@/domain/_constants';
 
 export const runtime = 'nodejs';
-
-const MAX_MEMO_LENGTH = 4000;
 
 /**
  * POST /t/[code]/api/requests/format
  * 依頼作成画面の「✨ AI で整形」ボタンから叩く。
  * 認証済み actor (tenant 内ユーザー) なら誰でも使える。tenant_admin 限定にはしない:
  *   配信前段の自分のメモを AI に整形させるだけで、他人の機密に触れる API ではない。
+ *
+ * NDG-95 (S8): actor ごと {@link AI_FORMAT_COOLDOWN_SECONDS} 秒間隔 +
+ * {@link AI_FORMAT_MAX_PER_MINUTE} 回/分の rate limit を audit_log 経由でかけている。
  */
 export async function POST(
   req: NextRequest,
@@ -33,9 +39,9 @@ export async function POST(
   if (typeof memo !== 'string' || !memo.trim()) {
     return NextResponse.json({ error: 'memo required' }, { status: 400 });
   }
-  if (memo.length > MAX_MEMO_LENGTH) {
+  if (memo.length > MAX_AI_FORMAT_MEMO) {
     return NextResponse.json(
-      { error: `memo too long (max ${MAX_MEMO_LENGTH})` },
+      { error: `memo too long (max ${MAX_AI_FORMAT_MEMO})` },
       { status: 400 },
     );
   }
@@ -46,6 +52,12 @@ export async function POST(
   }
 
   try {
+    // 1. rate limit チェック (AIFormatError code=rate_limited → 429 via mapDomainError)
+    await assertAIFormatNotRateLimited(appPool(), guard.actor);
+    // 2. audit_log に記録 (provider 呼び出しの前に入れる: 失敗呼び出しも数えて
+    //    リトライ嵐を抑制する効果)
+    await recordAIFormatRequest(appPool(), guard.actor, memo.length);
+    // 3. provider 呼び出し
     const provider = createProvider(config);
     const result = await provider.formatRequest(memo);
     return NextResponse.json(result);

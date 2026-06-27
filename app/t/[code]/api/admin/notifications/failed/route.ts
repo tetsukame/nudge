@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../_lib/session-guard';
 import { isTenantAdmin } from '@/domain/admin/guard';
-import { listFailedNotifications, FailedNotificationError } from '@/domain/notification/list-failed';
+import { listFailedNotifications } from '@/domain/notification/list-failed';
+import { mapDomainError } from '@/lib/respond';
 
 export const runtime = 'nodejs';
 
@@ -34,10 +35,8 @@ export async function GET(
     );
     return NextResponse.json(result);
   } catch (err) {
-    if (err instanceof FailedNotificationError) {
-      return NextResponse.json({ error: err.message, code: err.code },
-        { status: err.code === 'permission_denied' ? 403 : 400 });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../../../_lib/session-guard';
 import { isTenantAdmin } from '@/domain/admin/guard';
-import { removeManagedOrg, ManagerError } from '@/domain/admin/managers';
+import { removeManagedOrg } from '@/domain/admin/managers';
+import { mapDomainError } from '@/lib/respond';
 
 export const runtime = 'nodejs';
 
@@ -25,10 +26,8 @@ export async function DELETE(
     );
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof ManagerError) {
-      const status = err.code === 'permission_denied' ? 403 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

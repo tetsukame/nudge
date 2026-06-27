@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminPool } from '@/db/pools';
 import { getRootSession } from '@/auth/root-guard';
-import { getTenant, updateTenant, upsertSyncConfig, PlatformTenantError } from '@/domain/platform/tenants';
+import { getTenant, updateTenant, upsertSyncConfig } from '@/domain/platform/tenants';
+import { mapDomainError } from '@/lib/respond';
 
 export const runtime = 'nodejs';
 
@@ -57,10 +58,8 @@ export async function PATCH(
     }
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof PlatformTenantError) {
-      return NextResponse.json({ error: err.message, code: err.code },
-        { status: err.code === 'not_found' ? 404 : err.code === 'conflict' ? 409 : 400 });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

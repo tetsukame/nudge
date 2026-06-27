@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../_lib/session-guard';
 import { isTenantAdmin } from '@/domain/admin/guard';
-import { renameOrg, moveOrg, AdminOrgError } from '@/domain/admin/orgs';
+import { renameOrg, moveOrg } from '@/domain/admin/orgs';
+import { mapDomainError } from '@/lib/respond';
 
 export const runtime = 'nodejs';
 
@@ -30,12 +31,8 @@ export async function PATCH(
     }
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof AdminOrgError) {
-      const status = err.code === 'permission_denied' || err.code === 'kc_readonly' ? 403
-        : err.code === 'not_found' ? 404
-        : err.code === 'cycle' ? 409 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

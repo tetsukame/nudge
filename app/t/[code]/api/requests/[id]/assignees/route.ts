@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../_lib/session-guard';
-import { listAssignees, AssigneesError } from '@/domain/request/assignees';
+import { listAssignees } from '@/domain/request/assignees';
+import { mapDomainError } from '@/lib/respond';
 import type { AssignmentStatus } from '@/domain/types';
 
 export const runtime = 'nodejs';
@@ -38,9 +39,8 @@ export async function GET(
     });
     return NextResponse.json(result);
   } catch (err) {
-    if (err instanceof AssigneesError) {
-      return NextResponse.json({ error: err.message }, { status: 403 });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

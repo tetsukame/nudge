@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../_lib/session-guard';
 import { listComments } from '@/domain/comment/list';
-import { createComment, CommentError } from '@/domain/comment/create';
+import { createComment } from '@/domain/comment/create';
+import { mapDomainError } from '@/lib/respond';
 
 export const runtime = 'nodejs';
 
@@ -46,15 +47,8 @@ export async function POST(
     });
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
-    if (err instanceof CommentError) {
-      if (err.code === 'not_found') {
-        return NextResponse.json({ error: err.message, code: err.code }, { status: 404 });
-      }
-      if (err.code === 'permission_denied') {
-        return NextResponse.json({ error: err.message, code: err.code }, { status: 403 });
-      }
-      return NextResponse.json({ error: err.message, code: err.code }, { status: 400 });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

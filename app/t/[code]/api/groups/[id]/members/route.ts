@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../_lib/session-guard';
-import { listMembers, addMembers, GroupActionError } from '@/domain/group/actions';
+import { listMembers, addMembers } from '@/domain/group/actions';
+import { mapDomainError } from '@/lib/respond';
 
 export const runtime = 'nodejs';
 
@@ -17,11 +18,8 @@ export async function GET(
     const items = await listMembers(appPool(), guard.actor, id);
     return NextResponse.json({ items });
   } catch (err) {
-    if (err instanceof GroupActionError) {
-      const status = err.code === 'permission_denied' ? 403
-        : err.code === 'not_found' ? 404 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }
@@ -46,11 +44,8 @@ export async function POST(
     const result = await addMembers(appPool(), guard.actor, id, b.userIds);
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
-    if (err instanceof GroupActionError) {
-      const status = err.code === 'permission_denied' || err.code === 'kc_readonly' ? 403
-        : err.code === 'not_found' ? 404 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

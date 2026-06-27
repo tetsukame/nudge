@@ -5,8 +5,8 @@ import { isTenantAdmin } from '@/domain/admin/guard';
 import {
   listManagedOrgs,
   addManagedOrg,
-  ManagerError,
 } from '@/domain/admin/managers';
+import { mapDomainError } from '@/lib/respond';
 
 export const runtime = 'nodejs';
 
@@ -55,11 +55,8 @@ export async function POST(
     );
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof ManagerError) {
-      const status = err.code === 'permission_denied' ? 403
-        : err.code === 'not_found' ? 404 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

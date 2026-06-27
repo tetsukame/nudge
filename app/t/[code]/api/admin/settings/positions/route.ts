@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../_lib/session-guard';
-import { mapDomainError } from '../../../_lib/respond';
+import { mapDomainError } from '@/lib/respond';
 import { isTenantAdmin } from '@/domain/admin/guard';
 import {
   getTenantPositionConfig,

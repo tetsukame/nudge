@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../../_lib/session-guard';
 import { isTenantAdmin } from '@/domain/admin/guard';
-import {
-  reassignRequester,
-  ReassignRequesterError,
-} from '@/domain/request/reassign-requester';
+import { reassignRequester } from '@/domain/request/reassign-requester';
+import { mapDomainError } from '@/lib/respond';
 
 export const runtime = 'nodejs';
 
@@ -36,14 +34,8 @@ export async function PATCH(
     );
     return NextResponse.json(result);
   } catch (err) {
-    if (err instanceof ReassignRequesterError) {
-      const status =
-        err.code === 'permission_denied' ? 403
-        : err.code === 'not_found' ? 404
-        : err.code === 'invalid_target' ? 422
-        : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

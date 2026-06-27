@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminPool } from '@/db/pools';
 import { getRootSession } from '@/auth/root-guard';
-import { runSyncForTenant, PlatformSyncError, type SyncMode } from '@/domain/platform/sync';
+import { runSyncForTenant, type SyncMode } from '@/domain/platform/sync';
+import { mapDomainError } from '@/lib/respond';
 
 export const runtime = 'nodejs';
 
@@ -24,10 +25,8 @@ export async function POST(req: NextRequest) {
     const result = await runSyncForTenant(adminPool(), b.tenantId, b.mode);
     return NextResponse.json(result);
   } catch (err) {
-    if (err instanceof PlatformSyncError) {
-      return NextResponse.json({ error: err.message, code: err.code },
-        { status: err.code === 'not_found' ? 404 : err.code === 'already_running' ? 409 : 400 });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
 }

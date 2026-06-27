@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../_lib/session-guard';
 import { getGroup } from '@/domain/group/list';
-import { updateGroup, deleteGroup, GroupActionError } from '@/domain/group/actions';
+import { updateGroup, deleteGroup } from '@/domain/group/actions';
+import { mapDomainError } from '@/lib/respond';
 
 export const runtime = 'nodejs';
 
@@ -38,12 +39,8 @@ export async function PATCH(
     await updateGroup(appPool(), guard.actor, id, b);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof GroupActionError) {
-      const status = err.code === 'permission_denied' || err.code === 'kc_readonly' ? 403
-        : err.code === 'not_found' ? 404
-        : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }
@@ -60,12 +57,8 @@ export async function DELETE(
     await deleteGroup(appPool(), guard.actor, id);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof GroupActionError) {
-      const status = err.code === 'permission_denied' || err.code === 'kc_readonly' ? 403
-        : err.code === 'not_found' ? 404
-        : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../../_lib/session-guard';
 import { isTenantAdmin } from '@/domain/admin/guard';
-import { setUserOrgUnits, AdminUserError } from '@/domain/admin/users';
+import { setUserOrgUnits } from '@/domain/admin/users';
+import { mapDomainError } from '@/lib/respond';
 
 export const runtime = 'nodejs';
 
@@ -34,12 +35,8 @@ export async function PUT(
     );
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof AdminUserError) {
-      const status = err.code === 'permission_denied' ? 403
-        : err.code === 'not_found' ? 404
-        : err.code === 'conflict' ? 409 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

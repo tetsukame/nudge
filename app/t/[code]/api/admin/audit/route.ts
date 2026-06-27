@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../_lib/session-guard';
 import { canViewAuditLog } from '@/domain/admin/guard';
-import { listAuditLog, exportAuditLogCsv, AuditLogError } from '@/domain/audit-log/list';
+import { listAuditLog, exportAuditLogCsv } from '@/domain/audit-log/list';
+import { mapDomainError } from '@/lib/respond';
 
 export const runtime = 'nodejs';
 
@@ -55,12 +56,8 @@ export async function GET(
     });
     return NextResponse.json(result);
   } catch (err) {
-    if (err instanceof AuditLogError) {
-      return NextResponse.json(
-        { error: err.message, code: err.code },
-        { status: err.code === 'permission_denied' ? 403 : 400 },
-      );
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

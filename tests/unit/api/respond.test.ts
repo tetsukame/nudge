@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapDomainError } from '../../../app/t/[code]/api/_lib/respond.js';
+import { mapDomainError } from '../../../src/lib/respond.js';
 
 class MyError extends Error {
   constructor(msg: string, readonly code: string) {

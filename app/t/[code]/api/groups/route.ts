@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../_lib/session-guard';
 import { listGroups } from '@/domain/group/list';
-import { createGroup, GroupActionError } from '@/domain/group/actions';
+import { createGroup } from '@/domain/group/actions';
+import { mapDomainError } from '@/lib/respond';
 
 export const runtime = 'nodejs';
 
@@ -40,12 +41,8 @@ export async function POST(
     });
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
-    if (err instanceof GroupActionError) {
-      return NextResponse.json(
-        { error: err.message, code: err.code },
-        { status: err.code === 'permission_denied' ? 403 : 400 },
-      );
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

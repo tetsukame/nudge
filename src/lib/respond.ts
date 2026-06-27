@@ -35,8 +35,10 @@ const STATUS_BY_CODE: Record<string, number> = {
   invalid_state: 409,
   already_running: 409,       // sync が走行中
   last_admin: 409,            // 最後の tenant_admin を奪う動きの拒否
+  cycle: 409,                 // org_unit のサイクル等の構造不整合
   // 入力検証
   validation: 400,
+  invalid_target: 422,        // 単数形: 業務制約違反 (inactive user 等 / admin/requests/[id]/requester)
   invalid_targets: 400,
   empty_expansion: 400,
   // 認証 / 上流プロバイダ

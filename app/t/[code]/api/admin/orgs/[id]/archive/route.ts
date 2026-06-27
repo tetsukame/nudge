@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { appPool } from '@/db/pools';
 import { requireSession, isGuardFailure } from '../../../../_lib/session-guard';
 import { isTenantAdmin } from '@/domain/admin/guard';
-import { archiveOrg, restoreOrg, AdminOrgError } from '@/domain/admin/orgs';
+import { archiveOrg, restoreOrg } from '@/domain/admin/orgs';
+import { mapDomainError } from '@/lib/respond';
 
 export const runtime = 'nodejs';
 
@@ -20,11 +21,8 @@ export async function POST(
     const result = await archiveOrg(appPool(), { ...guard.actor, isTenantAdmin: true }, id);
     return NextResponse.json(result);
   } catch (err) {
-    if (err instanceof AdminOrgError) {
-      const status = err.code === 'permission_denied' || err.code === 'kc_readonly' ? 403
-        : err.code === 'not_found' ? 404 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }
@@ -44,11 +42,8 @@ export async function DELETE(
     await restoreOrg(appPool(), { ...guard.actor, isTenantAdmin: true }, id);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof AdminOrgError) {
-      const status = err.code === 'permission_denied' || err.code === 'kc_readonly' ? 403
-        : err.code === 'not_found' ? 404 : 400;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
+    const r = mapDomainError(err);
+    if (r) return r;
     throw err;
   }
 }

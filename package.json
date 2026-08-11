@@ -45,7 +45,7 @@
     "lucide-react": "^1.14.0",
     "next": "^15.5.18",
     "nodemailer": "^8.0.7",
-    "openid-client": "^5.7.0",
+    "openid-client": "^6.8.4",
     "pg": "^8.13.0",
     "pg-format": "^1.0.4",
     "postcss": "^8.5.14",

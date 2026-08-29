@@ -1,8 +1,10 @@
 import 'dotenv/config';
+import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 import { runScheduler } from './scheduler';
 import { runSender } from './sender';
 import { runRetention } from './retention';
+import { logger, runWithLogContext } from '@/lib/logger';
 
 const TICK_INTERVAL_MS = 60_000;
 
@@ -13,27 +15,29 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function tick(adminPool: pg.Pool): Promise<void> {
-  try {
-    await runScheduler(adminPool);
-  } catch (err) {
-    console.error('[worker] scheduler error:', (err as Error).message);
-  }
-  try {
-    await runSender(adminPool);
-  } catch (err) {
-    console.error('[worker] sender error:', (err as Error).message);
-  }
-  try {
-    await runRetention(adminPool);
-  } catch (err) {
-    console.error('[worker] retention error:', (err as Error).message);
-  }
+  await runWithLogContext({ runId: randomUUID() }, async () => {
+    try {
+      await runScheduler(adminPool);
+    } catch (err) {
+      logger.error({ err, job: 'scheduler' }, 'worker job failed');
+    }
+    try {
+      await runSender(adminPool);
+    } catch (err) {
+      logger.error({ err, job: 'sender' }, 'worker job failed');
+    }
+    try {
+      await runRetention(adminPool);
+    } catch (err) {
+      logger.error({ err, job: 'retention' }, 'worker job failed');
+    }
+  });
 }
 
 async function main(): Promise<void> {
   const adminUrl = process.env.DATABASE_URL_ADMIN;
   if (!adminUrl) {
-    console.error('DATABASE_URL_ADMIN is required');
+    logger.fatal('DATABASE_URL_ADMIN is required');
     process.exit(1);
   }
   const adminPool = new pg.Pool({ connectionString: adminUrl, max: 5 });
@@ -45,7 +49,7 @@ async function main(): Promise<void> {
     stopRequested = true;
   });
 
-  console.log('[worker] started, tick interval =', TICK_INTERVAL_MS, 'ms');
+  logger.info({ tickIntervalMs: TICK_INTERVAL_MS }, 'worker started');
   while (!stopRequested) {
     const start = Date.now();
     await tick(adminPool);
@@ -54,11 +58,11 @@ async function main(): Promise<void> {
     const remaining = Math.max(0, TICK_INTERVAL_MS - elapsed);
     await sleep(remaining);
   }
-  console.log('[worker] shutting down...');
+  logger.info('worker shutting down');
   await adminPool.end();
 }
 
 main().catch((err) => {
-  console.error('[worker] fatal:', err);
+  logger.fatal({ err }, 'worker fatal');
   process.exit(1);
 });

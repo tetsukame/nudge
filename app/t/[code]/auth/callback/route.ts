@@ -11,6 +11,7 @@ import { sealSession } from '@/auth/session';
 import type { NudgeSession } from '@/auth/session';
 import { cookieSecure } from '@/auth/cookie-flags';
 import { loadConfig } from '@/config';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
@@ -50,7 +51,7 @@ export async function GET(
       code_verifier: state.codeVerifier,
     });
   } catch (err) {
-    console.error('OIDC callback failed', err);
+    logger.error({ err, tenantId: tenant.id }, 'OIDC callback failed');
     return new NextResponse('Authentication failed', { status: 400 });
   }
 
@@ -69,9 +70,9 @@ export async function GET(
       email,
       displayName,
     });
-    console.log('[callback] jitUpsertUser OK, userId:', userId);
+    logger.debug({ userId, tenantId: tenant.id }, 'jitUpsertUser OK');
   } catch (err) {
-    console.error('[callback] jitUpsertUser FAILED:', err);
+    logger.error({ err, tenantId: tenant.id }, 'jitUpsertUser failed');
     return new NextResponse('User provisioning failed', { status: 500 });
   }
 
@@ -87,10 +88,12 @@ export async function GET(
   };
 
   const sessionSealed = await sealSession(session, cfg.IRON_SESSION_PASSWORD);
-  console.log('[callback] session sealed, length:', sessionSealed.length);
 
   const returnUrl = new URL(state.returnTo, req.url);
-  console.log('[callback] redirecting to:', returnUrl.toString());
+  logger.debug(
+    { userId, tenantId: tenant.id, returnTo: returnUrl.toString() },
+    'callback session sealed, redirecting',
+  );
 
   const maxAge = 14 * 24 * 60 * 60;
   const expires = new Date(Date.now() + maxAge * 1000).toUTCString();
@@ -106,7 +109,5 @@ export async function GET(
     'Set-Cookie',
     `${OIDC_STATE_COOKIE_NAME}=; Path=/t/${code}/; Max-Age=0`,
   );
-  console.log('[callback] Set-Cookie count:', headers.getSetCookie().length);
-  console.log('[callback] Cookie value length:', sessionSealed.length);
   return new Response(null, { status: 302, headers });
 }

@@ -11,6 +11,7 @@ import {
   exchangeEntraTokenForKcToken,
   TokenExchangeError,
 } from '@/auth/teams-token-exchange';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
@@ -75,7 +76,7 @@ export async function POST(
   try {
     userId = await jitUpsertUser(appPool(), tenant.id, { sub, email, displayName });
   } catch (err) {
-    console.error('[teams/auth] jitUpsertUser failed:', err);
+    logger.error({ err, tenantId: tenant.id }, 'teams/auth jitUpsertUser failed');
     return NextResponse.json({ error: 'user_provision_failed' }, { status: 500 });
   }
 

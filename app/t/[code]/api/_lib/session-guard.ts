@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
 import { adminPool, appPool } from '@/db/pools';
 import { resolveTenant } from '@/tenant/resolver';
 import { unsealSession } from '@/auth/session';
 import { loadConfig } from '@/config';
 import { withTenant } from '@/db/with-tenant';
+import { enterLogContext } from '@/lib/logger';
 import type { ActorContext } from '@/domain/types';
 
 export type GuardedContext = {
@@ -37,6 +39,15 @@ export async function requireSession(
       isTenantAdmin: roles.has('tenant_admin'),
       isTenantWideRequester: roles.has('tenant_wide_requester'),
     };
+  });
+
+  // NDG-99: 以降の await チェーンで発行されるログに tenantId/userId/requestId を自動付加。
+  // requestId は route を跨いだ一連の処理を辿るためのもので、client からのヘッダは信用せず
+  // 常にサーバ側で新規生成する。
+  enterLogContext({
+    tenantId: tenant.id,
+    userId: session.userId,
+    requestId: req.headers.get('x-request-id') ?? randomUUID(),
   });
 
   return {

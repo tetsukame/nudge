@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminPool, appPool } from '@/db/pools';
 import { resolveTenant } from '@/tenant/resolver';
-import { getOidcClient } from '@/auth/oidc-client';
+import { getAuthProvider } from '@/auth/provider';
 import {
   unsealOidcState,
   OIDC_STATE_COOKIE_NAME,
@@ -31,37 +31,34 @@ export async function GET(
   }
 
   // login route と同じくリクエスト由来の host で算出。OIDC token exchange 時に
-  // KC は code 発行時の redirect_uri と一致することを要求するため、ここも揃える必要がある。
+  // IdP は code 発行時の redirect_uri と一致することを要求するため、ここも揃える必要がある。
   const forwardedProto = req.headers.get('x-forwarded-proto') ?? 'http';
   const hostHeader = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? 'localhost:3000';
   const requestOrigin = `${forwardedProto}://${hostHeader}`;
   const redirectUri = `${requestOrigin}/t/${code}/auth/callback`;
-  const client = await getOidcClient(tenant, {
+
+  const provider = getAuthProvider(tenant, {
     clientId: cfg.OIDC_CLIENT_ID,
     clientSecret: cfg.OIDC_CLIENT_SECRET,
-    redirectUri,
   });
 
-  const params2 = client.callbackParams(req.url);
-  let tokenSet;
+  let callbackResult;
   try {
-    tokenSet = await client.callback(redirectUri, params2, {
-      state: state.state,
-      nonce: state.nonce,
-      code_verifier: state.codeVerifier,
-    });
+    callbackResult = await provider.handleCallback(
+      {
+        state: state.state,
+        nonce: state.nonce,
+        codeVerifier: state.codeVerifier,
+      },
+      redirectUri,
+      req.url,
+    );
   } catch (err) {
     logger.error({ err, tenantId: tenant.id }, 'OIDC callback failed');
     return new NextResponse('Authentication failed', { status: 400 });
   }
 
-  const claims = tokenSet.claims();
-  const sub = claims.sub;
-  const email = (claims.email as string) ?? '';
-  const displayName =
-    (claims.name as string) ??
-    (claims.preferred_username as string) ??
-    email;
+  const { sub, email, displayName } = callbackResult.claims;
 
   let userId: string;
   try {
@@ -84,7 +81,7 @@ export async function GET(
     email,
     displayName,
     refreshToken: '', // Excluded from cookie to stay under 4096 byte browser limit
-    accessTokenExp: tokenSet.expires_at ?? 0,
+    accessTokenExp: callbackResult.accessTokenExp,
   };
 
   const sessionSealed = await sealSession(session, cfg.IRON_SESSION_PASSWORD);

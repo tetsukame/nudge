@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generators } from 'openid-client';
 import { adminPool } from '@/db/pools';
 import { resolveTenant } from '@/tenant/resolver';
-import { getOidcClient } from '@/auth/oidc-client';
+import { getAuthProvider } from '@/auth/provider';
 import { sealOidcState, OIDC_STATE_COOKIE_NAME } from '@/auth/state-cookie';
 import { cookieSecure } from '@/auth/cookie-flags';
 import { loadConfig } from '@/config';
@@ -23,21 +23,15 @@ export async function GET(
   // redirectUri はリクエスト由来の host で算出する。req.nextUrl は Next.js が
   // 常に localhost に正規化してしまうため、x-forwarded-host → host ヘッダを直読みする。
   // cookie はオリジン単位なので、ユーザーが host.docker.internal でアクセスしている
-  // 状態で localhost に redirect_uri を返すと、KC からの戻りで cookie が送信されない。
+  // 状態で localhost に redirect_uri を返すと、IdP からの戻りで cookie が送信されない。
   const forwardedProto = req.headers.get('x-forwarded-proto') ?? 'http';
   const hostHeader = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? 'localhost:3000';
   const requestOrigin = `${forwardedProto}://${hostHeader}`;
   const redirectUri = `${requestOrigin}/t/${code}/auth/callback`;
-  const client = await getOidcClient(tenant, {
-    clientId: cfg.OIDC_CLIENT_ID,
-    clientSecret: cfg.OIDC_CLIENT_SECRET,
-    redirectUri,
-  });
 
   const state = generators.state();
   const nonce = generators.nonce();
   const codeVerifier = generators.codeVerifier();
-  const codeChallenge = generators.codeChallenge(codeVerifier);
 
   const returnTo = req.nextUrl.searchParams.get('returnTo') ?? `/t/${code}/`;
   // Only allow same-origin, same-tenant return paths
@@ -48,13 +42,14 @@ export async function GET(
     cfg.IRON_SESSION_PASSWORD,
   );
 
-  const authorizationUrl = client.authorizationUrl({
-    scope: 'openid email profile',
-    state,
-    nonce,
-    code_challenge: codeChallenge,
-    code_challenge_method: 'S256',
+  const provider = getAuthProvider(tenant, {
+    clientId: cfg.OIDC_CLIENT_ID,
+    clientSecret: cfg.OIDC_CLIENT_SECRET,
   });
+  const authorizationUrl = await provider.getAuthorizationUrl(
+    { state, nonce, codeVerifier },
+    redirectUri,
+  );
 
   const response = NextResponse.redirect(authorizationUrl);
   response.cookies.set(OIDC_STATE_COOKIE_NAME, sealed, {

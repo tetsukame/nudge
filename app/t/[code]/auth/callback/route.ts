@@ -3,6 +3,8 @@ import { adminPool, appPool } from '@/db/pools';
 import { resolveTenant } from '@/tenant/resolver';
 import { getAuthProvider } from '@/auth/provider';
 import { getTenantAuthConfig } from '@/domain/auth/config';
+import { parseClaimMapping, mapClaims } from '@/domain/auth/claim-mapping';
+import { syncUserRolesFromIdP } from '@/domain/auth/role-sync';
 import {
   unsealOidcState,
   OIDC_STATE_COOKIE_NAME,
@@ -61,7 +63,12 @@ export async function GET(
     return new NextResponse('Authentication failed', { status: 400 });
   }
 
-  const { sub, email, displayName } = callbackResult.claims;
+  // NDG-112: claim mapping を通して user 属性 + IdP 由来 role を解決
+  const mapping = parseClaimMapping(authConfig?.claimMapping ?? null);
+  const mapped = mapClaims(callbackResult.claims, mapping, tenant.id);
+  const sub = callbackResult.claims.sub;
+  const email = mapped.email;
+  const displayName = mapped.displayName;
 
   let userId: string;
   try {
@@ -74,6 +81,28 @@ export async function GET(
   } catch (err) {
     logger.error({ err, tenantId: tenant.id }, 'jitUpsertUser failed');
     return new NextResponse('User provisioning failed', { status: 500 });
+  }
+
+  // IdP 側で role マッピングが定義されていれば sync。map 空 or 未設定なら何もしない。
+  const managedRoles = new Set<string>(
+    Object.values(mapping.roles?.map ?? {}),
+  );
+  if (managedRoles.size > 0) {
+    try {
+      await syncUserRolesFromIdP(
+        appPool(),
+        tenant.id,
+        userId,
+        managedRoles,
+        mapped.roleAssignments,
+      );
+    } catch (err) {
+      // role sync 失敗はログインを止めない (fail-open)
+      logger.error(
+        { err, tenantId: tenant.id, userId },
+        'IdP role sync failed',
+      );
+    }
   }
 
   const session: NudgeSession = {

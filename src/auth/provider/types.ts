@@ -23,6 +23,12 @@ export type UserClaims = {
   displayName: string;
   /** groups claim (OIDC C の role マッピングで使う。無ければ undefined) */
   groups?: string[];
+  /**
+   * OIDC C (NDG-112): 生の id_token claims。tenant 固有の claim mapping で
+   * 独自 claim (roles / department / employeeType など) を参照するために使う。
+   * PII が含まれる可能性があるため、ログ出力時はキー名のみに絞る。
+   */
+  raw: Record<string, unknown>;
 };
 
 export type CallbackResult = {

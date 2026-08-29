@@ -81,6 +81,7 @@ export class KeycloakAdapter implements AuthProvider {
         email,
         displayName,
         groups,
+        raw: c as unknown as Record<string, unknown>,
       },
       accessTokenExp: tokenSet.expires_at ?? 0,
     };

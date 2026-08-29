@@ -87,7 +87,13 @@ export class GenericOidcAdapter implements AuthProvider {
       ? rawGroups.filter((g): g is string => typeof g === 'string')
       : undefined;
     return {
-      claims: { sub: c.sub, email, displayName, groups },
+      claims: {
+        sub: c.sub,
+        email,
+        displayName,
+        groups,
+        raw: c as unknown as Record<string, unknown>,
+      },
       accessTokenExp: tokenSet.expires_at ?? 0,
     };
   }

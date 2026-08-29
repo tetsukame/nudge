@@ -75,6 +75,8 @@ export const AUDIT_ACTION = {
   SETTINGS_NOTIFICATION_UPDATED: 'settings.notification.updated',
   SETTINGS_RETENTION_CHANGED: 'settings.retention.changed',
   SETTINGS_AI_UPDATED: 'settings.ai.updated',
+  SETTINGS_AUTH_UPDATED: 'settings.auth.updated',
+  SETTINGS_AUTH_DELETED: 'settings.auth.deleted',
 
   // AI 整形リクエスト (rate limit 検出にも利用)
   AI_FORMAT_REQUESTED: 'ai.format_requested',

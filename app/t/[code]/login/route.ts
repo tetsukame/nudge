@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generators } from 'openid-client';
-import { adminPool } from '@/db/pools';
+import { adminPool, appPool } from '@/db/pools';
 import { resolveTenant } from '@/tenant/resolver';
 import { getAuthProvider } from '@/auth/provider';
+import { getTenantAuthConfig } from '@/domain/auth/config';
 import { sealOidcState, OIDC_STATE_COOKIE_NAME } from '@/auth/state-cookie';
 import { cookieSecure } from '@/auth/cookie-flags';
 import { loadConfig } from '@/config';
@@ -42,10 +43,12 @@ export async function GET(
     cfg.IRON_SESSION_PASSWORD,
   );
 
-  const provider = getAuthProvider(tenant, {
-    clientId: cfg.OIDC_CLIENT_ID,
-    clientSecret: cfg.OIDC_CLIENT_SECRET,
-  });
+  const authConfig = await getTenantAuthConfig(appPool(), tenant.id);
+  const provider = getAuthProvider(
+    tenant,
+    { clientId: cfg.OIDC_CLIENT_ID, clientSecret: cfg.OIDC_CLIENT_SECRET },
+    authConfig,
+  );
   const authorizationUrl = await provider.getAuthorizationUrl(
     { state, nonce, codeVerifier },
     redirectUri,

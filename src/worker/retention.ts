@@ -1,5 +1,6 @@
 import type pg from 'pg';
 import { getRetentionConfigResolved } from '../domain/retention/config';
+import { logger } from '@/lib/logger';
 
 /**
  * NDG-87/89: retention worker。
@@ -179,8 +180,7 @@ export async function runRetention(pool: pg.Pool, force = false): Promise<void> 
       await processTenant(pool, r.tenant_id);
     } catch (err) {
       // tenant 単位で握りつぶす。残りの tenant の処理は続行
-      // eslint-disable-next-line no-console
-      console.error('[retention] tenant error:', r.tenant_id, (err as Error).message);
+      logger.error({ err, tenantId: r.tenant_id }, 'retention tenant error');
     }
   }
 }

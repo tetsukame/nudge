@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminPool, appPool } from '@/db/pools';
 import { resolveTenant } from '@/tenant/resolver';
 import { getAuthProvider } from '@/auth/provider';
+import { getTenantAuthConfig } from '@/domain/auth/config';
 import {
   unsealOidcState,
   OIDC_STATE_COOKIE_NAME,
@@ -37,10 +38,12 @@ export async function GET(
   const requestOrigin = `${forwardedProto}://${hostHeader}`;
   const redirectUri = `${requestOrigin}/t/${code}/auth/callback`;
 
-  const provider = getAuthProvider(tenant, {
-    clientId: cfg.OIDC_CLIENT_ID,
-    clientSecret: cfg.OIDC_CLIENT_SECRET,
-  });
+  const authConfig = await getTenantAuthConfig(appPool(), tenant.id);
+  const provider = getAuthProvider(
+    tenant,
+    { clientId: cfg.OIDC_CLIENT_ID, clientSecret: cfg.OIDC_CLIENT_SECRET },
+    authConfig,
+  );
 
   let callbackResult;
   try {

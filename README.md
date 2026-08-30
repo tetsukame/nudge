@@ -24,7 +24,7 @@
 - **代理完了 / 依頼取り消し**: マネージャ・tenant_admin が「本人不在」「依頼者判断」等のカテゴリ付きで代理完了。依頼者・tenant_admin は理由付きで取り消し可能（assignee 全員に通知）
 - **監査ログ + auditor ロール**: 全イベント記録、actor/対象種別/期間でフィルタ、CSV エクスポート。閲覧専用の `auditor` ロール
 - **マルチテナント**: PostgreSQL 17 の Row-Level Security でテナント分離。`/t/<tenant_code>/...` URL 体系
-- **OIDC 認証**: Keycloak 26 を IdP として利用（外部 IdP ブローカー経由 SSO・Microsoft Teams タブ統合 β）
+- **OIDC 認証**: tenant ごとに Keycloak / 汎用 OIDC (Pocket ID / Authentik / Entra ID 等) を切替 ([docs/auth/oidc-generic.md](docs/auth/oidc-generic.md))・Microsoft Teams タブ統合 β
 - **同期**: Keycloak からユーザー / 組織 / グループ / 職位（`position` → 管理職ロール）を定期同期
 - **通知**: メール（SMTP）→ Teams Webhook → Slack Webhook の優先順位でフォールバック、永続失敗時はバッジ表示・手動再送
 - **管理 UI**: tenant_admin 用（ユーザー / 組織 / グループ / ロール / マネージャ割当 / 職位設定 / 通知設定 / AI 整形設定 / データ保持設定 (v0.25 で UI、v0.24 は API のみ) / 依頼テンプレ / 同期実行） + 監査ログ (`/audit`、auditor も閲覧可)

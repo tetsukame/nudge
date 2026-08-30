@@ -6,6 +6,7 @@ import {
   Bell,
   Building2,
   FileText,
+  KeyRound,
   ScrollText,
   Settings,
   Sparkles,
@@ -149,6 +150,12 @@ export default async function AdminDashboardPage({
             icon={Archive}
             title="データ保持"
             description="通知履歴・監査ログ等の保持期間と削除戦略"
+          />
+          <AdminMenuCard
+            href={`/t/${code}/admin/settings/auth`}
+            icon={KeyRound}
+            title="認証プロバイダ"
+            description="Keycloak / 汎用 OIDC の切替と接続テスト"
           />
           <AdminMenuCard
             href={`/t/${code}/admin/failed-notifications`}

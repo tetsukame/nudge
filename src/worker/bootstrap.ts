@@ -9,6 +9,8 @@
  */
 import 'dotenv/config';
 import { initOtel } from '@/lib/otel';
+import { initSentry } from '@/lib/sentry';
 
 await initOtel();
+await initSentry();
 await import('./main');

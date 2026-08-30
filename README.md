@@ -214,6 +214,8 @@ NudgeFlow を Microsoft Teams の Personal Tab として組み込むことがで
 - [変更履歴 (CHANGELOG)](CHANGELOG.md)
 - [DB ERD v0.1 設計書](docs/superpowers/specs/2026-04-11-db-erd-design.md)
 - [Microsoft Teams 統合（β）](docs/teams-integration.md)
+- **認証**: [汎用 OIDC 設定 (KC / Pocket ID / Entra ID 等)](docs/auth/oidc-generic.md) / [SCIM 2.0 プロビジョニング](docs/auth/scim-provisioning.md)
+- **観測性**: [統合ガイド (Grafana + Loki + Tempo + Sentry)](docs/ops/observability.md) — [ログ](docs/ops/logging.md) / [メトリクス](docs/ops/metrics.md) / [Sentry](docs/ops/sentry.md)
 - 詳細仕様は `docs/superpowers/specs/`、各リリースの実装プランは `docs/superpowers/plans/` 配下
 
 ## コントリビューション

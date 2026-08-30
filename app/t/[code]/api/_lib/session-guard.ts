@@ -29,17 +29,33 @@ export async function requireSession(
     return new NextResponse('Forbidden', { status: 403 });
   }
 
-  const flags = await withTenant(appPool(), tenant.id, async (client) => {
+  // NDG-115: SCIM 経由で status='inactive' にされたユーザーはログイン継続を止める。
+  // 期限切れ session cookie は消すため 401 を返す。
+  const userState = await withTenant(appPool(), tenant.id, async (client) => {
+    const userRes = await client.query<{ status: string }>(
+      `SELECT status FROM users WHERE id = $1`,
+      [session.userId],
+    );
+    if (userRes.rows.length === 0) return { status: 'missing' as const };
+    if (userRes.rows[0].status !== 'active') return { status: 'inactive' as const };
     const { rows } = await client.query<{ role: string }>(
       `SELECT role FROM user_role WHERE user_id = $1`,
       [session.userId],
     );
     const roles = new Set(rows.map((r) => r.role));
     return {
+      status: 'active' as const,
       isTenantAdmin: roles.has('tenant_admin'),
       isTenantWideRequester: roles.has('tenant_wide_requester'),
     };
   });
+  if (userState.status !== 'active') {
+    return new NextResponse('Unauthorized', { status: 401 });
+  }
+  const flags = {
+    isTenantAdmin: userState.isTenantAdmin,
+    isTenantWideRequester: userState.isTenantWideRequester,
+  };
 
   // NDG-99: 以降の await チェーンで発行されるログに tenantId/userId/requestId を自動付加。
   // requestId は route を跨いだ一連の処理を辿るためのもので、client からのヘッダは信用せず

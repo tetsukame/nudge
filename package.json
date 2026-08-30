@@ -25,7 +25,8 @@
     "typecheck": "tsc --noEmit",
     "worker": "tsx src/worker/bootstrap.ts",
     "worker:dev": "tsx watch src/worker/bootstrap.ts",
-    "build:teams-manifest": "tsx scripts/build-teams-manifest.ts"
+    "build:teams-manifest": "tsx scripts/build-teams-manifest.ts",
+    "scim:rotate-token": "tsx src/scripts/rotate-scim-token.ts"
   },
   "dependencies": {
     "@microsoft/teams-js": "^2.34.0",

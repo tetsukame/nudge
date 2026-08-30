@@ -105,16 +105,27 @@ SAFE_URL_HOST_ALLOWLIST=192.168.1.105,id.internal.example.com
 IdP 側の Callback URL は Nudge が送るものと **完全一致** 必須。末尾スラッシュ / ポート番号 / プロトコル (http/https) を細かく確認。Pocket ID は `*` ワイルドカード対応、KC は不可。
 
 ### 3. tenant_admin が締め出される罠
-既存の tenant_admin ユーザーは KC 経由でしか作られていない。汎用 OIDC に切替えて別 IdP でログインすると、`users.oidc_sub` が違うため **新規ユーザーとして作成** され、role も所属も無い。この状態で認証設定を書き換えると管理 UI に戻れなくなる。復旧:
+既存の tenant_admin ユーザーは KC 経由でしか作られていない。汎用 OIDC に切替えて別 IdP でログインすると、`users.oidc_sub` が違うため **新規ユーザーとして作成** され、role も所属も無い。この状態で認証設定を書き換えると管理 UI に戻れなくなる。
+
+**復旧経路 A: 緊急ローカル管理者ログイン (推奨、NDG-118)**
+
+1. `.env` に `EMERGENCY_LOCAL_LOGIN=true` を追加 → dev サーバー再起動
+2. ブラウザで `http://localhost:3000/t/<code>/rescue-login` にアクセス
+3. Platform admin の email / password (`/root/login` で使うのと同じ) を入力 → 「緊急ログイン」
+4. 緊急 tenant_admin ユーザーが自動作成 (`keycloak_sub = 'emergency:<email>'`) + tenant_admin ロール付与
+5. `/admin/settings/auth` にリダイレクトされるので設定を修正
+6. 復旧作業が終わったら `EMERGENCY_LOCAL_LOGIN=false` に戻し、サーバー再起動
+
+audit_log に `login.emergency_local` として記録される。
+
+**復旧経路 B: SQL 直接削除**
 
 ```
 docker run --rm postgres:17-alpine psql "postgresql://dbadmin:...@<host>:5432/nudge" \
   -c "DELETE FROM tenant_auth_config WHERE tenant_id = '<uuid>';"
 ```
 
-削除すると env fallback (KC) に戻る。次のログインで既存 tenant_admin として入れる。
-
-より安全な復旧経路として NDG-118 (「緊急ローカル管理者ログイン」) を Phase 3 で実装予定 (環境変数 `EMERGENCY_LOCAL_LOGIN=true` の時だけ有効なパスワード認証)。
+削除すると env fallback (KC) に戻る。DB 直接アクセスできる場合はこちらが最短。
 
 ### 4. Discovery URL の trailing slash
 openid-client の `Issuer.discover(url)` は `url + "/.well-known/openid-configuration"` を叩く。issuer URL に既にスラッシュが付いていると `//..` になり Pocket ID などがハングする可能性。**末尾スラッシュなしを推奨**。

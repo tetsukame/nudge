@@ -47,8 +47,15 @@ OTEL_SERVICE_VERSION=v0.25    # 任意 (default: dev)
 | メトリクス | 種別 | ラベル |
 |---|---|---|
 | `nudge.api.request.duration` | ヒストグラム (ms) | `route`, `method`, `status` |
+| `nudge.notification.send_total` | カウンタ | `channel`, `result`, `tenant_id` |
+| `nudge.sync.duration_seconds` | ヒストグラム (s) | `source`, `result`, `tenant_id` |
+| `nudge.retention.deleted_total` | カウンタ | `kind` (soft/hard), `entity`, `tenant_id` |
 
-`nudge.api.request.duration` は route ハンドラで [recordApiDuration](../../src/lib/otel.ts) を呼んだ場合のみ記録される (現時点では明示 opt-in)。テナントを跨いだ集約用途は自動計測の `http.server.request.duration` で十分なので、ビジネス単位で切り分けたい場合だけ利用する。
+- **notification.send_total** — [src/worker/sender.ts](../../src/worker/sender.ts) が channel ごとに成功/失敗を record。`result` を使うと成功率 (success/(success+fail)) を計算できる
+- **sync.duration_seconds** — [src/domain/platform/sync.ts](../../src/domain/platform/sync.ts) が Keycloak sync 1 回分の所要秒を record。IdP 側の遅延・障害を検知する初期指標に
+- **retention.deleted_total** — [src/worker/retention.ts](../../src/worker/retention.ts) が soft/hard の削除行数を entity ごとに累積。想定外の急増を検知できる
+
+`nudge.api.request.duration` は route ハンドラで [recordApiDuration](../../src/lib/otel.ts) を呼んだ場合のみ記録される (opt-in)。テナントを跨いだ集約用途は自動計測の `http.server.request.duration` で十分なので、ビジネス単位で切り分けたい場合だけ利用する。
 
 ## 二重初期化ガード
 

@@ -21,11 +21,16 @@
  */
 
 import type { NodeSDK } from '@opentelemetry/sdk-node';
-import type { Histogram, Meter } from '@opentelemetry/api';
+import type { Counter, Histogram, Meter } from '@opentelemetry/api';
 
 let sdk: NodeSDK | null = null;
 let meter: Meter | null = null;
 let requestDurationHistogram: Histogram | null = null;
+
+// NDG-101 (v0.26 A3 業務メトリクス)
+let notificationSendCounter: Counter | null = null;
+let syncDurationHistogram: Histogram | null = null;
+let retentionDeletedCounter: Counter | null = null;
 
 /** 起動済みかどうか。テスト・二重初期化ガード用。 */
 export function isOtelInitialized(): boolean {
@@ -95,6 +100,27 @@ export async function initOtel(): Promise<boolean> {
     },
   );
 
+  // NDG-101: 業務メトリクス
+  notificationSendCounter = meter.createCounter(
+    'nudge.notification.send_total',
+    {
+      description: 'Notification send attempts by channel and outcome',
+    },
+  );
+  syncDurationHistogram = meter.createHistogram(
+    'nudge.sync.duration_seconds',
+    {
+      description: 'IdP/CSV sync duration per tenant',
+      unit: 's',
+    },
+  );
+  retentionDeletedCounter = meter.createCounter(
+    'nudge.retention.deleted_total',
+    {
+      description: 'Rows soft/hard deleted by retention worker',
+    },
+  );
+
   // graceful shutdown: SIGTERM でエクスポート flush してから終了
   const shutdown = async (): Promise<void> => {
     if (!sdk) return;
@@ -125,5 +151,59 @@ export function recordApiDuration(attrs: {
     route: attrs.route,
     method: attrs.method,
     status: attrs.status,
+  });
+}
+
+/**
+ * 通知チャネルごとの送信結果を計測 (NDG-101)。
+ * channel: email|teams|slack|in_app、result: success|fail
+ */
+export function recordNotificationSend(attrs: {
+  channel: string;
+  result: 'success' | 'fail';
+  tenantId?: string;
+}): void {
+  if (!notificationSendCounter) return;
+  notificationSendCounter.add(1, {
+    channel: attrs.channel,
+    result: attrs.result,
+    ...(attrs.tenantId ? { tenant_id: attrs.tenantId } : {}),
+  });
+}
+
+/**
+ * IdP / CSV sync 1 回分の所要時間 (NDG-101)。
+ * source: keycloak|csv、result: success|fail。
+ */
+export function recordSyncDuration(attrs: {
+  source: string;
+  result: 'success' | 'fail';
+  tenantId: string;
+  durationSeconds: number;
+}): void {
+  if (!syncDurationHistogram) return;
+  syncDurationHistogram.record(attrs.durationSeconds, {
+    source: attrs.source,
+    result: attrs.result,
+    tenant_id: attrs.tenantId,
+  });
+}
+
+/**
+ * Retention worker が削除した行数 (NDG-101)。
+ * kind: soft|hard、entity: notification|request|...
+ */
+export function recordRetentionDeleted(attrs: {
+  kind: 'soft' | 'hard';
+  entity: string;
+  tenantId: string;
+  count: number;
+}): void {
+  if (!retentionDeletedCounter) return;
+  if (attrs.count <= 0) return;
+  retentionDeletedCounter.add(attrs.count, {
+    kind: attrs.kind,
+    entity: attrs.entity,
+    tenant_id: attrs.tenantId,
   });
 }

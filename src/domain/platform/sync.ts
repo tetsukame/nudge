@@ -4,6 +4,7 @@ import { reconcileOrgs } from '../../sync/org-reconciler';
 import { KeycloakSyncSource } from '../../sync/keycloak-source';
 import { getSyncClientSecret } from '../../sync/secrets';
 import { appPool } from '../../db/pools';
+import { recordSyncDuration } from '../../lib/otel';
 
 export class PlatformSyncError extends Error {
   constructor(message: string, readonly code: 'not_configured' | 'not_found' | 'already_running' | 'validation') {
@@ -113,11 +114,19 @@ export async function runSyncForTenant(
       [tenantId],
     );
 
+    const durationMs = Date.now() - start;
+    // NDG-101: 業務メトリクス (success)
+    recordSyncDuration({
+      source: 'keycloak',
+      result: 'success',
+      tenantId,
+      durationSeconds: durationMs / 1000,
+    });
     return {
       tenantCode: t.code, syncType: mode,
       ...userRes,
       ...(orgs ? { orgs } : {}),
-      durationMs: Date.now() - start,
+      durationMs,
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -129,6 +138,13 @@ export async function runSyncForTenant(
       `UPDATE tenant_sync_config SET last_error = $2, updated_at = now() WHERE tenant_id = $1`,
       [tenantId, msg],
     );
+    // NDG-101: 業務メトリクス (fail)
+    recordSyncDuration({
+      source: 'keycloak',
+      result: 'fail',
+      tenantId,
+      durationSeconds: (Date.now() - start) / 1000,
+    });
     throw err;
   }
 }

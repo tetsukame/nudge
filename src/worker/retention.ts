@@ -1,6 +1,7 @@
 import type pg from 'pg';
 import { getRetentionConfigResolved } from '../domain/retention/config';
 import { logger } from '@/lib/logger';
+import { recordRetentionDeleted } from '@/lib/otel';
 
 /**
  * NDG-87/89: retention worker。
@@ -140,6 +141,8 @@ async function processTenant(
       const n = await runSoftForTable(pool, tenantId, target, days);
       if (n > 0) {
         await logRun(pool, tenantId, target.table, 'soft', n);
+        // NDG-101
+        recordRetentionDeleted({ kind: 'soft', entity: target.table, tenantId, count: n });
       }
     } catch (err) {
       await logRun(pool, tenantId, target.table, 'soft', 0, (err as Error).message)
@@ -152,6 +155,8 @@ async function processTenant(
         const n = await runHardForTable(pool, tenantId, target.table, cfg.softDeleteGraceDays);
         if (n > 0) {
           await logRun(pool, tenantId, target.table, 'hard', n);
+          // NDG-101
+          recordRetentionDeleted({ kind: 'hard', entity: target.table, tenantId, count: n });
         }
       } catch (err) {
         await logRun(pool, tenantId, target.table, 'hard', 0, (err as Error).message)

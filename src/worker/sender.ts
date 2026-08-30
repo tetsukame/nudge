@@ -3,6 +3,7 @@ import { getChannel } from '../notification/channel-registry';
 import type { TenantSettings } from '../notification/types';
 import type { NotificationContext } from '../notification/channel';
 import { nextAttemptAt } from './retry';
+import { recordNotificationSend } from '../lib/otel';
 
 const BATCH_SIZE = 100;
 
@@ -147,6 +148,12 @@ async function processOne(pool: pg.Pool, row: PendingRow): Promise<void> {
       `UPDATE notification SET status='sent', sent_at=now(), next_attempt_at=NULL WHERE id=$1`,
       [row.id],
     );
+    // NDG-101: 送信成功をカウント (metrics 未初期化なら no-op)
+    recordNotificationSend({
+      channel: row.channel,
+      result: 'success',
+      tenantId: row.tenant_id,
+    });
   } catch (err) {
     const newAttemptCount = row.attempt_count + 1;
     const next = nextAttemptAt(newAttemptCount);
@@ -159,6 +166,12 @@ async function processOne(pool: pg.Pool, row: PendingRow): Promise<void> {
         WHERE id = $1`,
       [row.id, newAttemptCount, (err as Error).message, next],
     ).catch(() => {});
+    // 失敗もカウント (permanent failure か retry 対象かは attempt_count で判別可能)
+    recordNotificationSend({
+      channel: row.channel,
+      result: 'fail',
+      tenantId: row.tenant_id,
+    });
   } finally {
     client.release();
   }

@@ -40,10 +40,15 @@ export function middleware(request: NextRequest) {
     path.includes('/logout') ||
     path.includes('/logged-out') ||
     // NDG-26: Teams Tab/Auth はセッションを「これから」作るので除外
-    path.includes('/teams/');
+    path.includes('/teams/') ||
+    // NDG-118: 緊急ローカルログイン画面はセッション不要
+    path.includes('/rescue-login');
   const isApiRoute = path.includes('/api/');
+  // NDG-115: SCIM は Bearer token 認証で session cookie を持たない。middleware
+  // の redirect から除外し、route ハンドラの requireScimAuth に判定を委ねる。
+  const isScimRoute = path.includes('/scim/');
 
-  if (isAuthRoute || isApiRoute) {
+  if (isAuthRoute || isApiRoute || isScimRoute) {
     return withCsp(NextResponse.next());
   }
 
